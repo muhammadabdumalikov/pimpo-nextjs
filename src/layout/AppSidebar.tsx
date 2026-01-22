@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
   BoxCubeIcon,
+  BoxIcon,
   CalenderIcon,
   ChevronDownIcon,
   GridIcon,
@@ -18,6 +19,9 @@ import {
   UserCircleIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
+import { useTranslations } from "@/hooks/useTranslations";
+import { useSubscription } from "@/context/SubscriptionContext";
+import { getMenuPermissions, isMenuAllowed } from "@/data/menuPermissions";
 
 type NavItem = {
   name: string;
@@ -26,77 +30,158 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-const navItems: NavItem[] = [
-  {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
-  },
-  {
-    icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/calendar",
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "User Profile",
-    path: "/profile",
-  },
-
-  {
-    name: "Forms",
-    icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  },
-  {
-    name: "Tables",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
-  },
-  {
-    name: "Pages",
-    icon: <PageIcon />,
-    subItems: [
-      { name: "Blank Page", path: "/blank", pro: false },
-      { name: "404 Error", path: "/error-404", pro: false },
-    ],
-  },
-];
-
-const othersItems: NavItem[] = [
-  {
-    icon: <PieChartIcon />,
-    name: "Charts",
-    subItems: [
-      { name: "Line Chart", path: "/line-chart", pro: false },
-      { name: "Bar Chart", path: "/bar-chart", pro: false },
-    ],
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "UI Elements",
-    subItems: [
-      { name: "Alerts", path: "/alerts", pro: false },
-      { name: "Avatar", path: "/avatars", pro: false },
-      { name: "Badge", path: "/badge", pro: false },
-      { name: "Buttons", path: "/buttons", pro: false },
-      { name: "Images", path: "/images", pro: false },
-      { name: "Videos", path: "/videos", pro: false },
-    ],
-  },
-  {
-    icon: <PlugInIcon />,
-    name: "Authentication",
-    subItems: [
-      { name: "Sign In", path: "/signin", pro: false },
-      { name: "Sign Up", path: "/signup", pro: false },
-    ],
-  },
-];
-
 const AppSidebar: React.FC = () => {
+  const { t } = useTranslations();
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { currentTier } = useSubscription();
   const pathname = usePathname();
+  const menuPermissions = getMenuPermissions();
+
+  // Helper function to map path to menu identifier
+  const getMenuIdFromPath = (path: string): string | null => {
+    const pathMap: Record<string, string> = {
+      '/': 'dashboard.ecommerce',
+      '/dashboard-v2': 'dashboard.ecommerceV2',
+      '/products': 'ecommerce.products',
+      '/product-v2': 'ecommerce.productsV2',
+      '/add-product': 'ecommerce.addProduct',
+      '/add-product-v2': 'ecommerce.addProductV2',
+      '/user-debt': 'userDebt',
+      '/calendar': 'calendar',
+      '/profile': 'userProfile',
+      '/form-elements': 'forms.formElements',
+      '/basic-tables': 'tables.basicTables',
+      '/blank': 'pages.blankPage',
+      '/error-404': 'pages.error404',
+      '/line-chart': 'charts.lineChart',
+      '/bar-chart': 'charts.barChart',
+      '/alerts': 'uiElements.alerts',
+      '/avatars': 'uiElements.avatar',
+      '/badge': 'uiElements.badge',
+      '/buttons': 'uiElements.buttons',
+      '/images': 'uiElements.images',
+      '/videos': 'uiElements.videos',
+      '/signin': 'authentication.signIn',
+      '/signup': 'authentication.signUp',
+      '/subscription-management': 'subscriptionManagement',
+    };
+    return pathMap[path] || null;
+  };
+
+  // Filter menu items based on subscription
+  const filterMenuItems = (items: NavItem[]): NavItem[] => {
+    return items
+      .map(item => {
+        if (item.subItems) {
+          const filteredSubItems = item.subItems.filter(subItem => {
+            const menuId = getMenuIdFromPath(subItem.path);
+            return menuId ? isMenuAllowed(menuId, currentTier, menuPermissions) : true;
+          });
+          
+          // Only show parent menu if it has at least one allowed sub-item
+          if (filteredSubItems.length === 0) return null;
+          
+          return { ...item, subItems: filteredSubItems };
+        } else if (item.path) {
+          const menuId = getMenuIdFromPath(item.path);
+          if (menuId && !isMenuAllowed(menuId, currentTier, menuPermissions)) {
+            return null;
+          }
+        }
+        return item;
+      })
+      .filter((item): item is NavItem => item !== null);
+  };
+
+  const navItems: NavItem[] = filterMenuItems([
+    {
+      icon: <GridIcon />,
+      name: t('sidebar.dashboard'),
+      subItems: [
+        { name: t('sidebar.ecommerce'), path: "/", pro: false },
+        { name: t('sidebar.ecommerceV2'), path: "/dashboard-v2", pro: false },
+      ],
+    },
+    {
+      icon: <BoxIcon />,
+      name: t('sidebar.ecommerceMenu'),
+      subItems: [
+        { name: t('sidebar.products'), path: "/products", pro: false },
+        { name: t('sidebar.productsV2'), path: "/product-v2", pro: false },
+        { name: t('sidebar.addProduct'), path: "/add-product", pro: false },
+        { name: t('sidebar.addProductV2'), path: "/add-product-v2", pro: false },
+      ],
+    },
+    {
+      icon: <CalenderIcon />,
+      name: t('sidebar.calendar'),
+      path: "/calendar",
+    },
+    {
+      icon: <UserCircleIcon />,
+      name: t('sidebar.userProfile'),
+      path: "/profile",
+    },
+    {
+      icon: <UserCircleIcon />,
+      name: t('sidebar.userDebt'),
+      path: "/user-debt",
+    },
+    {
+      icon: <PlugInIcon />,
+      name: t('sidebar.subscriptionManagement'),
+      path: "/subscription-management",
+    },
+    {
+      name: t('sidebar.forms'),
+      icon: <ListIcon />,
+      subItems: [{ name: t('sidebar.formElements'), path: "/form-elements", pro: false }],
+    },
+    {
+      name: t('sidebar.tables'),
+      icon: <TableIcon />,
+      subItems: [{ name: t('sidebar.basicTables'), path: "/basic-tables", pro: false }],
+    },
+    {
+      name: t('sidebar.pages'),
+      icon: <PageIcon />,
+      subItems: [
+        { name: t('sidebar.blankPage'), path: "/blank", pro: false },
+        { name: t('sidebar.error404'), path: "/error-404", pro: false },
+      ],
+    },
+  ]);
+
+  const othersItems: NavItem[] = filterMenuItems([
+    {
+      icon: <PieChartIcon />,
+      name: t('sidebar.charts'),
+      subItems: [
+        { name: t('sidebar.lineChart'), path: "/line-chart", pro: false },
+        { name: t('sidebar.barChart'), path: "/bar-chart", pro: false },
+      ],
+    },
+    {
+      icon: <BoxCubeIcon />,
+      name: t('sidebar.uiElements'),
+      subItems: [
+        { name: t('sidebar.alerts'), path: "/alerts", pro: false },
+        { name: t('sidebar.avatar'), path: "/avatars", pro: false },
+        { name: t('sidebar.badge'), path: "/badge", pro: false },
+        { name: t('sidebar.buttons'), path: "/buttons", pro: false },
+        { name: t('sidebar.images'), path: "/images", pro: false },
+        { name: t('sidebar.videos'), path: "/videos", pro: false },
+      ],
+    },
+    {
+      icon: <PlugInIcon />,
+      name: t('sidebar.authentication'),
+      subItems: [
+        { name: t('sidebar.signIn'), path: "/signin", pro: false },
+        { name: t('sidebar.signUp'), path: "/signup", pro: false },
+      ],
+    },
+  ]);
 
   const renderMenuItems = (
     navItems: NavItem[],
@@ -198,7 +283,7 @@ const AppSidebar: React.FC = () => {
                                 : "menu-dropdown-badge-inactive"
                             } menu-dropdown-badge `}
                           >
-                            new
+                            {t('sidebar.new')}
                           </span>
                         )}
                         {subItem.pro && (
@@ -209,7 +294,7 @@ const AppSidebar: React.FC = () => {
                                 : "menu-dropdown-badge-inactive"
                             } menu-dropdown-badge `}
                           >
-                            pro
+                            {t('sidebar.pro')}
                           </span>
                         )}
                       </span>
@@ -348,7 +433,7 @@ const AppSidebar: React.FC = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Menu"
+                  t('sidebar.menu')
                 ) : (
                   <HorizontaLDots />
                 )}
@@ -365,7 +450,7 @@ const AppSidebar: React.FC = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Others"
+                  t('sidebar.others')
                 ) : (
                   <HorizontaLDots />
                 )}
