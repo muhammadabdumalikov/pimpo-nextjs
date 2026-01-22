@@ -21,6 +21,8 @@ interface ProductV2 {
   priceOut: string;
   quantity: number;
   image: string;
+  code: string;
+  barcode: string;
 }
 
 // Define the table data using the interface
@@ -32,6 +34,8 @@ const tableData: ProductV2[] = [
     priceOut: "$2,199",
     quantity: 0,
     image: "/images/product/product-01.jpg",
+    code: "ASUS-001",
+    barcode: "1234567890123",
   },
   {
     id: 2,
@@ -40,6 +44,8 @@ const tableData: ProductV2[] = [
     priceOut: "$839",
     quantity: 45,
     image: "/images/product/product-02.jpg",
+    code: "APPLE-002",
+    barcode: "1234567890124",
   },
   {
     id: 3,
@@ -48,6 +54,8 @@ const tableData: ProductV2[] = [
     priceOut: "$1,579",
     quantity: 0,
     image: "/images/product/product-03.jpg",
+    code: "APPLE-003",
+    barcode: "1234567890125",
   },
   {
     id: 4,
@@ -56,6 +64,8 @@ const tableData: ProductV2[] = [
     priceOut: "$279",
     quantity: 120,
     image: "/images/product/product-04.jpg",
+    code: "BOSE-004",
+    barcode: "1234567890126",
   },
   {
     id: 5,
@@ -64,6 +74,8 @@ const tableData: ProductV2[] = [
     priceOut: "$3,899",
     quantity: 8,
     image: "/images/product/product-05.jpg",
+    code: "CANON-005",
+    barcode: "1234567890127",
   },
   {
     id: 6,
@@ -72,6 +84,8 @@ const tableData: ProductV2[] = [
     priceOut: "$1,299",
     quantity: 25,
     image: "/images/product/product-01.jpg",
+    code: "DELL-006",
+    barcode: "1234567890128",
   },
   {
     id: 7,
@@ -80,6 +94,8 @@ const tableData: ProductV2[] = [
     priceOut: "$899",
     quantity: 0,
     image: "/images/product/product-02.jpg",
+    code: "GOOGLE-007",
+    barcode: "1234567890129",
   },
   {
     id: 8,
@@ -88,6 +104,8 @@ const tableData: ProductV2[] = [
     priceOut: "$399",
     quantity: 60,
     image: "/images/product/product-03.jpg",
+    code: "SONY-008",
+    barcode: "1234567890130",
   },
   {
     id: 9,
@@ -96,6 +114,8 @@ const tableData: ProductV2[] = [
     priceOut: "$1,199",
     quantity: 30,
     image: "/images/product/product-04.jpg",
+    code: "SAMSUNG-009",
+    barcode: "1234567890131",
   },
   {
     id: 10,
@@ -104,6 +124,8 @@ const tableData: ProductV2[] = [
     priceOut: "$1,299",
     quantity: 15,
     image: "/images/product/product-05.jpg",
+    code: "APPLE-010",
+    barcode: "1234567890132",
   },
   {
     id: 11,
@@ -112,6 +134,8 @@ const tableData: ProductV2[] = [
     priceOut: "$5,499",
     quantity: 0,
     image: "/images/product/product-01.jpg",
+    code: "NIKON-011",
+    barcode: "1234567890133",
   },
   {
     id: 12,
@@ -120,6 +144,8 @@ const tableData: ProductV2[] = [
     priceOut: "$1,499",
     quantity: 20,
     image: "/images/product/product-02.jpg",
+    code: "MS-012",
+    barcode: "1234567890134",
   },
   {
     id: 13,
@@ -128,6 +154,8 @@ const tableData: ProductV2[] = [
     priceOut: "$799",
     quantity: 50,
     image: "/images/product/product-03.jpg",
+    code: "ONEPLUS-013",
+    barcode: "1234567890135",
   },
   {
     id: 14,
@@ -136,6 +164,8 @@ const tableData: ProductV2[] = [
     priceOut: "$129",
     quantity: 100,
     image: "/images/product/product-04.jpg",
+    code: "JBL-014",
+    barcode: "1234567890136",
   },
   {
     id: 15,
@@ -144,6 +174,8 @@ const tableData: ProductV2[] = [
     priceOut: "$1,599",
     quantity: 12,
     image: "/images/product/product-05.jpg",
+    code: "HP-015",
+    barcode: "1234567890137",
   },
   {
     id: 16,
@@ -152,6 +184,8 @@ const tableData: ProductV2[] = [
     priceOut: "$1,699",
     quantity: 18,
     image: "/images/product/product-01.jpg",
+    code: "FUJI-016",
+    barcode: "1234567890138",
   },
   {
     id: 17,
@@ -160,6 +194,8 @@ const tableData: ProductV2[] = [
     priceOut: "$999",
     quantity: 0,
     image: "/images/product/product-02.jpg",
+    code: "XIAOMI-017",
+    barcode: "1234567890139",
   },
   {
     id: 18,
@@ -168,6 +204,8 @@ const tableData: ProductV2[] = [
     priceOut: "$349",
     quantity: 40,
     image: "/images/product/product-03.jpg",
+    code: "SENN-018",
+    barcode: "1234567890140",
   },
   {
     id: 19,
@@ -176,6 +214,8 @@ const tableData: ProductV2[] = [
     priceOut: "$1,799",
     quantity: 22,
     image: "/images/product/product-04.jpg",
+    code: "LENOVO-019",
+    barcode: "1234567890141",
   },
   {
     id: 20,
@@ -184,6 +224,8 @@ const tableData: ProductV2[] = [
     priceOut: "$1,999",
     quantity: 10,
     image: "/images/product/product-05.jpg",
+    code: "PANASONIC-020",
+    barcode: "1234567890142",
   },
 ];
 
@@ -198,14 +240,6 @@ export default function ProductsListV2() {
   // Check product limit
   const productLimit = getLimit('products');
   const productLimitReached = productLimit !== null && isLimitReached('products', tableData.length);
-
-  // Helper function to calculate profit
-  const calculateProfit = (priceOut: string, priceIn: string): string => {
-    const out = parseFloat(priceOut.replace(/[$,]/g, ""));
-    const inPrice = parseFloat(priceIn.replace(/[$,]/g, ""));
-    const profit = out - inPrice;
-    return `$${profit.toLocaleString()}`;
-  };
 
   // Filter products based on search query
   const filteredProducts = tableData.filter(
@@ -453,7 +487,28 @@ export default function ProductsListV2() {
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
               >
                 <div className="flex items-center gap-2">
-                  {t('productsV2.profit')}
+                  {t('productsV2.code')}
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                    />
+                  </svg>
+                </div>
+              </TableCell>
+              <TableCell
+                isHeader
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
+              >
+                <div className="flex items-center gap-2">
+                  {t('productsV2.barcode')}
                   <svg
                     className="w-4 h-4 text-gray-400"
                     fill="none"
@@ -540,10 +595,11 @@ export default function ProductsListV2() {
                 <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
                   {product.priceOut}
                 </TableCell>
-                <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
-                  <span className="text-success-600 text-theme-sm font-medium dark:text-success-500">
-                    {calculateProfit(product.priceOut, product.priceIn)}
-                  </span>
+                <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
+                  {product.code}
+                </TableCell>
+                <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
+                  {product.barcode}
                 </TableCell>
                 <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
                   {product.quantity}

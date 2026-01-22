@@ -7,6 +7,7 @@ import { useSidebar } from "../context/SidebarContext";
 import {
   BoxCubeIcon,
   BoxIcon,
+  BoxIconLine,
   CalenderIcon,
   ChevronDownIcon,
   GridIcon,
@@ -126,6 +127,16 @@ const AppSidebar: React.FC = () => {
       icon: <UserCircleIcon />,
       name: t('sidebar.userDebt'),
       path: "/user-debt",
+    },
+    {
+      icon: <BoxIconLine />,
+      name: t('sidebar.inventory'),
+      path: "/inventory",
+    },
+    {
+      icon: <PieChartIcon />,
+      name: t('sidebar.productPerformance'),
+      path: "/product-performance",
     },
     {
       icon: <PlugInIcon />,

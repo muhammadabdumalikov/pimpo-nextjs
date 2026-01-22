@@ -7,12 +7,14 @@ import { Dropdown } from "../ui/dropdown/Dropdown";
 import { MoreDotIcon } from "@/icons";
 import { useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
+import { useTranslations } from "@/hooks/useTranslations";
 // Dynamically import the ReactApexChart component
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
 
 export default function MonthlyTarget() {
+  const { t } = useTranslations();
   const series = [75.55];
   const options: ApexOptions = {
     colors: ["#465FFF"],
@@ -125,8 +127,7 @@ export default function MonthlyTarget() {
           </span>
         </div>
         <p className="mx-auto mt-10 w-full max-w-[380px] text-center text-sm text-gray-500 sm:text-base">
-          You earn $3287 today, it&apos;s higher than last month. Keep up your
-          good work!
+          {t('dashboardV2.earnMessage').replace('{amount}', '3287')}
         </p>
       </div>
 

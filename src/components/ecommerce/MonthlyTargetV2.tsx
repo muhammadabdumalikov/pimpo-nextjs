@@ -127,8 +127,7 @@ export default function MonthlyTargetV2() {
           </span>
         </div>
         <p className="mx-auto mt-4 w-full max-w-[380px] text-center text-sm text-gray-500">
-          You earn $3287 today, it&apos;s higher than last month. Keep up your
-          good work!
+          {t('dashboardV2.earnMessage').replace('{amount}', '3287')}
         </p>
       </div>
 

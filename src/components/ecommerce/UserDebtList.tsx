@@ -629,43 +629,43 @@ export default function UserDebtList() {
             <TableRow>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-12"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-12"
               >
                 <span></span>
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 pr-4 sm:pl-2 sm:pr-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[28%]"
+                className="py-3 pr-4 sm:pl-2 sm:pr-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[28%]"
               >
-                {t('userDebt.description')}
+                {t('userDebt.descriptionLabel')}
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[20%]"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[20%]"
               >
                 {t('userDebt.phone')}
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[15%]"
               >
                 {t('userDebt.amount')}
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[15%]"
               >
                 {t('userDebt.status')}
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[12%]"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[12%]"
               >
                 {t('userDebt.dueDate')}
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[13%]"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[13%]"
               >
                 {t('userDebt.actions')}
               </TableCell>
@@ -694,32 +694,32 @@ export default function UserDebtList() {
                       </button>
                     </TableCell>
                     <TableCell className="py-3 pr-4 sm:pl-2 sm:pr-6 w-[25%]">
-                      <p className="font-semibold text-gray-800 text-theme-sm dark:text-white/90">
+                      <p className="font-semibold text-gray-800 text-base dark:text-white/90">
                         {group.userName}
                       </p>
                     </TableCell>
                     <TableCell className="py-3 px-4 sm:px-6 w-[20%]">
-                      <span className="text-gray-500 text-theme-sm dark:text-gray-400">
+                      <span className="text-gray-500 text-base dark:text-gray-400">
                         {group.phone}
                       </span>
                     </TableCell>
                     <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
-                      <p className="font-semibold text-gray-800 text-theme-sm dark:text-white/90">
+                      <p className="font-semibold text-gray-800 text-base dark:text-white/90">
                         {formatAmount(group.totalDebt)}
                       </p>
                     </TableCell>
                     <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
-                      <span className="text-gray-500 text-theme-sm dark:text-gray-400">
+                      <span className="text-gray-500 text-base dark:text-gray-400">
                         {group.debts.length} {group.debts.length === 1 ? t('userDebt.debt') : t('userDebt.debts')}
                       </span>
                     </TableCell>
                     <TableCell className="py-3 px-4 sm:px-6 w-[12%]">
-                      <span className="text-gray-500 text-theme-sm dark:text-gray-400">
+                      <span className="text-gray-500 text-base dark:text-gray-400">
                         -
                       </span>
                     </TableCell>
                     <TableCell className="py-3 px-4 sm:px-6 w-[13%]">
-                      <span className="text-gray-500 text-theme-sm dark:text-gray-400">
+                      <span className="text-gray-500 text-base dark:text-gray-400">
                         -
                       </span>
                     </TableCell>
@@ -755,7 +755,7 @@ export default function UserDebtList() {
                               className="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                             />
                           ) : (
-                            <p className={`font-normal text-theme-sm ${debt.description ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 italic'}`}>
+                            <p className={`font-normal text-base ${debt.description ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 italic'}`}>
                               {debt.description || t('userDebt.noDescription')}
                             </p>
                           )}
@@ -766,10 +766,10 @@ export default function UserDebtList() {
                               type="text"
                               value={editFormData.phone || ""}
                               onChange={(e) => handleEditChange("phone", e.target.value)}
-                              className="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                              className="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-base text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                             />
                           ) : (
-                            <span className="text-gray-500 text-theme-sm dark:text-gray-400">
+                            <span className="text-gray-500 text-base dark:text-gray-400">
                               {debt.phone}
                             </span>
                           )}
@@ -780,10 +780,10 @@ export default function UserDebtList() {
                               type="text"
                               value={editFormData.amount || ""}
                               onChange={(e) => handleEditChange("amount", e.target.value)}
-                              className="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                              className="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-base text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                             />
                           ) : (
-                            <span className="text-gray-500 text-theme-sm dark:text-gray-400">
+                            <span className="text-gray-500 text-base dark:text-gray-400">
                               {debt.amount}
                             </span>
                           )}
@@ -794,7 +794,7 @@ export default function UserDebtList() {
                               <select
                                 value={editFormData.status || ""}
                                 onChange={(e) => handleEditChange("status", e.target.value as UserDebt["status"])}
-                                className="h-9 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-3 py-2 pr-10 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                                className="h-9 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-3 py-2 pr-10 text-base text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                               >
                                 {statusOptions.map((option) => (
                                   <option key={option.value} value={option.value} className="text-gray-700 dark:bg-gray-900 dark:text-gray-400">
@@ -827,7 +827,7 @@ export default function UserDebtList() {
                               />
                             </div>
                           ) : (
-                            <span className="text-gray-500 text-theme-sm dark:text-gray-400">
+                            <span className="text-gray-500 text-base dark:text-gray-400">
                               {debt.dueDate}
                             </span>
                           )}
