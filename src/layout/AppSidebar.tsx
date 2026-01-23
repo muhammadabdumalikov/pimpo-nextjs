@@ -42,11 +42,9 @@ const AppSidebar: React.FC = () => {
   const getMenuIdFromPath = (path: string): string | null => {
     const pathMap: Record<string, string> = {
       '/': 'dashboard.ecommerce',
-      '/dashboard-v2': 'dashboard.ecommerceV2',
       '/products': 'ecommerce.products',
-      '/product-v2': 'ecommerce.productsV2',
+      '/product': 'ecommerce.productsList',
       '/add-product': 'ecommerce.addProduct',
-      '/add-product-v2': 'ecommerce.addProductV2',
       '/user-debt': 'userDebt',
       '/calendar': 'calendar',
       '/profile': 'userProfile',
@@ -98,19 +96,14 @@ const AppSidebar: React.FC = () => {
     {
       icon: <GridIcon />,
       name: t('sidebar.dashboard'),
-      subItems: [
-        { name: t('sidebar.ecommerce'), path: "/", pro: false },
-        { name: t('sidebar.ecommerceV2'), path: "/dashboard-v2", pro: false },
-      ],
+      path: "/",
     },
     {
       icon: <BoxIcon />,
       name: t('sidebar.ecommerceMenu'),
       subItems: [
         { name: t('sidebar.products'), path: "/products", pro: false },
-        { name: t('sidebar.productsV2'), path: "/product-v2", pro: false },
         { name: t('sidebar.addProduct'), path: "/add-product", pro: false },
-        { name: t('sidebar.addProductV2'), path: "/add-product-v2", pro: false },
       ],
     },
     {

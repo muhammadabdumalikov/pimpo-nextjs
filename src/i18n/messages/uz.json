@@ -24,6 +24,7 @@
     "delete": "O'chirish",
     "deleteConfirm": "Bu qarzni o'chirishni xohlaysizmi?",
     "loadingDebts": "Qarzlar yuklanmoqda...",
+    "noDebts": "Qarzlar topilmadi",
     "paid": "To'langan",
     "pending": "Kutilmoqda",
     "overdue": "Muddati o'tgan",
@@ -33,9 +34,13 @@
     "results": "natija",
     "previous": "Oldingi",
     "next": "Keyingi",
-    "limitReached": "Limitga yetildi (maks. {limit} qarz)"
+    "limitReached": "Limitga yetildi (maks. {limit} qarz)",
+    "limitInfo": "{current}/{limit} qarz",
+    "creating": "Yaratilmoqda...",
+    "addSuccess": "Qarz muvaffaqiyatli qo'shildi",
+    "addError": "Qarz qo'shishda xatolik yuz berdi"
   },
-  "productsV2": {
+  "products": {
     "title": "Mahsulotlar ro'yxati",
     "description": "Sotuvlarni oshirish uchun do'koningizning rivojlanishini kuzating.",
     "export": "Eksport",
@@ -43,12 +48,20 @@
     "search": "Qidirish...",
     "filter": "Filtrlash",
     "products": "Mahsulotlar",
+      "loading": "Mahsulotlar yuklanmoqda...",
+    "noProducts": "Mahsulotlar topilmadi",
     "priceIn": "Xarid narxi",
     "priceOut": "Sotuv narxi",
     "profit": "Foyda",
     "code": "Kod",
     "barcode": "Shtrix-kod",
     "quantity": "Miqdor",
+    "actions": "Harakatlar",
+    "edit": "Tahrirlash",
+    "delete": "O'chirish",
+    "confirmDelete": "Bu mahsulotni o'chirishni xohlaysizmi?",
+    "deleteSuccess": "Mahsulot muvaffaqiyatli o'chirildi",
+    "deleteError": "Mahsulotni o'chirib bo'lmadi",
     "showing": "Ko'rsatilmoqda",
     "to": "dan",
     "of": "gacha",
@@ -58,7 +71,7 @@
     "limitReached": "Limitga yetildi (maks. {limit} mahsulot)",
     "limitInfo": "{current}/{limit} mahsulot"
   },
-  "dashboardV2": {
+  "dashboard": {
     "totalProducts": "Jami mahsulotlar",
     "totalQuantity": "Jami miqdor",
     "totalProfit": "Jami foyda",
@@ -71,10 +84,14 @@
     "viewMore": "Ko'proq ko'rish",
     "delete": "O'chirish"
   },
-  "addProductV2": {
+  "addProduct": {
     "productInformation": "Mahsulot ma'lumotlari",
     "productName": "Mahsulot nomi",
     "productNamePlaceholder": "Mahsulot nomini kiriting",
+    "code": "Mahsulot kodi",
+    "codePlaceholder": "Mahsulot kodini kiriting (ixtiyoriy)",
+    "barcode": "Shtrix-kod",
+    "barcodePlaceholder": "Shtrix-kodni kiriting (ixtiyoriy)",
     "priceIn": "Xarid narxi",
     "priceOut": "Sotuv narxi",
     "pricePlaceholder": "$0.00",
@@ -90,7 +107,21 @@
     "clickToUpload": "Yuklash uchun bosing",
     "dragAndDrop": "yoki SVG, PNG, JPG yoki GIF ni sudrab tashlang (MAKS. 800x400px)",
     "draft": "Qoralama",
-    "publishProduct": "Mahsulotni nashr qilish"
+    "publishProduct": "Mahsulotni nashr qilish",
+    "cancel": "Bekor qilish",
+    "creating": "Yaratilmoqda...",
+    "updating": "Yangilanmoqda...",
+    "success": "Mahsulot muvaffaqiyatli yaratildi!",
+    "updateSuccess": "Mahsulot muvaffaqiyatli yangilandi!",
+    "updateProduct": "Mahsulotni yangilash",
+    "editProductInformation": "Mahsulot ma'lumotlarini tahrirlash",
+    "loading": "Mahsulot yuklanmoqda...",
+    "errors": {
+      "productNameRequired": "Mahsulot nomi majburiy",
+      "priceInRequired": "Xarid narxi majburiy va 0 dan katta bo'lishi kerak",
+      "priceOutRequired": "Sotuv narxi majburiy va 0 dan katta bo'lishi kerak",
+      "createFailed": "Mahsulotni yaratishda xatolik yuz berdi"
+    }
   },
   "upgradePlan": {
     "title": "Rejangizni tanlang",
@@ -98,11 +129,9 @@
     "free": "Bepul",
     "basic": "Asosiy",
     "pro": "Professional",
-    "enterprise": "Korporativ",
     "freeDescription": "Boshlash uchun ideal",
     "basicDescription": "Kichik bizneslar uchun",
     "proDescription": "O'sib borayotgan bizneslar uchun",
-    "enterpriseDescription": "Yirik tashkilotlar uchun",
     "mostPopular": "Eng mashhur",
     "currentPlan": "Joriy reja",
     "upgrade": "Yangilash",
@@ -116,8 +145,8 @@
     "features": {
       "free": {
         "userDebtList": "Foydalanuvchi qarzlari ro'yxati",
-        "ecommerceV2": "Ecommerce V2 boshqaruv paneli",
-        "productsListV2": "Mahsulotlar ro'yxati V2",
+        "ecommerce": "Ecommerce boshqaruv paneli",
+        "productsList": "Mahsulotlar ro'yxati",
         "debtsLimit": "20 tagacha qarz",
         "productsLimit": "20 tagacha mahsulot"
       },
@@ -130,35 +159,23 @@
       },
       "pro": {
         "everythingInBasic": "Asosiy rejadagi hamma narsa",
-        "ecommerceV2Dashboard": "Ecommerce V2 boshqaruv paneli",
-        "productsV2": "Mahsulotlar V2",
-        "addProductV2": "Mahsulot qo'shish V2",
+        "ecommerceDashboard": "Ecommerce boshqaruv paneli",
+        "productsList": "Mahsulotlar ro'yxati",
+        "addProduct": "Mahsulot qo'shish",
         "userDebtManagement": "Foydalanuvchi qarzlarini boshqarish",
         "chartsAnalytics": "Grafiklar va tahlil",
         "subscriptionManagement": "Obuna boshqaruvi",
         "prioritySupport": "Ustuvor qo'llab-quvvatlash"
-      },
-      "enterprise": {
-        "everythingInPro": "Professional rejadagi hamma narsa",
-        "unlimitedAccess": "Cheksiz kirish",
-        "customIntegrations": "Maxsus integratsiyalar",
-        "dedicatedSupport": "Maxsus qo'llab-quvvatlash",
-        "advancedAnalytics": "Ilg'or tahlil",
-        "customBranding": "Maxsus brending",
-        "apiAccess": "API kirishi",
-        "support247": "24/7 qo'llab-quvvatlash"
       }
     }
   },
   "sidebar": {
     "dashboard": "Boshqaruv paneli",
     "ecommerce": "Elektron tijorat",
-    "ecommerceV2": "Elektron tijorat",
     "ecommerceMenu": "Elektron tijorat",
     "products": "Mahsulotlar",
-    "productsV2": "Mahsulotlar",
+    "productsList": "Mahsulotlar ro'yxati",
     "addProduct": "Mahsulot qo'shish",
-    "addProductV2": "Mahsulot qo'shish",
     "calendar": "Taqvim",
     "userProfile": "Foydalanuvchi profili",
     "userDebt": "Foydalanuvchi qarzi",

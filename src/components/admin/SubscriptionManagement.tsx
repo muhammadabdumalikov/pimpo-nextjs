@@ -10,11 +10,8 @@ import Badge from "../ui/badge/Badge";
 // Menu structure matching AppSidebar
 const menuStructure = [
   { id: 'dashboard.ecommerce', label: 'Dashboard > Ecommerce', category: 'Dashboard' },
-  { id: 'dashboard.ecommerceV2', label: 'Dashboard > Ecommerce V2', category: 'Dashboard' },
   { id: 'ecommerce.products', label: 'E-commerce > Products', category: 'E-commerce' },
-  { id: 'ecommerce.productsV2', label: 'E-commerce > Products V2', category: 'E-commerce' },
   { id: 'ecommerce.addProduct', label: 'E-commerce > Add Product', category: 'E-commerce' },
-  { id: 'ecommerce.addProductV2', label: 'E-commerce > Add Product V2', category: 'E-commerce' },
   { id: 'userDebt', label: 'User Debt', category: 'Main' },
   { id: 'calendar', label: 'Calendar', category: 'Main' },
   { id: 'userProfile', label: 'User Profile', category: 'Main' },
@@ -35,7 +32,7 @@ const menuStructure = [
   { id: 'authentication.signUp', label: 'Authentication > Sign Up', category: 'Authentication' },
 ];
 
-const subscriptionTiers: SubscriptionTier[] = ['free', 'basic', 'pro', 'enterprise'];
+const subscriptionTiers: SubscriptionTier[] = ['free', 'basic', 'pro'];
 
 export default function SubscriptionManagement() {
   const { t } = useTranslations();

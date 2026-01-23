@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function AddProduct() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="Add Products" />
+      <PageBreadcrumb pageTitle="Add Product" />
       <div className="space-y-6">
         <AddProductForm />
       </div>

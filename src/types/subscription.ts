@@ -1,4 +1,4 @@
-export type SubscriptionTier = 'free' | 'basic' | 'pro' | 'enterprise';
+export type SubscriptionTier = 'free' | 'basic' | 'pro' | ;
 
 export interface MenuPermission {
   menuItem: string; // Menu item identifier (e.g., "dashboard", "products", "userDebt")

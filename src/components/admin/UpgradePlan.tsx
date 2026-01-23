@@ -1,12 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { SubscriptionTier } from "@/types/subscription";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useTranslations } from "@/hooks/useTranslations";
+import { useToast } from "@/context/ToastContext";
 import { CheckLineIcon } from "@/icons/index";
 import Button from "../ui/button/Button";
-import Badge from "../ui/badge/Badge";
+import { getSubscriptionPlans, type SubscriptionPlan } from "@/lib/api";
 
 interface PlanData {
   tier: SubscriptionTier;
@@ -20,21 +21,99 @@ interface PlanData {
 
 export default function UpgradePlan() {
   const { t } = useTranslations();
-  const { currentTier, setCurrentTier } = useSubscription();
+  const { currentTier, setCurrentTier, isLoading: subscriptionLoading } = useSubscription();
+  const { showToast } = useToast();
+  const [plans, setPlans] = useState<PlanData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [updatingTier, setUpdatingTier] = useState<SubscriptionTier | null>(null);
 
-  const subscriptionPlans: PlanData[] = [
+  useEffect(() => {
+    loadPlans();
+  }, []);
+
+  const loadPlans = async () => {
+    try {
+      setIsLoading(true);
+      const backendPlans = await getSubscriptionPlans();
+      
+      // Sort plans by tier order for consistent display
+      const tierOrder = ['free', 'basic', 'pro'];
+      const sortedPlans = [...backendPlans].sort((a, b) => {
+        const aIndex = tierOrder.indexOf(a.tier);
+        const bIndex = tierOrder.indexOf(b.tier);
+        return aIndex - bIndex;
+      });
+      
+      // Map backend plans to frontend format
+      const mappedPlans: PlanData[] = sortedPlans.map((plan: SubscriptionPlan) => {
+        const tier = plan.tier as SubscriptionTier;
+        const price = parseFloat(plan.price || '0');
+        
+        // Get features based on tier
+        const features = getFeaturesForTier(tier, t);
+        
+        return {
+          tier,
+          name: plan.name,
+          price,
+          description: plan.description || '',
+          features,
+          popular: tier === 'basic',
+          soon: tier === 'pro',
+        };
+      });
+      
+      setPlans(mappedPlans);
+    } catch (error) {
+      console.error('Failed to load plans:', error);
+      // Fallback to default plans if API fails
+      setPlans(getDefaultPlans(t));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getFeaturesForTier = (tier: SubscriptionTier, t: any): string[] => {
+    switch (tier) {
+      case 'free':
+        return [
+          t('upgradePlan.features.free.userDebtList'),
+          t('upgradePlan.features.free.ecommerceDashboard'),
+          t('upgradePlan.features.free.productsList'),
+          t('upgradePlan.features.free.debtsLimit'),
+          t('upgradePlan.features.free.productsLimit'),
+        ];
+      case 'basic':
+        return [
+          t('upgradePlan.features.basic.everythingInFree'),
+          t('upgradePlan.features.basic.addProducts'),
+          t('upgradePlan.features.basic.formElements'),
+          t('upgradePlan.features.basic.imagesVideos'),
+          t('upgradePlan.features.basic.emailSupport'),
+        ];
+      case 'pro':
+        return [
+          t('upgradePlan.features.pro.everythingInBasic'),
+          t('upgradePlan.features.pro.ecommerceDashboard'),
+          t('upgradePlan.features.pro.productsList'),
+          t('upgradePlan.features.pro.addProduct'),
+          t('upgradePlan.features.pro.userDebtManagement'),
+          t('upgradePlan.features.pro.chartsAnalytics'),
+          t('upgradePlan.features.pro.subscriptionManagement'),
+          t('upgradePlan.features.pro.prioritySupport'),
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const getDefaultPlans = (t: any): PlanData[] => [
     {
       tier: 'free' as SubscriptionTier,
       name: t('upgradePlan.free'),
       price: 0,
       description: t('upgradePlan.freeDescription'),
-      features: [
-        t('upgradePlan.features.free.userDebtList'),
-        t('upgradePlan.features.free.ecommerceV2'),
-        t('upgradePlan.features.free.productsListV2'),
-        t('upgradePlan.features.free.debtsLimit'),
-        t('upgradePlan.features.free.productsLimit'),
-      ],
+      features: getFeaturesForTier('free', t),
       popular: false,
     },
     {
@@ -42,13 +121,7 @@ export default function UpgradePlan() {
       name: t('upgradePlan.basic'),
       price: 29,
       description: t('upgradePlan.basicDescription'),
-      features: [
-        t('upgradePlan.features.basic.everythingInFree'),
-        t('upgradePlan.features.basic.addProducts'),
-        t('upgradePlan.features.basic.formElements'),
-        t('upgradePlan.features.basic.imagesVideos'),
-        t('upgradePlan.features.basic.emailSupport'),
-      ],
+      features: getFeaturesForTier('basic', t),
       popular: true,
     },
     {
@@ -56,32 +129,38 @@ export default function UpgradePlan() {
       name: t('upgradePlan.pro'),
       price: 99,
       description: t('upgradePlan.proDescription'),
-      features: [
-        t('upgradePlan.features.pro.everythingInBasic'),
-        t('upgradePlan.features.pro.ecommerceV2Dashboard'),
-        t('upgradePlan.features.pro.productsV2'),
-        t('upgradePlan.features.pro.addProductV2'),
-        t('upgradePlan.features.pro.userDebtManagement'),
-        t('upgradePlan.features.pro.chartsAnalytics'),
-        t('upgradePlan.features.pro.subscriptionManagement'),
-        t('upgradePlan.features.pro.prioritySupport'),
-      ],
+      features: getFeaturesForTier('pro', t),
       popular: false,
       soon: true,
     },
   ];
 
-  const handleUpgrade = (tier: SubscriptionTier) => {
-    // In production, this would integrate with payment gateway
-    setCurrentTier(tier);
-    alert(`Upgraded to ${tier} plan!`);
+  const handleUpgrade = async (tier: SubscriptionTier) => {
+    try {
+      setUpdatingTier(tier);
+      await setCurrentTier(tier);
+      showToast('success', `Successfully ${tier === currentTier ? 'updated' : tierOrder.indexOf(tier) > tierOrder.indexOf(currentTier) ? 'upgraded to' : 'downgraded to'} ${tier} plan!`, 'Subscription Updated');
+    } catch (error: any) {
+      console.error('Failed to update subscription:', error);
+      showToast('error', error.message || 'Failed to update subscription', 'Error');
+    } finally {
+      setUpdatingTier(null);
+    }
   };
 
+  const tierOrder = ['free', 'basic', 'pro'];
   const isCurrentPlan = (tier: SubscriptionTier) => currentTier === tier;
   const isUpgrade = (tier: SubscriptionTier) => {
-    const tierOrder = ['free', 'basic', 'pro', 'enterprise'];
     return tierOrder.indexOf(tier) > tierOrder.indexOf(currentTier);
   };
+
+  if (isLoading || subscriptionLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-gray-500 dark:text-gray-400">Loading plans...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -99,11 +178,12 @@ export default function UpgradePlan() {
 
       {/* Plans Grid */}
       <div className="flex flex-wrap justify-center gap-6">
-        {subscriptionPlans.map((plan) => {
+        {plans.map((plan) => {
           const current = isCurrentPlan(plan.tier);
           const upgrade = isUpgrade(plan.tier);
           const isSoon = plan.soon || false;
           const isEnabled = plan.tier === 'free' || plan.tier === 'basic';
+          const isUpdating = updatingTier === plan.tier;
           
           return (
             <div
@@ -160,9 +240,22 @@ export default function UpgradePlan() {
                 size="md"
                 className="w-full mt-auto"
                 onClick={() => handleUpgrade(plan.tier)}
-                disabled={current || !isEnabled}
+                disabled={current || !isEnabled || isUpdating}
               >
-                {current ? t('upgradePlan.currentPlan') : !isEnabled ? t('upgradePlan.comingSoon') : upgrade ? t('upgradePlan.upgrade') : t('upgradePlan.downgrade')}
+                {isUpdating ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                    <span>{t('upgradePlan.updating')}</span>
+                  </div>
+                ) : current ? (
+                  t('upgradePlan.currentPlan')
+                ) : !isEnabled ? (
+                  t('upgradePlan.comingSoon')
+                ) : upgrade ? (
+                  t('upgradePlan.upgrade')
+                ) : (
+                  t('upgradePlan.downgrade')
+                )}
               </Button>
             </div>
           );

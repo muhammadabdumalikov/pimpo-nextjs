@@ -5,6 +5,8 @@ import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { LocaleProvider } from '@/context/LocaleContext';
 import { SubscriptionProvider } from '@/context/SubscriptionContext';
+import { AuthProvider } from '@/context/AuthContext';
+import { ToastProvider } from '@/context/ToastContext';
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -18,13 +20,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.className} dark:bg-gray-900`} suppressHydrationWarning>
-        <LocaleProvider>
-          <SubscriptionProvider>
-            <ThemeProvider>
-              <SidebarProvider>{children}</SidebarProvider>
-            </ThemeProvider>
-          </SubscriptionProvider>
-        </LocaleProvider>
+        <AuthProvider>
+          <LocaleProvider>
+            <SubscriptionProvider>
+              <ThemeProvider>
+                <SidebarProvider>
+                  <ToastProvider>
+                    {children}
+                  </ToastProvider>
+                </SidebarProvider>
+              </ThemeProvider>
+            </SubscriptionProvider>
+          </LocaleProvider>
+        </AuthProvider>
       </body>
     </html>
   );

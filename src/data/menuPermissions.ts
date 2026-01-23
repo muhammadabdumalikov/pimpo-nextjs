@@ -3,56 +3,53 @@ import { MenuPermission, SubscriptionTier } from '@/types/subscription';
 // Default menu permissions - can be managed from admin page
 export const defaultMenuPermissions: MenuPermission[] = [
   // Dashboard menus
-  { menuItem: 'dashboard.ecommerce', allowedTiers: ['basic', 'pro', 'enterprise'] },
-  { menuItem: 'dashboard.ecommerceV2', allowedTiers: ['free', 'pro', 'enterprise'] },
+  { menuItem: 'dashboard.ecommerce', allowedTiers: ['free', 'basic', 'pro', ] },
   
   // E-commerce menus
-  { menuItem: 'ecommerce.products', allowedTiers: ['basic', 'pro', 'enterprise'] },
-  { menuItem: 'ecommerce.productsV2', allowedTiers: ['free', 'pro', 'enterprise'] },
-  { menuItem: 'ecommerce.addProduct', allowedTiers: ['basic', 'pro', 'enterprise'] },
-  { menuItem: 'ecommerce.addProductV2', allowedTiers: ['pro', 'enterprise'] },
+  { menuItem: 'ecommerce.products', allowedTiers: ['free', 'basic', 'pro', ] },
+  { menuItem: 'ecommerce.addProduct', allowedTiers: ['pro', ] },
   
   // User Debt
-  { menuItem: 'userDebt', allowedTiers: ['free', 'pro', 'enterprise'] },
+  { menuItem: 'userDebt', allowedTiers: ['free', 'pro', ] },
   
   // Calendar
-  { menuItem: 'calendar', allowedTiers: ['basic', 'pro', 'enterprise'] },
+  { menuItem: 'calendar', allowedTiers: ['basic', 'pro', ] },
   
   // User Profile
-  { menuItem: 'userProfile', allowedTiers: ['basic', 'pro', 'enterprise'] },
+  { menuItem: 'userProfile', allowedTiers: ['basic', 'pro', ] },
   
   // Forms
-  { menuItem: 'forms.formElements', allowedTiers: ['basic', 'pro', 'enterprise'] },
+  { menuItem: 'forms.formElements', allowedTiers: ['basic', 'pro', ] },
   
   // Tables
-  { menuItem: 'tables.basicTables', allowedTiers: ['basic', 'pro', 'enterprise'] },
+  { menuItem: 'tables.basicTables', allowedTiers: ['basic', 'pro', ] },
   
   // Pages
-  { menuItem: 'pages.blankPage', allowedTiers: ['basic', 'pro', 'enterprise'] },
-  { menuItem: 'pages.error404', allowedTiers: ['basic', 'pro', 'enterprise'] },
+  { menuItem: 'pages.blankPage', allowedTiers: ['basic', 'pro'] },
+  { menuItem: 'pages.error404', allowedTiers: ['basic', 'pro', ] },
   
   // Charts
-  { menuItem: 'charts.lineChart', allowedTiers: ['pro', 'enterprise'] },
-  { menuItem: 'charts.barChart', allowedTiers: ['pro', 'enterprise'] },
+  { menuItem: 'charts.lineChart', allowedTiers: ['pro', ] },
+  { menuItem: 'charts.barChart', allowedTiers: ['pro', ] },
   
   // UI Elements
-  { menuItem: 'uiElements.alerts', allowedTiers: ['basic', 'pro', 'enterprise'] },
-  { menuItem: 'uiElements.avatar', allowedTiers: ['basic', 'pro', 'enterprise'] },
-  { menuItem: 'uiElements.badge', allowedTiers: ['basic', 'pro', 'enterprise'] },
-  { menuItem: 'uiElements.buttons', allowedTiers: ['basic', 'pro', 'enterprise'] },
-  { menuItem: 'uiElements.images', allowedTiers: ['basic', 'pro', 'enterprise'] },
-  { menuItem: 'uiElements.videos', allowedTiers: ['basic', 'pro', 'enterprise'] },
+  { menuItem: 'uiElements.alerts', allowedTiers: ['basic', 'pro', ] },
+  { menuItem: 'uiElements.avatar', allowedTiers: ['basic', 'pro', ] },
+  { menuItem: 'uiElements.badge', allowedTiers: ['basic', 'pro', ] },
+  { menuItem: 'uiElements.buttons', allowedTiers: ['basic', 'pro', ] },
+  { menuItem: 'uiElements.images', allowedTiers: ['basic', 'pro', ] },
+  { menuItem: 'uiElements.videos', allowedTiers: ['basic', 'pro', ] },
   
   // Authentication
-  { menuItem: 'authentication.signIn', allowedTiers: ['free', 'basic', 'pro', 'enterprise'] },
-  { menuItem: 'authentication.signUp', allowedTiers: ['free', 'basic', 'pro', 'enterprise'] },
+  { menuItem: 'authentication.signIn', allowedTiers: ['free', 'basic', 'pro', ] },
+  { menuItem: 'authentication.signUp', allowedTiers: ['free', 'basic', 'pro', ] },
   
   // Subscription Management (typically admin only, but configurable)
   // Made accessible to all tiers for easier management
-  { menuItem: 'subscriptionManagement', allowedTiers: ['free', 'basic', 'pro', 'enterprise'] },
+  { menuItem: 'subscriptionManagement', allowedTiers: ['free', 'basic', 'pro', ] },
   
   // Upgrade Plan (accessible to all tiers)
-  { menuItem: 'upgradePlan', allowedTiers: ['free', 'basic', 'pro', 'enterprise'] },
+  { menuItem: 'upgradePlan', allowedTiers: ['free', 'basic', 'pro', ] },
 ];
 
 // Helper function to get menu permissions

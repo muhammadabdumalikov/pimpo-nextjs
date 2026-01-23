@@ -4,7 +4,7 @@ import Badge from "../ui/badge/Badge";
 import { ArrowUpIcon, BoxIconLine, DollarLineIcon } from "@/icons";
 import { useTranslations } from "@/hooks/useTranslations";
 
-export const ProductV2Metrics = () => {
+export const ProductMetrics = () => {
   const { t } = useTranslations();
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-6">
@@ -16,7 +16,7 @@ export const ProductV2Metrics = () => {
         <div className="flex items-end justify-between mt-5">
           <div>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {t('dashboardV2.totalProducts')}
+              {t('dashboardtotalProducts')}
             </span>
             <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
               1,245
@@ -37,7 +37,7 @@ export const ProductV2Metrics = () => {
         <div className="flex items-end justify-between mt-5">
           <div>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {t('dashboardV2.totalQuantity')}
+              {t('dashboardtotalQuantity')}
             </span>
             <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
               8,542
@@ -58,7 +58,7 @@ export const ProductV2Metrics = () => {
         <div className="flex items-end justify-between mt-5">
           <div>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {t('dashboardV2.totalProfit')}
+              {t('dashboardtotalProfit')}
             </span>
             <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
               $125,430

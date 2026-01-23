@@ -8,254 +8,77 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import Badge from "../ui/badge/Badge";
 import Image from "next/image";
-import { PlusIcon, DownloadIcon } from "@/icons/index";
-import Pagination from "../tables/Pagination";
+import { PlusIcon, DownloadIcon, ChevronLeftIcon, PencilIcon, TrashBinIcon } from "@/icons/index";
+import { useTranslations } from "@/hooks/useTranslations";
+import { useSubscription } from "@/context/SubscriptionContext";
+import { getProducts, getProductCount, deleteProduct, type Product } from "@/lib/api";
+import { useToast } from "@/context/ToastContext";
+import { useRouter } from "next/navigation";
 
-// Define the TypeScript interface for the product
-interface Product {
-  id: number;
-  name: string;
-  category: string;
-  brand: string;
-  price: string;
-  stock: "In Stock" | "Out of Stock";
-  createdAt: string;
-  image: string;
-}
-
-// Define the table data using the interface
-const tableData: Product[] = [
-  {
-    id: 1,
-    name: "ASUS ROG Gaming Laptop",
-    category: "Laptop",
-    brand: "ASUS",
-    price: "$2,199",
-    stock: "Out of Stock",
-    createdAt: "01 Dec, 2027",
-    image: "/images/product/product-01.jpg",
-  },
-  {
-    id: 2,
-    name: "Airpods Pro 2nd Gen",
-    category: "Accessories",
-    brand: "Apple",
-    price: "$839",
-    stock: "In Stock",
-    createdAt: "29 Jun, 2027",
-    image: "/images/product/product-02.jpg",
-  },
-  {
-    id: 3,
-    name: "Apple Watch Ultra",
-    category: "Watch",
-    brand: "Apple",
-    price: "$1,579",
-    stock: "Out of Stock",
-    createdAt: "13 Mar, 2027",
-    image: "/images/product/product-03.jpg",
-  },
-  {
-    id: 4,
-    name: "Bose QuietComfort Earbuds",
-    category: "Audio",
-    brand: "Bose",
-    price: "$279",
-    stock: "In Stock",
-    createdAt: "18 Nov, 2027",
-    image: "/images/product/product-04.jpg",
-  },
-  {
-    id: 5,
-    name: "Canon EOS R5 Camera",
-    category: "Camera",
-    brand: "Canon",
-    price: "$3,899",
-    stock: "In Stock",
-    createdAt: "28 Sep, 2027",
-    image: "/images/product/product-05.jpg",
-  },
-  {
-    id: 6,
-    name: "Dell XPS 13 Laptop",
-    category: "Laptop",
-    brand: "Dell",
-    price: "$1,299",
-    stock: "In Stock",
-    createdAt: "18 Aug, 2027",
-    image: "/images/product/product-01.jpg",
-  },
-  {
-    id: 7,
-    name: "Google Pixel 8 Pro",
-    category: "Phone",
-    brand: "Google",
-    price: "$899",
-    stock: "Out of Stock",
-    createdAt: "02 Sep, 2027",
-    image: "/images/product/product-02.jpg",
-  },
-  {
-    id: 8,
-    name: "Sony WH-1000XM5 Headphones",
-    category: "Audio",
-    brand: "Sony",
-    price: "$399",
-    stock: "In Stock",
-    createdAt: "15 Oct, 2027",
-    image: "/images/product/product-03.jpg",
-  },
-  {
-    id: 9,
-    name: "Samsung Galaxy S24 Ultra",
-    category: "Phone",
-    brand: "Samsung",
-    price: "$1,199",
-    stock: "In Stock",
-    createdAt: "22 Jul, 2027",
-    image: "/images/product/product-04.jpg",
-  },
-  {
-    id: 10,
-    name: "MacBook Air M3",
-    category: "Laptop",
-    brand: "Apple",
-    price: "$1,299",
-    stock: "In Stock",
-    createdAt: "05 Nov, 2027",
-    image: "/images/product/product-05.jpg",
-  },
-  {
-    id: 11,
-    name: "Nikon Z9 Camera",
-    category: "Camera",
-    brand: "Nikon",
-    price: "$5,499",
-    stock: "Out of Stock",
-    createdAt: "10 Jan, 2027",
-    image: "/images/product/product-01.jpg",
-  },
-  {
-    id: 12,
-    name: "Microsoft Surface Pro 9",
-    category: "Laptop",
-    brand: "Microsoft",
-    price: "$1,499",
-    stock: "In Stock",
-    createdAt: "08 Feb, 2027",
-    image: "/images/product/product-02.jpg",
-  },
-  {
-    id: 13,
-    name: "OnePlus 12 Pro",
-    category: "Phone",
-    brand: "OnePlus",
-    price: "$799",
-    stock: "In Stock",
-    createdAt: "14 Mar, 2027",
-    image: "/images/product/product-03.jpg",
-  },
-  {
-    id: 14,
-    name: "JBL Flip 6 Speaker",
-    category: "Audio",
-    brand: "JBL",
-    price: "$129",
-    stock: "In Stock",
-    createdAt: "20 Apr, 2027",
-    image: "/images/product/product-04.jpg",
-  },
-  {
-    id: 15,
-    name: "HP Spectre x360",
-    category: "Laptop",
-    brand: "HP",
-    price: "$1,599",
-    stock: "In Stock",
-    createdAt: "25 May, 2027",
-    image: "/images/product/product-05.jpg",
-  },
-  {
-    id: 16,
-    name: "Fujifilm X-T5 Camera",
-    category: "Camera",
-    brand: "Fujifilm",
-    price: "$1,699",
-    stock: "In Stock",
-    createdAt: "30 Jun, 2027",
-    image: "/images/product/product-01.jpg",
-  },
-  {
-    id: 17,
-    name: "Xiaomi 14 Ultra",
-    category: "Phone",
-    brand: "Xiaomi",
-    price: "$999",
-    stock: "Out of Stock",
-    createdAt: "12 Aug, 2027",
-    image: "/images/product/product-02.jpg",
-  },
-  {
-    id: 18,
-    name: "Sennheiser Momentum 4",
-    category: "Audio",
-    brand: "Sennheiser",
-    price: "$349",
-    stock: "In Stock",
-    createdAt: "07 Sep, 2027",
-    image: "/images/product/product-03.jpg",
-  },
-  {
-    id: 19,
-    name: "Lenovo ThinkPad X1 Carbon",
-    category: "Laptop",
-    brand: "Lenovo",
-    price: "$1,799",
-    stock: "In Stock",
-    createdAt: "19 Oct, 2027",
-    image: "/images/product/product-04.jpg",
-  },
-  {
-    id: 20,
-    name: "Panasonic Lumix S5II",
-    category: "Camera",
-    brand: "Panasonic",
-    price: "$1,999",
-    stock: "In Stock",
-    createdAt: "03 Nov, 2027",
-    image: "/images/product/product-05.jpg",
-  },
-];
+// Helper function to format price
+const formatPrice = (price: string): string => {
+  const numPrice = parseFloat(price);
+  return `$${numPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+};
 
 export default function ProductsList() {
+  const { t } = useTranslations();
+  const { getLimit, isLimitReached } = useSubscription();
+  const { showToast } = useToast();
+  const router = useRouter();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const itemsPerPage = 7;
 
-  // Filter products based on search query
-  const filteredProducts = tableData.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.brand.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Check product limit
+  const productLimit = getLimit('products');
+  const productLimitReached = productLimit !== null && isLimitReached('products', totalProducts);
+
+  const loadProducts = async () => {
+    try {
+      setIsLoading(true);
+      const response = await getProducts(currentPage, itemsPerPage, searchQuery || undefined);
+      setProducts(response.products);
+      setTotalProducts(response.total);
+    } catch (error: any) {
+      console.error('Failed to load products:', error);
+      showToast('error', error.message || 'Failed to load products', 'Error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch products from API when page changes
+  useEffect(() => {
+    loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  // Debounce search and reset to page 1
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentPage === 1) {
+        loadProducts();
+      } else {
+        setCurrentPage(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(totalProducts / itemsPerPage);
 
   // Check if all current page products are selected
-  const allSelected = paginatedProducts.length > 0 && paginatedProducts.every(product => selectedProducts.includes(product.id));
-
-  // Reset to page 1 when search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
+  const allSelected = products.length > 0 && products.every(product => selectedProducts.includes(product.id));
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -263,19 +86,42 @@ export default function ProductsList() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const pageIds = paginatedProducts.map(p => p.id);
+      const pageIds = products.map((p: Product) => p.id);
       setSelectedProducts([...new Set([...selectedProducts, ...pageIds])]);
     } else {
-      const pageIds = paginatedProducts.map(p => p.id);
+      const pageIds = products.map((p: Product) => p.id);
       setSelectedProducts(selectedProducts.filter(id => !pageIds.includes(id)));
     }
   };
 
-  const handleSelectProduct = (productId: number, checked: boolean) => {
+  const handleSelectProduct = (productId: string, checked: boolean) => {
     if (checked) {
       setSelectedProducts([...selectedProducts, productId]);
     } else {
       setSelectedProducts(selectedProducts.filter(id => id !== productId));
+    }
+  };
+
+  const handleEdit = (productId: string) => {
+    router.push(`/edit-product?id=${productId}`);
+  };
+
+  const handleDelete = async (productId: string) => {
+    if (!confirm(t('products.confirmDelete') || 'Are you sure you want to delete this product?')) {
+      return;
+    }
+
+    try {
+      setDeletingProductId(productId);
+      await deleteProduct(productId);
+      showToast('success', t('products.deleteSuccess') || 'Product deleted successfully', 'Success');
+      // Reload products
+      await loadProducts();
+    } catch (error: any) {
+      console.error('Failed to delete product:', error);
+      showToast('error', error.message || t('products.deleteError') || 'Failed to delete product', 'Error');
+    } finally {
+      setDeletingProductId(null);
     }
   };
 
@@ -285,25 +131,36 @@ export default function ProductsList() {
       <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-2">
-            Products List
+            {t('products.title')}
           </h3>
           <p className="text-gray-500 text-theme-sm dark:text-gray-400">
-            Track your store's progress to boost your sales.
+            {t('products.description')}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-            <DownloadIcon/>
-            Export
+            <DownloadIcon />
+            {t('products.export')}
           </button>
-          <Link
-            href="/add-product"
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 dark:bg-brand-500 dark:hover:bg-brand-600"
-          >
-            <PlusIcon />
-            Add Product
-          </Link>
+          {productLimitReached ? (
+            <div className="flex items-center gap-2 text-sm text-warning-600 dark:text-warning-500">
+              <span>{t('products.limitReached').replace('{limit}', String(productLimit))}</span>
+            </div>
+          ) : (
+            <Link
+              href="/add-product"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 dark:bg-brand-500 dark:hover:bg-brand-600"
+            >
+              <PlusIcon />
+              {t('products.addProduct')}
+            </Link>
+          )}
+          {productLimit !== null && !productLimitReached && (
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {t('products.limitInfo').replace('{current}', String(totalProducts)).replace('{limit}', String(productLimit))}
+            </span>
+          )}
         </div>
       </div>
 
@@ -329,7 +186,7 @@ export default function ProductsList() {
           </span>
           <input
             type="text"
-            placeholder="Search..."
+            placeholder={t('products.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-12 pr-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
@@ -372,170 +229,194 @@ export default function ProductsList() {
               strokeWidth="1.5"
             />
           </svg>
-          Filter
+          {t('products.filter')}
         </button>
       </div>
 
       {/* Products Table */}
-        <div className="w-full overflow-x-auto -mx-4 sm:-mx-6" style={{ scrollbarGutter: 'stable' }}>
-          <Table className="w-full [table-layout:fixed]">
-            {/* Table Header */}
-            <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
-              <TableRow>
-                <TableCell
-                  isHeader
-                  className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-12"
-                >
-                  <label className="cursor-pointer text-sm font-medium text-gray-700 select-none dark:text-gray-400">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="sr-only"
+      <div className="w-full overflow-x-auto -mx-4 sm:-mx-6" style={{ scrollbarGutter: 'stable' }}>
+        <Table className="w-full [table-layout:fixed]">
+          {/* Table Header */}
+          <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
+            <TableRow>
+              <TableCell
+                isHeader
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-12"
+              >
+                <label className="cursor-pointer text-sm font-medium text-gray-700 select-none dark:text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span className={`flex h-4 w-4 items-center justify-center rounded-sm border-[1.25px] ${allSelected ? 'border-brand-500 bg-brand-500' : 'border-gray-300 dark:border-gray-700'}`}>
+                    {allSelected && (
+                      <span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="1.6666" strokeLinecap="round" strokeLinejoin="round"></path>
+                        </svg>
+                      </span>
+                    )}
+                  </span>
+                </label>
+              </TableCell>
+              <TableCell
+                isHeader
+                className="py-3 pr-4 sm:pl-2 sm:pr-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[30%]"
+              >
+                <div className="flex items-center gap-2">
+                  {t('products.products')}
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
                     />
-                    <span className={`flex h-4 w-4 items-center justify-center rounded-sm border-[1.25px] ${allSelected ? 'border-brand-500 bg-brand-500' : 'border-gray-300 dark:border-gray-700'}`}>
-                      {allSelected && (
-                        <span>
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="1.6666" strokeLinecap="round" strokeLinejoin="round"></path>
-                          </svg>
-                        </span>
-                      )}
+                  </svg>
+                </div>
+              </TableCell>
+              <TableCell
+                isHeader
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
+              >
+                <div className="flex items-center gap-2">
+                  {t('products.priceIn')}
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                    />
+                  </svg>
+                </div>
+              </TableCell>
+              <TableCell
+                isHeader
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
+              >
+                <div className="flex items-center gap-2">
+                  {t('products.priceOut')}
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                    />
+                  </svg>
+                </div>
+              </TableCell>
+              <TableCell
+                isHeader
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
+              >
+                <div className="flex items-center gap-2">
+                  {t('products.code')}
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                    />
+                  </svg>
+                </div>
+              </TableCell>
+              <TableCell
+                isHeader
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
+              >
+                <div className="flex items-center gap-2">
+                  {t('products.barcode')}
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                    />
+                  </svg>
+                </div>
+              </TableCell>
+              <TableCell
+                isHeader
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
+              >
+                <div className="flex items-center gap-2">
+                  {t('products.quantity')}
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                    />
+                  </svg>
+                </div>
+              </TableCell>
+              <TableCell
+                isHeader
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[10%]"
+              >
+                {t('products.actions') || 'Actions'}
+              </TableCell>
+            </TableRow>
+          </TableHeader>
+
+          {/* Table Body */}
+          <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="py-12 text-center">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-3 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400"></div>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('products.loading') || 'Loading products...'}
                     </span>
-                  </label>
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="py-3 pr-4 sm:pl-2 sm:pr-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[25%]"
-                >
-                  <div className="flex items-center gap-2">
-                    Products
-                    <svg
-                      className="w-4 h-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                  </div>
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
-                >
-                  <div className="flex items-center gap-2">
-                    Category
-                    <svg
-                      className="w-4 h-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                  </div>
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[12%]"
-                >
-                  <div className="flex items-center gap-2">
-                    Brand
-                    <svg
-                      className="w-4 h-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                  </div>
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[12%]"
-                >
-                  <div className="flex items-center gap-2">
-                    Price
-                    <svg
-                      className="w-4 h-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                  </div>
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[12%]"
-                >
-                  <div className="flex items-center gap-2">
-                    Stock
-                    <svg
-                      className="w-4 h-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                  </div>
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[12%]"
-                >
-                  <div className="flex items-center gap-2">
-                    Created At
-                    <svg
-                      className="w-4 h-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
                   </div>
                 </TableCell>
               </TableRow>
-            </TableHeader>
-
-            {/* Table Body */}
-            <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {paginatedProducts.map((product) => (
+            ) : products.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                  {t('products.noProducts') || 'No products found'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              products.map((product) => (
                 <TableRow key={product.id} className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02] cursor-pointer">
                   <TableCell className="py-3 px-4 sm:px-6 w-12">
                     <label className="cursor-pointer text-sm font-medium text-gray-700 select-none dark:text-gray-400">
@@ -556,16 +437,33 @@ export default function ProductsList() {
                       </span>
                     </label>
                   </TableCell>
-                  <TableCell className="py-3 pr-4 sm:pl-2 sm:pr-6 w-[25%]">
+                  <TableCell className="py-3 pr-4 sm:pl-2 sm:pr-6 w-[30%]">
                     <div className="flex items-center gap-3">
-                      <div className="h-[50px] w-[50px] overflow-hidden rounded-md">
-                        <Image
-                          width={50}
-                          height={50}
-                          src={product.image}
-                          className="h-[50px] w-[50px] object-cover"
-                          alt={product.name}
-                        />
+                      <div className="h-[50px] w-[50px] overflow-hidden rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                        {product.image ? (
+                          <Image
+                            width={50}
+                            height={50}
+                            src={product.image}
+                            className="h-[50px] w-[50px] object-cover"
+                            alt={product.name}
+                          />
+                        ) : (
+                          <svg
+                            className="h-6 w-6 text-gray-400 dark:text-gray-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                        )}
                       </div>
                       <div>
                         <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
@@ -575,42 +473,129 @@ export default function ProductsList() {
                     </div>
                   </TableCell>
                   <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
-                    {product.category}
+                    {formatPrice(product.priceIn)}
                   </TableCell>
-                  <TableCell className="py-3 px-4 sm:px-6 w-[12%] text-gray-500 text-theme-sm dark:text-gray-400">
-                    {product.brand}
+                  <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
+                    {formatPrice(product.priceOut)}
                   </TableCell>
-                  <TableCell className="py-3 px-4 sm:px-6 w-[12%] text-gray-500 text-theme-sm dark:text-gray-400">
-                    {product.price}
+                  <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
+                    {product.code || '-'}
                   </TableCell>
-                  <TableCell className="py-3 px-4 sm:px-6 w-[12%]">
-                    <Badge
-                      size="sm"
-                      color={product.stock === "In Stock" ? "success" : "error"}
-                    >
-                      {product.stock}
-                    </Badge>
+                  <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
+                    {product.barcode || '-'}
                   </TableCell>
-                  <TableCell className="py-3 px-4 sm:px-6 w-[12%] text-gray-500 text-theme-sm dark:text-gray-400">
-                    {product.createdAt}
+                  <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
+                    {product.quantity}
+                  </TableCell>
+                  <TableCell className="py-3 px-4 sm:px-6 w-[10%]">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(product.id);
+                        }}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs font-medium hover:bg-yellow-50 hover:border-yellow-300 hover:text-yellow-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-yellow-900/20 dark:hover:border-yellow-700 dark:hover:text-yellow-400"
+                        title={t('products.edit') || 'Edit product'}
+                      >
+                        <PencilIcon />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(product.id);
+                        }}
+                        disabled={deletingProductId === product.id}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs font-medium hover:bg-red-50 hover:border-red-300 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:border-red-700 dark:hover:text-red-400"
+                        title={t('products.delete') || 'Delete product'}
+                      >
+                        {deletingProductId === product.id ? (
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                        ) : (
+                          <TrashBinIcon />
+                        )}
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Pagination */}
       <div className="flex flex-col gap-4 pt-4 mt-4 -mx-4 sm:-mx-6 px-4 sm:px-6 border-t border-gray-100 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          Showing {filteredProducts.length > 0 ? startIndex + 1 : 0} to{" "}
-          {Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length}
+          {t('products.showing')} {products.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} {t('products.to')}{" "}
+          {Math.min(currentPage * itemsPerPage, totalProducts)} {t('products.of')} {totalProducts} {t('products.results')}
         </div>
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="flex items-center justify-center h-10 w-10 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+          <div className="flex items-center gap-2">
+            {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+              let page;
+              if (totalPages <= 3) {
+                page = i + 1;
+              } else if (currentPage === 1) {
+                page = i + 1;
+              } else if (currentPage === totalPages) {
+                page = totalPages - 2 + i;
+              } else {
+                page = currentPage - 1 + i;
+              }
+              return (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`flex w-10 h-10 items-center justify-center rounded-lg text-sm font-medium ${
+                    currentPage === page
+                      ? "bg-brand-500 text-white"
+                      : "text-gray-700 hover:bg-blue-500/[0.08] hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-500"
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="flex items-center justify-center h-10 w-10 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -69,7 +69,7 @@ const tableData: ProductV2[] = [
   },
 ];
 
-export default function RecentProductsV2() {
+export default function RecentProducts() {
   const { t } = useTranslations();
   // Sort products by quantity in descending order
   const sortedProducts = [...tableData].sort((a, b) => a.quantity - b.quantity);
@@ -79,10 +79,10 @@ export default function RecentProductsV2() {
       <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            {t('dashboardV2.recentProducts')}
+            {t('dashboard.recentProducts')}
           </h3>
           <p className="mt-1 text-gray-500 text-theme-sm dark:text-gray-400">
-            {t('dashboardV2.recentProductsDescription')}
+            {t('dashboard.recentProductsDescription')}
           </p>
         </div>
       </div>
@@ -95,31 +95,31 @@ export default function RecentProductsV2() {
                 isHeader
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                {t('productsV2.products')}
+                {t('products.products')}
               </TableCell>
               <TableCell
                 isHeader
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                {t('productsV2.priceIn')}
+                {t('products.priceIn')}
               </TableCell>
               <TableCell
                 isHeader
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                {t('productsV2.priceOut')}
+                {t('products.priceOut')}
               </TableCell>
               <TableCell
                 isHeader
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                {t('productsV2.profit')}
+                {t('products.profit')}
               </TableCell>
               <TableCell
                 isHeader
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                {t('productsV2.quantity')}
+                {t('products.quantity')}
               </TableCell>
             </TableRow>
           </TableHeader>

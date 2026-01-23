@@ -1,6 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -11,251 +10,36 @@ import {
 import Badge from "../ui/badge/Badge";
 import { PlusIcon, DownloadIcon, ChevronLeftIcon, PencilIcon, ChevronDownIcon, ChevronUpIcon, TrashBinIcon } from "@/icons/index";
 import DatePicker from "../form/date-picker";
+import Label from "../form/Label";
+import Input from "../form/input/InputField";
+import Select from "../form/Select";
+import { Modal } from "../ui/modal";
+import { useModal } from "@/hooks/useModal";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
+import { getDebts, getDebtsByUser, createDebt, updateDebt, deleteDebt, getDebtCount } from "@/lib/api";
+import { useToast } from "@/context/ToastContext";
 
-// Define the TypeScript interface for the debt
+// Define the TypeScript interface for the debt (matching backend)
 interface UserDebt {
-  id: number;
-  userName: string;
-  phone: string;
+  id: string;
+  businessId: string;
+  userId: string;
   amount: string;
   status: "Paid" | "Pending" | "Overdue";
-  dueDate: string;
-  createdAt: string;
-  description?: string; // Optional description field
+  dueDate: string | Date;
+  createdAt: string | Date;
+  description?: string | null;
+  user?: {
+    name: string;
+    phone: string;
+  };
 }
-
-// Define the table data using the interface
-const tableData: UserDebt[] = [
-  {
-    id: 1,
-    userName: "John Doe",
-    phone: "+1 (555) 123-4567",
-    amount: "$1,250",
-    status: "Pending",
-    dueDate: "15 Jan, 2028",
-    createdAt: "01 Dec, 2027",
-    description: "Monthly subscription payment",
-  },
-  {
-    id: 2,
-    userName: "Jane Smith",
-    phone: "+1 (555) 234-5678",
-    amount: "$850",
-    status: "Paid",
-    dueDate: "10 Dec, 2027",
-    createdAt: "29 Nov, 2027",
-    description: "Service fee for Q4",
-  },
-  {
-    id: 3,
-    userName: "Mike Johnson",
-    phone: "+1 (555) 345-6789",
-    amount: "$2,100",
-    status: "Overdue",
-    dueDate: "05 Dec, 2027",
-    createdAt: "13 Nov, 2027",
-    description: "Outstanding invoice #1234",
-  },
-  {
-    id: 4,
-    userName: "Sarah Williams",
-    phone: "+1 (555) 456-7890",
-    amount: "$650",
-    status: "Paid",
-    dueDate: "20 Jan, 2028",
-    createdAt: "18 Nov, 2027",
-  },
-  {
-    id: 5,
-    userName: "David Brown",
-    phone: "+1 (555) 567-8901",
-    amount: "$1,800",
-    status: "Pending",
-    dueDate: "25 Jan, 2028",
-    createdAt: "28 Oct, 2027",
-  },
-  {
-    id: 6,
-    userName: "Emily Davis",
-    phone: "+1 (555) 678-9012",
-    amount: "$950",
-    status: "Paid",
-    dueDate: "12 Dec, 2027",
-    createdAt: "18 Oct, 2027",
-  },
-  {
-    id: 7,
-    userName: "Robert Wilson",
-    phone: "+1 (555) 789-0123",
-    amount: "$1,450",
-    status: "Overdue",
-    dueDate: "30 Nov, 2027",
-    createdAt: "02 Oct, 2027",
-  },
-  {
-    id: 8,
-    userName: "Lisa Anderson",
-    phone: "+1 (555) 890-1234",
-    amount: "$750",
-    status: "Pending",
-    dueDate: "18 Jan, 2028",
-    createdAt: "15 Sep, 2027",
-  },
-  {
-    id: 9,
-    userName: "James Taylor",
-    phone: "+1 (555) 901-2345",
-    amount: "$1,100",
-    status: "Paid",
-    dueDate: "08 Dec, 2027",
-    createdAt: "10 Sep, 2027",
-  },
-  {
-    id: 10,
-    userName: "Maria Garcia",
-    phone: "+1 (555) 012-3456",
-    amount: "$1,600",
-    status: "Pending",
-    dueDate: "22 Jan, 2028",
-    createdAt: "05 Sep, 2027",
-  },
-  {
-    id: 11,
-    userName: "William Martinez",
-    phone: "+1 (555) 123-7890",
-    amount: "$2,300",
-    status: "Overdue",
-    dueDate: "28 Nov, 2027",
-    createdAt: "01 Sep, 2027",
-  },
-  {
-    id: 12,
-    userName: "Jennifer Lee",
-    phone: "+1 (555) 234-8901",
-    amount: "$880",
-    status: "Paid",
-    dueDate: "14 Dec, 2027",
-    createdAt: "28 Aug, 2027",
-  },
-  {
-    id: 13,
-    userName: "Christopher White",
-    phone: "+1 (555) 345-9012",
-    amount: "$1,350",
-    status: "Pending",
-    dueDate: "20 Jan, 2028",
-    createdAt: "20 Aug, 2027",
-  },
-  {
-    id: 14,
-    userName: "Amanda Harris",
-    phone: "+1 (555) 456-0123",
-    amount: "$1,050",
-    status: "Paid",
-    dueDate: "11 Dec, 2027",
-    createdAt: "15 Aug, 2027",
-  },
-  {
-    id: 15,
-    userName: "Daniel Clark",
-    phone: "+1 (555) 567-1234",
-    amount: "$1,700",
-    status: "Overdue",
-    dueDate: "03 Dec, 2027",
-    createdAt: "10 Aug, 2027",
-  },
-  {
-    id: 16,
-    userName: "Jessica Lewis",
-    phone: "+1 (555) 678-2345",
-    amount: "$920",
-    status: "Pending",
-    dueDate: "16 Jan, 2028",
-    createdAt: "05 Aug, 2027",
-  },
-  {
-    id: 17,
-    userName: "Matthew Walker",
-    phone: "+1 (555) 789-3456",
-    amount: "$1,180",
-    status: "Paid",
-    dueDate: "09 Dec, 2027",
-    createdAt: "01 Aug, 2027",
-  },
-  {
-    id: 18,
-    userName: "Ashley Hall",
-    phone: "+1 (555) 890-4567",
-    amount: "$1,420",
-    status: "Pending",
-    dueDate: "19 Jan, 2028",
-    createdAt: "25 Jul, 2027",
-  },
-  {
-    id: 19,
-    userName: "Andrew Allen",
-    phone: "+1 (555) 901-5678",
-    amount: "$1,650",
-    status: "Overdue",
-    dueDate: "01 Dec, 2027",
-    createdAt: "20 Jul, 2027",
-  },
-  {
-    id: 20,
-    userName: "Michelle Young",
-    phone: "+1 (555) 012-6789",
-    amount: "$1,100",
-    status: "Paid",
-    dueDate: "13 Dec, 2027",
-    createdAt: "15 Jul, 2027",
-  },
-  {
-    id: 21,
-    userName: "John Doe",
-    phone: "+1 (555) 123-4567",
-    amount: "$500",
-    status: "Pending",
-    dueDate: "20 Jan, 2028",
-    createdAt: "05 Dec, 2027",
-    description: "Consulting services fee",
-  },
-  {
-    id: 22,
-    userName: "John Doe",
-    phone: "+1 (555) 123-4567",
-    amount: "$750",
-    status: "Overdue",
-    dueDate: "01 Dec, 2027",
-    createdAt: "10 Nov, 2027",
-    description: "Late payment penalty",
-  },
-  {
-    id: 23,
-    userName: "John Doe",
-    phone: "+1 (555) 123-4567",
-    amount: "$1,000",
-    status: "Paid",
-    dueDate: "05 Dec, 2027",
-    createdAt: "15 Nov, 2027",
-    description: "Equipment rental charge",
-  },
-  {
-    id: 24,
-    userName: "John Doe",
-    phone: "+1 (555) 123-4567",
-    amount: "$300",
-    status: "Pending",
-    dueDate: "25 Jan, 2028",
-    createdAt: "01 Dec, 2027",
-    description: "Maintenance service fee",
-  },
-];
 
 interface UserDebtGroup {
   userName: string;
   phone: string;
+  userId: string;
   totalDebt: number;
   debts: UserDebt[];
 }
@@ -263,19 +47,34 @@ interface UserDebtGroup {
 export default function UserDebtList() {
   const { t } = useTranslations();
   const { getLimit, isLimitReached } = useSubscription();
+  const { showToast } = useToast();
+  const [debts, setDebts] = useState<UserDebt[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedDebts, setSelectedDebts] = useState<number[]>([]);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [totalDebts, setTotalDebts] = useState(0);
+  const [selectedDebts, setSelectedDebts] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<UserDebt>>({});
-  const [debts, setDebts] = useState<UserDebt[]>(tableData);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [loadingUsers, setLoadingUsers] = useState<Set<string>>(new Set());
+  const [userDebtsCache, setUserDebtsCache] = useState<Record<string, UserDebt[]>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const addDebtModal = useModal();
+  const [addFormData, setAddFormData] = useState({
+    userName: "",
+    phone: "",
+    amount: "",
+    status: "Pending" as "Paid" | "Pending" | "Overdue",
+    dueDate: "",
+    description: "",
+  });
   const itemsPerPage = 7;
+  const searchDebounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Check debt limit
   const debtLimit = getLimit('debts');
-  const debtLimitReached = debtLimit !== null && isLimitReached('debts', debts.length);
+  const debtLimitReached = debtLimit !== null && isLimitReached('debts', totalDebts);
 
   // Helper function to parse amount string to number
   const parseAmount = (amount: string): number => {
@@ -283,18 +82,69 @@ export default function UserDebtList() {
   };
 
   // Helper function to format number to currency string
-  const formatAmount = (amount: number): string => {
-    return `$${amount.toLocaleString()}`;
+  const formatAmount = (amount: number | string): string => {
+    const numAmount = typeof amount === 'string' ? parseAmount(amount) : amount;
+    return `$${numAmount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
+
+  // Format date helper
+  const formatDate = (date: string | Date): string => {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  // Load debts from API
+  const loadDebts = async () => {
+    try {
+      setIsLoading(true);
+      const response = await getDebts(currentPage, itemsPerPage, searchQuery || undefined);
+      setDebts(response.debts);
+      setTotalDebts(response.total);
+    } catch (error: any) {
+      console.error('Failed to load debts:', error);
+      showToast('error', error.message || 'Failed to load debts', 'Error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch debts from API when page changes
+  useEffect(() => {
+    loadDebts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  // Debounce search and reset to page 1
+  useEffect(() => {
+    if (searchDebounceTimeout.current) {
+      clearTimeout(searchDebounceTimeout.current);
+    }
+    searchDebounceTimeout.current = setTimeout(() => {
+      setCurrentPage(1); // Reset to page 1 on new search
+      loadDebts();
+    }, 500); // Debounce for 500ms
+
+    return () => {
+      if (searchDebounceTimeout.current) {
+        clearTimeout(searchDebounceTimeout.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   // Group debts by user
   const groupDebtsByUser = (debtsList: UserDebt[]): UserDebtGroup[] => {
     const grouped = debtsList.reduce((acc, debt) => {
-      const key = debt.userName;
+      const userName = debt.user?.name || 'Unknown User';
+      const userPhone = debt.user?.phone || '';
+      const userId = debt.userId;
+      const key = userId;
       if (!acc[key]) {
         acc[key] = {
-          userName: debt.userName,
-          phone: debt.phone,
+          userName,
+          phone: userPhone,
+          userId,
           totalDebt: 0,
           debts: [],
         };
@@ -307,16 +157,8 @@ export default function UserDebtList() {
     return Object.values(grouped);
   };
 
-  // Filter debts based on search query
-  const filteredDebts = debts.filter(
-    (debt) =>
-      debt.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      debt.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      debt.amount.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Group filtered debts
-  const userGroups = groupDebtsByUser(filteredDebts);
+  // Group debts
+  const userGroups = groupDebtsByUser(debts);
 
   // Calculate pagination for user groups
   const totalPages = Math.ceil(userGroups.length / itemsPerPage);
@@ -324,8 +166,8 @@ export default function UserDebtList() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedGroups = userGroups.slice(startIndex, endIndex);
 
-  // Toggle user expansion with loading state
-  const toggleUserExpansion = (userName: string) => {
+  // Toggle user expansion with loading state - fetch user debts from API
+  const toggleUserExpansion = async (userName: string, userId: string) => {
     const isCurrentlyExpanded = expandedUsers.has(userName);
     
     if (isCurrentlyExpanded) {
@@ -350,21 +192,32 @@ export default function UserDebtList() {
         return newSet;
       });
       
-      // Simulate API call delay (1-1.5 seconds)
-      setTimeout(() => {
+      try {
+        // Fetch user debts from API using userId
+        const userDebtsList = await getDebtsByUser(userId);
+        // Cache the user debts
+        setUserDebtsCache(prev => ({
+          ...prev,
+          [userName]: userDebtsList,
+        }));
+      } catch (error: any) {
+        console.error('Failed to load user debts:', error);
+        showToast('error', error.message || 'Failed to load user debts', 'Error');
+        // Collapse on error
+        setExpandedUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userName);
+          return newSet;
+        });
+      } finally {
         setLoadingUsers(prev => {
           const newSet = new Set(prev);
           newSet.delete(userName);
           return newSet;
         });
-      }, 1200);
+      }
     }
   };
-
-  // Reset to page 1 when search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -373,24 +226,26 @@ export default function UserDebtList() {
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       // Get all debt IDs from expanded groups on current page
-      const pageIds: number[] = [];
+      const pageIds: string[] = [];
       paginatedGroups.forEach(group => {
-        if (expandedUsers.has(group.userName)) {
-          pageIds.push(...group.debts.map(d => d.id));
+        if (expandedUsers.has(group.userName) && userDebtsCache[group.userName]) {
+          pageIds.push(...userDebtsCache[group.userName].map(d => d.id));
         }
       });
       setSelectedDebts([...new Set([...selectedDebts, ...pageIds])]);
     } else {
       // Remove all debt IDs from current page
-      const pageIds: number[] = [];
+      const pageIds: string[] = [];
       paginatedGroups.forEach(group => {
-        pageIds.push(...group.debts.map(d => d.id));
+        if (expandedUsers.has(group.userName) && userDebtsCache[group.userName]) {
+          pageIds.push(...userDebtsCache[group.userName].map(d => d.id));
+        }
       });
       setSelectedDebts(selectedDebts.filter(id => !pageIds.includes(id)));
     }
   };
 
-  const handleSelectDebt = (debtId: number, checked: boolean) => {
+  const handleSelectDebt = (debtId: string, checked: boolean) => {
     if (checked) {
       setSelectedDebts([...selectedDebts, debtId]);
     } else {
@@ -411,26 +266,107 @@ export default function UserDebtList() {
     }
   };
 
+  const handleAddNew = () => {
+    addDebtModal.openModal();
+    setAddFormData({
+      userName: "",
+      phone: "",
+      amount: "",
+      status: "Pending",
+      dueDate: "",
+      description: "",
+    });
+  };
+
   const handleEdit = (debt: UserDebt) => {
     setEditingId(debt.id);
     setEditFormData({
-      userName: debt.userName,
-      phone: debt.phone,
       amount: debt.amount,
       status: debt.status,
-      dueDate: debt.dueDate,
+      dueDate: typeof debt.dueDate === 'string' ? debt.dueDate : debt.dueDate.toISOString(),
       description: debt.description || "",
     });
   };
 
-  const handleSave = (id: number) => {
-    setDebts(debts.map(debt => 
-      debt.id === id 
-        ? { ...debt, ...editFormData } 
-        : debt
-    ));
-    setEditingId(null);
-    setEditFormData({});
+  const handleSave = async (id: string) => {
+    try {
+      setIsSubmitting(true);
+      await updateDebt(id, {
+        amount: editFormData.amount,
+        status: editFormData.status,
+        dueDate: editFormData.dueDate as string,
+        description: editFormData.description,
+      });
+      showToast('success', t('userDebt.updateSuccess') || 'Debt updated successfully', 'Success');
+      setEditingId(null);
+      setEditFormData({});
+      // Reload debts
+      await loadDebts();
+      // Reload user debts if expanded
+      const debt = debts.find(d => d.id === id);
+      if (debt && debt.userId) {
+        const group = userGroups.find(g => g.userId === debt.userId);
+        if (group && expandedUsers.has(group.userName)) {
+          const userDebtsList = await getDebtsByUser(debt.userId);
+          setUserDebtsCache(prev => ({
+            ...prev,
+            [group.userName]: userDebtsList,
+          }));
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to update debt:', error);
+      showToast('error', error.message || t('userDebt.updateError') || 'Failed to update debt', 'Error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddFormChange = (field: string, value: string) => {
+    setAddFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!addFormData.userName || !addFormData.phone || !addFormData.amount || !addFormData.dueDate) {
+      showToast('error', 'Please fill in all required fields', 'Error');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      // Convert date from "Y-m-d" format to ISO string
+      const dueDateISO = new Date(addFormData.dueDate + 'T00:00:00Z').toISOString();
+      await createDebt({
+        userName: addFormData.userName,
+        phone: addFormData.phone,
+        amount: addFormData.amount,
+        status: addFormData.status,
+        dueDate: dueDateISO,
+        description: addFormData.description || undefined,
+      });
+      showToast('success', t('userDebt.addSuccess') || 'Debt added successfully', 'Success');
+      addDebtModal.closeModal();
+      setAddFormData({
+        userName: "",
+        phone: "",
+        amount: "",
+        status: "Pending",
+        dueDate: "",
+        description: "",
+      });
+      await loadDebts();
+    } catch (error: any) {
+      console.error('Failed to create debt:', error);
+      showToast('error', error.message || t('userDebt.addError') || 'Failed to add debt', 'Error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddFormDateChange = (dates: Date[], dateStr: string) => {
+    handleAddFormChange("dueDate", dateStr);
   };
 
   const handleCancel = () => {
@@ -438,73 +374,48 @@ export default function UserDebtList() {
     setEditFormData({});
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm(t('userDebt.deleteConfirm'))) {
-      setDebts(debts.filter(debt => debt.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(t('userDebt.deleteConfirm') || 'Are you sure you want to delete this debt?')) {
+      return;
+    }
+
+    try {
+      await deleteDebt(id);
+      showToast('success', t('userDebt.deleteSuccess') || 'Debt deleted successfully', 'Success');
       setSelectedDebts(selectedDebts.filter(debtId => debtId !== id));
       // If the deleted debt was being edited, cancel editing
       if (editingId === id) {
         setEditingId(null);
         setEditFormData({});
       }
+      // Reload debts
+      await loadDebts();
+      // Reload user debts if expanded
+      const debt = debts.find(d => d.id === id);
+      if (debt && debt.userId) {
+        const group = userGroups.find(g => g.userId === debt.userId);
+        if (group && expandedUsers.has(group.userName)) {
+          const userDebtsList = await getDebtsByUser(debt.userId);
+          setUserDebtsCache(prev => ({
+            ...prev,
+            [group.userName]: userDebtsList,
+          }));
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to delete debt:', error);
+      showToast('error', error.message || t('userDebt.deleteError') || 'Failed to delete debt', 'Error');
     }
   };
 
-  const handleEditChange = (field: keyof UserDebt, value: string) => {
+  const handleEditChange = (field: string, value: string) => {
     setEditFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  // Helper function to parse date from "DD MMM, YYYY" format to Date object
-  const parseDate = (dateString: string): Date | undefined => {
-    if (!dateString) return undefined;
-    // Parse format like "15 Jan, 2028"
-    const months: { [key: string]: number } = {
-      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-    };
-    const parts = dateString.split(' ');
-    if (parts.length === 3) {
-      const day = parseInt(parts[0]);
-      const month = months[parts[1].replace(',', '')];
-      const year = parseInt(parts[2]);
-      if (!isNaN(day) && month !== undefined && !isNaN(year)) {
-        return new Date(year, month, day);
-      }
-    }
-    return undefined;
-  };
-
-  // Helper function to format date from Date object or "Y-m-d" string to "DD MMM, YYYY" format
-  const formatDate = (date: Date | string | undefined): string => {
-    if (!date) return '';
-    let dateObj: Date;
-    if (typeof date === 'string') {
-      // If it's already in "DD MMM, YYYY" format, return as is
-      if (date.match(/^\d{1,2} \w{3}, \d{4}$/)) {
-        return date;
-      }
-      // If it's in "Y-m-d" format from DatePicker, parse it
-      const parts = date.split('-');
-      if (parts.length === 3) {
-        dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      } else {
-        return date;
-      }
-    } else {
-      dateObj = date;
-    }
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const day = dateObj.getDate();
-    const month = months[dateObj.getMonth()];
-    const year = dateObj.getFullYear();
-    return `${day} ${month}, ${year}`;
   };
 
   const handleDateChange = (dates: Date[], dateStr: string) => {
     // dateStr is in "Y-m-d" format from flatpickr
-    // Convert to "DD MMM, YYYY" format for storage
-    const formattedDate = formatDate(dateStr);
-    handleEditChange("dueDate", formattedDate);
+    // Store as ISO string for API
+    handleEditChange("dueDate", dateStr);
   };
 
   const statusOptions = [
@@ -512,6 +423,7 @@ export default function UserDebtList() {
     { value: "Pending", label: t('userDebt.pending') },
     { value: "Overdue", label: t('userDebt.overdue') },
   ];
+
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
@@ -536,17 +448,17 @@ export default function UserDebtList() {
               <span>{t('userDebt.limitReached').replace('{limit}', String(debtLimit))}</span>
             </div>
           ) : (
-            <Link
-              href="/add-debt"
+            <button
+              onClick={handleAddNew}
               className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 dark:bg-brand-500 dark:hover:bg-brand-600"
             >
               <PlusIcon />
               {t('userDebt.addDebt')}
-            </Link>
+            </button>
           )}
           {debtLimit !== null && !debtLimitReached && (
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {t('userDebt.limitInfo').replace('{current}', String(debts.length)).replace('{limit}', String(debtLimit))}
+              {t('userDebt.limitInfo').replace('{current}', String(totalDebts)).replace('{limit}', String(debtLimit))}
             </span>
           )}
         </div>
@@ -674,7 +586,25 @@ export default function UserDebtList() {
 
           {/* Table Body */}
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {paginatedGroups.map((group) => {
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="py-12 text-center">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-3 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400"></div>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('userDebt.loading') || 'Loading debts...'}
+                    </span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : paginatedGroups.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                  {t('userDebt.noDebts') || 'No debts found'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedGroups.map((group) => {
               const isExpanded = expandedUsers.has(group.userName);
               return (
                 <React.Fragment key={group.userName}>
@@ -682,7 +612,7 @@ export default function UserDebtList() {
                   <TableRow className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02] bg-gray-50/50 dark:bg-white/[0.02]">
                     <TableCell className="py-3 px-4 sm:px-6 w-12">
                       <button
-                        onClick={() => toggleUserExpansion(group.userName)}
+                        onClick={() => toggleUserExpansion(group.userName, group.userId)}
                         className="p-1 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400 transition-transform"
                         title={isExpanded ? "Collapse" : "Expand"}
                       >
@@ -738,7 +668,7 @@ export default function UserDebtList() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      group.debts.map((debt) => {
+                      (userDebtsCache[group.userName] || group.debts).map((debt) => {
                         const isEditing = editingId === debt.id;
                         return (
                           <TableRow key={debt.id} className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02] bg-white dark:bg-gray-900/50">
@@ -761,18 +691,9 @@ export default function UserDebtList() {
                           )}
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[20%]">
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editFormData.phone || ""}
-                              onChange={(e) => handleEditChange("phone", e.target.value)}
-                              className="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-base text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                            />
-                          ) : (
                             <span className="text-gray-500 text-base dark:text-gray-400">
-                              {debt.phone}
+                            {debt.user?.phone || ''}
                             </span>
-                          )}
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
                           {isEditing ? (
@@ -784,7 +705,7 @@ export default function UserDebtList() {
                             />
                           ) : (
                             <span className="text-gray-500 text-base dark:text-gray-400">
-                              {debt.amount}
+                              {formatAmount(debt.amount)}
                             </span>
                           )}
                         </TableCell>
@@ -822,13 +743,13 @@ export default function UserDebtList() {
                                 dateFormat="d.m.y" // should be in dd-mm-yy format
                                 placeholder="Select due date"
                                 mode="single"
-                                defaultDate={editFormData.dueDate ? parseDate(editFormData.dueDate) : undefined}
+                                defaultDate={editFormData.dueDate ? (typeof editFormData.dueDate === 'string' ? new Date(editFormData.dueDate) : editFormData.dueDate) : undefined}
                                 onChange={handleDateChange}
                               />
                             </div>
                           ) : (
                             <span className="text-gray-500 text-base dark:text-gray-400">
-                              {debt.dueDate}
+                              {formatDate(debt.dueDate)}
                             </span>
                           )}
                         </TableCell>
@@ -874,7 +795,7 @@ export default function UserDebtList() {
                   )}
                 </React.Fragment>
               );
-            })}
+            }))}
           </TableBody>
         </Table>
       </div>
@@ -953,6 +874,106 @@ export default function UserDebtList() {
           </button>
         </div>
       </div>
+
+      {/* Add Debt Modal */}
+      <Modal
+        isOpen={addDebtModal.isOpen}
+        onClose={addDebtModal.closeModal}
+        className="max-w-[600px] p-5 lg:p-10"
+      >
+        <h4 className="font-semibold text-gray-800 mb-6 text-title-sm dark:text-white/90">
+          {t('userDebt.addDebt')}
+        </h4>
+        <form onSubmit={handleAddFormSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label>{t('userDebt.user')} *</Label>
+              <Input
+                type="text"
+                name="userName"
+                value={addFormData.userName}
+                onChange={(e) => handleAddFormChange("userName", e.target.value)}
+                placeholder={t('userDebt.user') || "User name"}
+                required
+              />
+            </div>
+            <div>
+              <Label>{t('userDebt.phone')} *</Label>
+              <Input
+                type="text"
+                name="phone"
+                value={addFormData.phone}
+                onChange={(e) => handleAddFormChange("phone", e.target.value)}
+                placeholder={t('userDebt.phone') || "Phone number"}
+                required
+              />
+            </div>
+            <div>
+              <Label>{t('userDebt.amount')} *</Label>
+              <Input
+                type="text"
+                name="amount"
+                value={addFormData.amount}
+                onChange={(e) => handleAddFormChange("amount", e.target.value)}
+                placeholder="$0.00"
+                required
+              />
+            </div>
+            <div>
+              <Label>{t('userDebt.status')}</Label>
+              <div className="relative">
+                <Select
+                  options={statusOptions}
+                  placeholder={t('userDebt.status') || "Select status"}
+                  onChange={(value) => handleAddFormChange("status", value)}
+                  defaultValue={addFormData.status}
+                  className="dark:bg-gray-900"
+                />
+                <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                  <ChevronDownIcon />
+                </span>
+              </div>
+            </div>
+            <div>
+              <Label>{t('userDebt.dueDate')} *</Label>
+              <DatePicker
+                id="add-debt-due-date"
+                dateFormat="Y-m-d"
+                placeholder={t('userDebt.dueDate') || "Select due date"}
+                mode="single"
+                onChange={handleAddFormDateChange}
+              />
+            </div>
+            <div>
+              <Label>{t('userDebt.descriptionLabel')}</Label>
+              <Input
+                type="text"
+                name="description"
+                value={addFormData.description}
+                onChange={(e) => handleAddFormChange("description", e.target.value)}
+                placeholder={t('userDebt.descriptionPlaceholder') || "Description (optional)"}
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-800">
+            <button
+              type="button"
+              onClick={addDebtModal.closeModal}
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+            >
+              {t('userDebt.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-500 dark:hover:bg-brand-600"
+            >
+              {isSubmitting ? t('userDebt.creating') || 'Creating...' : t('userDebt.addDebt')}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

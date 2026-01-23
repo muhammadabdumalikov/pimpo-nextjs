@@ -24,6 +24,7 @@
     "delete": "Удалить",
     "deleteConfirm": "Вы уверены, что хотите удалить этот долг?",
     "loadingDebts": "Загрузка долгов...",
+    "noDebts": "Долги не найдены",
     "paid": "Оплачено",
     "pending": "В ожидании",
     "overdue": "Просрочено",
@@ -33,15 +34,21 @@
     "results": "результатов",
     "previous": "Предыдущая",
     "next": "Следующая",
-    "limitReached": "Достигнут лимит ({limit} долгов макс.)"
+    "limitReached": "Достигнут лимит ({limit} долгов макс.)",
+    "limitInfo": "{current}/{limit} долгов",
+    "creating": "Создание...",
+    "addSuccess": "Долг успешно добавлен",
+    "addError": "Не удалось добавить долг"
   },
-  "productsV2": {
+  "products": {
     "title": "Список товаров",
     "description": "Отслеживайте прогресс вашего магазина для увеличения продаж.",
     "export": "Экспорт",
     "addProduct": "Добавить товар",
     "search": "Поиск...",
     "filter": "Фильтр",
+    "loading": "Загрузка товаров...",
+    "noProducts": "Товары не найдены",
     "products": "Товары",
     "priceIn": "Цена входа",
     "priceOut": "Цена выхода",
@@ -49,6 +56,12 @@
     "code": "Код",
     "barcode": "Штрих-код",
     "quantity": "Количество",
+    "actions": "Действия",
+    "edit": "Редактировать",
+    "delete": "Удалить",
+    "confirmDelete": "Вы уверены, что хотите удалить этот товар?",
+    "deleteSuccess": "Товар успешно удален",
+    "deleteError": "Не удалось удалить товар",
     "showing": "Показано",
     "to": "до",
     "of": "из",
@@ -58,7 +71,7 @@
     "limitReached": "Достигнут лимит ({limit} товаров макс.)",
     "limitInfo": "{current}/{limit} товаров"
   },
-  "dashboardV2": {
+  "dashboard": {
     "totalProducts": "Всего товаров",
     "totalQuantity": "Общее количество",
     "totalProfit": "Общая прибыль",
@@ -71,10 +84,14 @@
     "viewMore": "Подробнее",
     "delete": "Удалить"
   },
-  "addProductV2": {
+  "addProduct": {
     "productInformation": "Информация о товаре",
     "productName": "Название товара",
     "productNamePlaceholder": "Введите название товара",
+    "code": "Код товара",
+    "codePlaceholder": "Введите код товара (необязательно)",
+    "barcode": "Штрих-код",
+    "barcodePlaceholder": "Введите штрих-код (необязательно)",
     "priceIn": "Цена входа",
     "priceOut": "Цена выхода",
     "pricePlaceholder": "$0.00",
@@ -90,7 +107,21 @@
     "clickToUpload": "Нажмите для загрузки",
     "dragAndDrop": "или перетащите SVG, PNG, JPG или GIF (МАКС. 800x400px)",
     "draft": "Черновик",
-    "publishProduct": "Опубликовать товар"
+    "publishProduct": "Опубликовать товар",
+    "cancel": "Отмена",
+    "creating": "Создание...",
+    "updating": "Обновление...",
+    "success": "Товар успешно создан!",
+    "updateSuccess": "Товар успешно обновлен!",
+    "updateProduct": "Обновить товар",
+    "editProductInformation": "Редактировать информацию о товаре",
+    "loading": "Загрузка товара...",
+    "errors": {
+      "productNameRequired": "Название товара обязательно",
+      "priceInRequired": "Цена входа обязательна и должна быть больше 0",
+      "priceOutRequired": "Цена выхода обязательна и должна быть больше 0",
+      "createFailed": "Не удалось создать товар"
+    }
   },
   "upgradePlan": {
     "title": "Выберите свой план",
@@ -98,11 +129,9 @@
     "free": "Бесплатный",
     "basic": "Базовый",
     "pro": "Профессиональный",
-    "enterprise": "Корпоративный",
     "freeDescription": "Идеально для начала",
     "basicDescription": "Для малого бизнеса",
     "proDescription": "Для растущего бизнеса",
-    "enterpriseDescription": "Для крупных организаций",
     "mostPopular": "Самый популярный",
     "currentPlan": "Текущий план",
     "upgrade": "Обновить",
@@ -116,8 +145,8 @@
     "features": {
       "free": {
         "userDebtList": "Список долгов пользователей",
-        "ecommerceV2": "Панель управления Ecommerce V2",
-        "productsListV2": "Список товаров V2",
+        "ecommerce": "Панель управления Ecommerce",
+        "productsList": "Список товаров",
         "debtsLimit": "До 20 долгов",
         "productsLimit": "До 20 товаров"
       },
@@ -130,35 +159,23 @@
       },
       "pro": {
         "everythingInBasic": "Все из базового",
-        "ecommerceV2Dashboard": "Панель управления Ecommerce V2",
-        "productsV2": "Товары V2",
-        "addProductV2": "Добавить товар V2",
+        "ecommerceDashboard": "Панель управления Ecommerce",
+        "productsList": "Список товаров",
+        "addProduct": "Добавить товар",
         "userDebtManagement": "Управление долгами пользователей",
         "chartsAnalytics": "Графики и аналитика",
         "subscriptionManagement": "Управление подписками",
         "prioritySupport": "Приоритетная поддержка"
-      },
-      "enterprise": {
-        "everythingInPro": "Все из профессионального",
-        "unlimitedAccess": "Неограниченный доступ",
-        "customIntegrations": "Пользовательские интеграции",
-        "dedicatedSupport": "Выделенная поддержка",
-        "advancedAnalytics": "Расширенная аналитика",
-        "customBranding": "Пользовательский брендинг",
-        "apiAccess": "Доступ к API",
-        "support247": "Поддержка 24/7"
       }
     }
   },
   "sidebar": {
     "dashboard": "Панель управления",
     "ecommerce": "Электронная коммерция",
-    "ecommerceV2": "Электронная коммерция",
     "ecommerceMenu": "Электронная коммерция",
     "products": "Товары",
-    "productsV2": "Товары",
+    "productsList": "Список товаров",
     "addProduct": "Добавить товар",
-    "addProductV2": "Добавить товар",
     "calendar": "Календарь",
     "userProfile": "Профиль пользователя",
     "userDebt": "Долги пользователей",
