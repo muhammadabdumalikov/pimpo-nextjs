@@ -5,6 +5,17 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface AccountInfo {
+  type: 'business' | 'staff';
+  id: string;
+  name: string;
+  login: string;
+  roleId: string | null;
+  roleName: string | null;
+  // Allowed sidebar menu keys. ["*"] means full access (business owner).
+  menuKeys: string[];
+}
+
 export interface LoginResponse {
   accessToken: string;
   tokenType: string;
@@ -18,6 +29,7 @@ export interface LoginResponse {
     createdAt: string;
     updatedAt: string;
   };
+  account: AccountInfo;
 }
 
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -50,6 +62,33 @@ export function setAuthToken(token: string): void {
 export function removeAuthToken(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('accessToken');
+}
+
+const ACCOUNT_STORAGE_KEY = 'account';
+
+export function setAccount(account: AccountInfo): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(account));
+}
+
+export function getStoredAccount(): AccountInfo | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(ACCOUNT_STORAGE_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AccountInfo;
+  } catch {
+    return null;
+  }
+}
+
+export function getStoredMenuKeys(): string[] {
+  return getStoredAccount()?.menuKeys ?? [];
+}
+
+export function clearAccount(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(ACCOUNT_STORAGE_KEY);
 }
 
 // Subscription API
@@ -109,7 +148,7 @@ export async function getCurrentSubscription(): Promise<CurrentSubscription> {
       Authorization: `Bearer ${token}`,
     },
   });
-
+  console.log(response);
   if (!response.ok) {
     throw new Error('Failed to fetch current subscription');
   }
@@ -219,6 +258,7 @@ export interface Product {
   quantityType: string | null;
   image: string | null;
   isActive: boolean;
+  categoryId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -232,6 +272,7 @@ export interface CreateProductRequest {
   quantity: number;
   quantityType?: string;
   image?: string;
+  categoryId?: string;
 }
 
 export interface UpdateProductRequest {
@@ -243,6 +284,7 @@ export interface UpdateProductRequest {
   quantity?: number;
   quantityType?: string;
   image?: string;
+  categoryId?: string;
 }
 
 export interface ProductsResponse {
@@ -410,6 +452,136 @@ export async function generateProductCode(): Promise<string> {
 
   const result = await response.json();
   return result.code;
+}
+
+// Categories API
+export interface Category {
+  id: string;
+  businessId: string;
+  name: string;
+  image: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface CreateCategoryDto {
+  id: string;
+  name: string;
+  image?: string;
+}
+
+export interface UpdateCategoryDto {
+  name?: string;
+  image?: string;
+}
+
+export async function getCategories(): Promise<Category[]> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const response = await fetch(`${API_BASE_URL}/categories`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch categories');
+  }
+  return response.json();
+}
+
+export async function createCategory(data: CreateCategoryDto): Promise<Category> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const response = await fetch(`${API_BASE_URL}/categories`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Failed to create category' }));
+    throw new Error(error.message || 'Failed to create category');
+  }
+  return response.json();
+}
+
+export async function updateCategory(id: string, data: UpdateCategoryDto): Promise<Category> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Failed to update category' }));
+    throw new Error(error.message || 'Failed to update category');
+  }
+  return response.json();
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Failed to delete category' }));
+    throw new Error(error.message || 'Failed to delete category');
+  }
+}
+
+// Storage upload (S3-compatible)
+export interface UploadStorageResponse {
+  url: string;
+  key: string;
+}
+
+export async function uploadStorageFile(
+  file: File,
+  prefix?: string,
+): Promise<UploadStorageResponse> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const formData = new FormData();
+  formData.append('file', file);
+  if (prefix) formData.append('prefix', prefix);
+
+  const response = await fetch(`${API_BASE_URL}/storage/upload`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Failed to upload file' }));
+    throw new Error(error.message || 'Failed to upload file');
+  }
+  return response.json();
 }
 
 // Debt API
@@ -624,4 +796,259 @@ export async function getDebtCount(): Promise<number> {
 
   const result = await response.json();
   return result.count;
+}
+
+// ---------------------------------------------------------------------------
+// Roles & Staff API (sidebar permission management — owner only for writes)
+// ---------------------------------------------------------------------------
+
+function authHeaders(): HeadersInit {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+async function parseError(response: Response, fallback: string): Promise<never> {
+  const error = await response.json().catch(() => ({ message: fallback }));
+  throw new Error(error.message || fallback);
+}
+
+export interface Role {
+  id: string;
+  businessId: string;
+  name: string;
+  menuKeys: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateRoleDto {
+  name: string;
+  menuKeys: string[];
+}
+
+export interface UpdateRoleDto {
+  name?: string;
+  menuKeys?: string[];
+  isActive?: boolean;
+}
+
+export async function getRoles(): Promise<Role[]> {
+  const response = await fetch(`${API_BASE_URL}/roles`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch roles');
+  return response.json();
+}
+
+export async function getRole(id: string): Promise<Role> {
+  const response = await fetch(`${API_BASE_URL}/roles/${id}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch role');
+  return response.json();
+}
+
+export async function createRole(data: CreateRoleDto): Promise<Role> {
+  const response = await fetch(`${API_BASE_URL}/roles`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create role');
+  return response.json();
+}
+
+export async function updateRole(id: string, data: UpdateRoleDto): Promise<Role> {
+  const response = await fetch(`${API_BASE_URL}/roles/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update role');
+  return response.json();
+}
+
+export async function deleteRole(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/roles/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to delete role');
+}
+
+export interface Staff {
+  id: string;
+  businessId: string;
+  roleId: string;
+  roleName: string | null;
+  name: string;
+  login: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateStaffDto {
+  name: string;
+  login: string;
+  password: string;
+  roleId: string;
+}
+
+export interface UpdateStaffDto {
+  name?: string;
+  roleId?: string;
+  password?: string;
+  isActive?: boolean;
+}
+
+export async function getStaff(): Promise<Staff[]> {
+  const response = await fetch(`${API_BASE_URL}/staff`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch staff');
+  return response.json();
+}
+
+export async function createStaff(data: CreateStaffDto): Promise<Staff> {
+  const response = await fetch(`${API_BASE_URL}/staff`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create staff');
+  return response.json();
+}
+
+export async function updateStaff(id: string, data: UpdateStaffDto): Promise<Staff> {
+  const response = await fetch(`${API_BASE_URL}/staff/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update staff');
+  return response.json();
+}
+
+export async function deleteStaff(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/staff/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to delete staff');
+}
+
+// ---------------------------------------------------------------------------
+// Orders API
+// ---------------------------------------------------------------------------
+
+export interface OrderItem {
+  id: string;
+  orderId: string;
+  productId: string | null;
+  productName: string;
+  priceOut: string;
+  quantity: number;
+  lineTotal: string;
+}
+
+export interface Order {
+  id: string;
+  businessId: string;
+  userId: string | null;
+  customerName: string | null;
+  status: string;
+  totalAmount: string;
+  itemCount: number;
+  paymentMethod: string | null;
+  note: string | null;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+  items?: OrderItem[];
+}
+
+export interface CreateOrderDto {
+  items: { productId: string; quantity: number }[];
+  userId?: string;
+  customerName?: string;
+  status?: string;
+  paymentMethod?: string;
+  note?: string;
+  source?: string;
+}
+
+export interface OrdersResponse {
+  orders: Order[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getOrders(
+  page?: number,
+  limit?: number,
+  search?: string,
+  status?: string,
+): Promise<OrdersResponse> {
+  const params = new URLSearchParams();
+  if (page) params.set('page', String(page));
+  if (limit) params.set('limit', String(limit));
+  if (search) params.set('search', search);
+  if (status) params.set('status', status);
+  const response = await fetch(`${API_BASE_URL}/orders?${params.toString()}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch orders');
+  return response.json();
+}
+
+export async function getOrder(id: string): Promise<Order> {
+  const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch order');
+  return response.json();
+}
+
+export async function createOrder(data: CreateOrderDto): Promise<Order> {
+  const response = await fetch(`${API_BASE_URL}/orders`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create order');
+  return response.json();
+}
+
+export async function getOrderCount(): Promise<number> {
+  const response = await fetch(`${API_BASE_URL}/orders/count`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch order count');
+  const result = await response.json();
+  return result.count;
+}
+
+export async function getOrderRevenue(): Promise<number> {
+  const response = await fetch(`${API_BASE_URL}/orders/revenue`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch revenue');
+  const result = await response.json();
+  return result.revenue;
 }

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
+  AccountSettingsIcon,
   BoxCubeIcon,
   BoxIcon,
   BoxIconLine,
@@ -19,9 +20,9 @@ import {
   TableIcon,
   UserCircleIcon,
 } from "../icons/index";
-import SidebarWidget from "./SidebarWidget";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
+import { useAuth } from "@/context/AuthContext";
 import { getMenuPermissions, isMenuAllowed } from "@/data/menuPermissions";
 
 type NavItem = {
@@ -35,6 +36,7 @@ const AppSidebar: React.FC = () => {
   const { t } = useTranslations();
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const { currentTier } = useSubscription();
+  const { hasMenuAccess } = useAuth();
   const pathname = usePathname();
   const menuPermissions = getMenuPermissions();
 
@@ -42,6 +44,7 @@ const AppSidebar: React.FC = () => {
   const getMenuIdFromPath = (path: string): string | null => {
     const pathMap: Record<string, string> = {
       '/': 'dashboard.ecommerce',
+      '/categories': 'ecommerce.categories',
       '/products': 'ecommerce.products',
       '/product': 'ecommerce.productsList',
       '/add-product': 'ecommerce.addProduct',
@@ -63,27 +66,40 @@ const AppSidebar: React.FC = () => {
       '/signin': 'authentication.signIn',
       '/signup': 'authentication.signUp',
       '/subscription-management': 'subscriptionManagement',
+      '/settings': 'settings',
+      '/settings/receipts': 'settings.receipts',
+      '/checkout': 'checkout',
+      '/inventory': 'inventory',
+      '/product-performance': 'productPerformance',
+      '/roles': 'team.roles',
+      '/staff': 'team.staff',
     };
     return pathMap[path] || null;
   };
 
-  // Filter menu items based on subscription
+  // A menu is shown only when allowed by BOTH the subscription tier and the
+  // acting account's role. The business owner has menuKeys ["*"] so the role
+  // check always passes for them.
+  const isVisible = (menuId: string | null): boolean => {
+    if (!menuId) return true;
+    return isMenuAllowed(menuId, currentTier, menuPermissions) && hasMenuAccess(menuId);
+  };
+
+  // Filter menu items based on subscription tier + role permissions
   const filterMenuItems = (items: NavItem[]): NavItem[] => {
     return items
       .map(item => {
         if (item.subItems) {
-          const filteredSubItems = item.subItems.filter(subItem => {
-            const menuId = getMenuIdFromPath(subItem.path);
-            return menuId ? isMenuAllowed(menuId, currentTier, menuPermissions) : true;
-          });
-          
+          const filteredSubItems = item.subItems.filter(subItem =>
+            isVisible(getMenuIdFromPath(subItem.path)),
+          );
+
           // Only show parent menu if it has at least one allowed sub-item
           if (filteredSubItems.length === 0) return null;
-          
+
           return { ...item, subItems: filteredSubItems };
         } else if (item.path) {
-          const menuId = getMenuIdFromPath(item.path);
-          if (menuId && !isMenuAllowed(menuId, currentTier, menuPermissions)) {
+          if (!isVisible(getMenuIdFromPath(item.path))) {
             return null;
           }
         }
@@ -102,8 +118,10 @@ const AppSidebar: React.FC = () => {
       icon: <BoxIcon />,
       name: t('sidebar.ecommerceMenu'),
       subItems: [
+        { name: t('sidebar.categories'), path: "/categories", pro: false },
         { name: t('sidebar.products'), path: "/products", pro: false },
         { name: t('sidebar.addProduct'), path: "/add-product", pro: false },
+        { name: t('sidebar.checkout'), path: "/checkout", pro: false },
       ],
     },
     {
@@ -135,6 +153,21 @@ const AppSidebar: React.FC = () => {
       icon: <PlugInIcon />,
       name: t('sidebar.subscriptionManagement'),
       path: "/subscription-management",
+    },
+    {
+      icon: <UserCircleIcon />,
+      name: t('sidebar.team'),
+      subItems: [
+        { name: t('sidebar.roles'), path: "/roles", pro: false },
+        { name: t('sidebar.staff'), path: "/staff", pro: false },
+      ],
+    },
+    {
+      icon: <AccountSettingsIcon />,
+      name: t('sidebar.settings'),
+      subItems: [
+        { name: t('sidebar.receipts'), path: "/settings/receipts", pro: false },
+      ],
     },
     {
       name: t('sidebar.forms'),
@@ -402,7 +435,7 @@ const AppSidebar: React.FC = () => {
             <>
               <Image
                 className="dark:hidden"
-                src="/images/logo/logo.svg"
+                src="/images/logo/logo-icon.svg"
                 alt="Logo"
                 width={150}
                 height={40}
@@ -463,7 +496,6 @@ const AppSidebar: React.FC = () => {
             </div>
           </div>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
       </div>
     </aside>
   );

@@ -51,6 +51,8 @@ import HorizontaLDots from "./horizontal-dots.svg";
 import ChatIcon from "./chat.svg";
 import MoreDotIcon from "./more-dot.svg";
 import BellIcon from "./bell.svg";
+import SettingsIcon from "./settings.svg";
+import AccountSettingsIcon from "./account-settings.svg";
 
 export {
   DownloadIcon,
@@ -106,4 +108,6 @@ export {
   HorizontaLDots,
   ChevronUpIcon,
   ChatIcon,
+  SettingsIcon,
+  AccountSettingsIcon,
 };

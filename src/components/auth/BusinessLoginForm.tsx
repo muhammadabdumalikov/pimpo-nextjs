@@ -7,7 +7,7 @@ import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { login, setAuthToken, getAuthToken } from "@/lib/api";
+import { login, setAuthToken, getAuthToken, setAccount } from "@/lib/api";
 
 export default function BusinessLoginForm() {
   const router = useRouter();
@@ -49,8 +49,9 @@ export default function BusinessLoginForm() {
         password: formData.password,
       });
 
-      // Store the token
+      // Store the token + acting account (drives sidebar menu permissions)
       setAuthToken(response.accessToken);
+      setAccount(response.account);
 
       // Redirect to dashboard
       router.push("/");

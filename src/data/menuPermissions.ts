@@ -6,8 +6,10 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'dashboard.ecommerce', allowedTiers: ['free', 'basic', 'pro', ] },
   
   // E-commerce menus
+  { menuItem: 'ecommerce.categories', allowedTiers: ['free', 'basic', 'pro', ] },
   { menuItem: 'ecommerce.products', allowedTiers: ['free', 'basic', 'pro', ] },
   { menuItem: 'ecommerce.addProduct', allowedTiers: ['pro', ] },
+  { menuItem: 'checkout', allowedTiers: ['free', 'basic', 'pro',] },
   
   // User Debt
   { menuItem: 'userDebt', allowedTiers: ['free', 'pro', ] },
@@ -44,12 +46,24 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'authentication.signIn', allowedTiers: ['free', 'basic', 'pro', ] },
   { menuItem: 'authentication.signUp', allowedTiers: ['free', 'basic', 'pro', ] },
   
+  // Inventory & analytics
+  { menuItem: 'inventory', allowedTiers: ['free', 'basic', 'pro'] },
+  { menuItem: 'productPerformance', allowedTiers: ['free', 'basic', 'pro'] },
+
+  // Team management (role/staff access is further gated to the owner via role permissions)
+  { menuItem: 'team.roles', allowedTiers: ['free', 'basic', 'pro'] },
+  { menuItem: 'team.staff', allowedTiers: ['free', 'basic', 'pro'] },
+
   // Subscription Management (typically admin only, but configurable)
   // Made accessible to all tiers for easier management
   { menuItem: 'subscriptionManagement', allowedTiers: ['free', 'basic', 'pro', ] },
   
   // Upgrade Plan (accessible to all tiers)
   { menuItem: 'upgradePlan', allowedTiers: ['free', 'basic', 'pro', ] },
+
+  // Settings
+  { menuItem: 'settings', allowedTiers: ['free', 'basic', 'pro',] },
+  { menuItem: 'settings.receipts', allowedTiers: ['free', 'basic', 'pro',] },
 ];
 
 // Helper function to get menu permissions
