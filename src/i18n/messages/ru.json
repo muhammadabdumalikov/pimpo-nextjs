@@ -110,7 +110,9 @@
     "recentProducts": "Недавние товары",
     "recentProductsDescription": "Последние товары, добавленные в инвентарь",
     "viewMore": "Подробнее",
-    "delete": "Удалить"
+    "delete": "Удалить",
+    "totalOrders": "Всего заказов",
+    "revenue": "Выручка"
   },
   "addProduct": {
     "productInformation": "Информация о товаре",
@@ -323,7 +325,12 @@
     "showing": "Показано",
     "to": "до",
     "of": "из",
-    "results": "результатов"
+    "results": "результатов",
+    "inStock": "В наличии",
+    "lowStock": "Мало",
+    "outOfStock": "Нет в наличии",
+    "stock": "Остаток",
+    "noItems": "Товары не найдены"
   },
   "productPerformance": {
     "title": "Производительность товаров",

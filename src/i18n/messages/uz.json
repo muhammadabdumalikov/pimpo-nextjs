@@ -110,7 +110,9 @@
     "recentProducts": "So'nggi mahsulotlar",
     "recentProductsDescription": "Omborga qo'shilgan so'nggi mahsulotlar",
     "viewMore": "Ko'proq ko'rish",
-    "delete": "O'chirish"
+    "delete": "O'chirish",
+    "totalOrders": "Jami buyurtmalar",
+    "revenue": "Tushum"
   },
   "addProduct": {
     "productInformation": "Mahsulot ma'lumotlari",
@@ -323,7 +325,12 @@
     "showing": "Ko'rsatilmoqda",
     "to": "dan",
     "of": "gacha",
-    "results": "natija"
+    "results": "natija",
+    "inStock": "Omborda bor",
+    "lowStock": "Kam qoldi",
+    "outOfStock": "Tugagan",
+    "stock": "Qoldiq",
+    "noItems": "Mahsulotlar topilmadi"
   },
   "productPerformance": {
     "title": "Mahsulotlar samaradorligi",

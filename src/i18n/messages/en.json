@@ -110,7 +110,9 @@
     "recentProducts": "Recent Products",
     "recentProductsDescription": "Latest products added to inventory",
     "viewMore": "View More",
-    "delete": "Delete"
+    "delete": "Delete",
+    "totalOrders": "Total Orders",
+    "revenue": "Revenue"
   },
   "addProduct": {
     "productInformation": "Product Information",
@@ -324,7 +326,12 @@
     "showing": "Showing",
     "to": "to",
     "of": "of",
-    "results": "results"
+    "results": "results",
+    "inStock": "In stock",
+    "lowStock": "Low stock",
+    "outOfStock": "Out of stock",
+    "stock": "Stock",
+    "noItems": "No products found"
   },
   "productPerformance": {
     "title": "Product Performance",
