@@ -235,7 +235,7 @@ export default function ProductsList() {
 
       {/* Products Table */}
       <div className="w-full overflow-x-auto -mx-4 sm:-mx-6" style={{ scrollbarGutter: 'stable' }}>
-        <Table className="w-full [table-layout:fixed]">
+        <Table className="w-full min-w-[760px]! [table-layout:fixed]">
           {/* Table Header */}
           <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
             <TableRow>
