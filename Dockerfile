@@ -10,7 +10,9 @@ RUN corepack enable && \
     pnpm config set fetch-retry-maxtimeout 120000
 COPY package.json ./
 COPY pnpm-lock.yaml* ./
-RUN pnpm install --no-frozen-lockfile
+# --ignore-scripts avoids pnpm's ERR_PNPM_IGNORED_BUILDS gate; sharp ships its
+# native binary via optional deps (@img/sharp-linuxmusl-*), so it still works.
+RUN pnpm install --no-frozen-lockfile --ignore-scripts
 COPY . .
 
 # NEXT_PUBLIC_* vars are inlined at build time, so the backend URL the browser
