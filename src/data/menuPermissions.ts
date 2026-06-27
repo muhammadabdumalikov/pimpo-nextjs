@@ -13,39 +13,7 @@ export const defaultMenuPermissions: MenuPermission[] = [
   
   // User Debt
   { menuItem: 'userDebt', allowedTiers: ['free', 'pro', ] },
-  
-  // Calendar
-  { menuItem: 'calendar', allowedTiers: ['basic', 'pro', ] },
-  
-  // User Profile
-  { menuItem: 'userProfile', allowedTiers: ['basic', 'pro', ] },
-  
-  // Forms
-  { menuItem: 'forms.formElements', allowedTiers: ['basic', 'pro', ] },
-  
-  // Tables
-  { menuItem: 'tables.basicTables', allowedTiers: ['basic', 'pro', ] },
-  
-  // Pages
-  { menuItem: 'pages.blankPage', allowedTiers: ['basic', 'pro'] },
-  { menuItem: 'pages.error404', allowedTiers: ['basic', 'pro', ] },
-  
-  // Charts
-  { menuItem: 'charts.lineChart', allowedTiers: ['pro', ] },
-  { menuItem: 'charts.barChart', allowedTiers: ['pro', ] },
-  
-  // UI Elements
-  { menuItem: 'uiElements.alerts', allowedTiers: ['basic', 'pro', ] },
-  { menuItem: 'uiElements.avatar', allowedTiers: ['basic', 'pro', ] },
-  { menuItem: 'uiElements.badge', allowedTiers: ['basic', 'pro', ] },
-  { menuItem: 'uiElements.buttons', allowedTiers: ['basic', 'pro', ] },
-  { menuItem: 'uiElements.images', allowedTiers: ['basic', 'pro', ] },
-  { menuItem: 'uiElements.videos', allowedTiers: ['basic', 'pro', ] },
-  
-  // Authentication
-  { menuItem: 'authentication.signIn', allowedTiers: ['free', 'basic', 'pro', ] },
-  { menuItem: 'authentication.signUp', allowedTiers: ['free', 'basic', 'pro', ] },
-  
+
   // Inventory & analytics
   { menuItem: 'inventory', allowedTiers: ['free', 'basic', 'pro'] },
   { menuItem: 'productPerformance', allowedTiers: ['free', 'basic', 'pro'] },

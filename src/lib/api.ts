@@ -1052,3 +1052,70 @@ export async function getOrderRevenue(): Promise<number> {
   const result = await response.json();
   return result.revenue;
 }
+
+// Receipt settings API
+export interface ReceiptSettings {
+  businessId: string;
+  receiptName: string;
+  showLogo: boolean;
+  logoUrl: string | null;
+  updatedAt?: string;
+}
+
+export interface UpdateReceiptSettingsDto {
+  receiptName?: string;
+  showLogo?: boolean;
+  logoUrl?: string | null;
+}
+
+export async function getReceiptSettings(): Promise<ReceiptSettings> {
+  const response = await fetch(`${API_BASE_URL}/settings/receipt`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch receipt settings');
+  return response.json();
+}
+
+export async function updateReceiptSettings(
+  data: UpdateReceiptSettingsDto,
+): Promise<ReceiptSettings> {
+  const response = await fetch(`${API_BASE_URL}/settings/receipt`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to save receipt settings');
+  return response.json();
+}
+
+export interface ProductPerformanceRow {
+  productId: string | null;
+  name: string;
+  code: string | null;
+  image: string | null;
+  category: string | null;
+  unitsSold: number;
+  revenue: number;
+  profit: number;
+  profitMargin: number;
+}
+
+export async function getProductPerformance(
+  from?: string,
+  to?: string,
+): Promise<ProductPerformanceRow[]> {
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  const qs = params.toString();
+  const response = await fetch(
+    `${API_BASE_URL}/orders/product-performance${qs ? `?${qs}` : ''}`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch product performance');
+  return response.json();
+}

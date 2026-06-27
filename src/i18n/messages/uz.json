@@ -383,7 +383,10 @@
     "productName": "Mahsulot nomi",
     "vatIncluded": "Qo'shimcha QQS {percent}%",
     "total": "JAMI",
-    "thankYouMessage": "Xaridingiz uchun rahmat!"
+    "thankYouMessage": "Xaridingiz uchun rahmat!",
+    "saving": "Saqlanmoqda...",
+    "saved": "Chek sozlamalari saqlandi",
+    "saveFailed": "Chek sozlamalarini saqlab bo'lmadi"
   },
   "checkout": {
     "title": "Buyurtma berish",

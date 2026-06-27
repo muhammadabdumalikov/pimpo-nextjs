@@ -38,7 +38,6 @@ export const menuCatalog: MenuCatalogItem[] = [
 
   // Customers
   { key: "userDebt", labelKey: "sidebar.userDebt", group: "customers" },
-  { key: "userProfile", labelKey: "sidebar.userProfile", group: "customers" },
 
   // Team (owner-only management surfaces)
   { key: "team.roles", labelKey: "sidebar.roles", group: "team", ownerOnly: true },
@@ -47,7 +46,6 @@ export const menuCatalog: MenuCatalogItem[] = [
   // Settings
   { key: "subscriptionManagement", labelKey: "sidebar.subscriptionManagement", group: "settings" },
   { key: "settings.receipts", labelKey: "sidebar.receipts", group: "settings" },
-  { key: "calendar", labelKey: "sidebar.calendar", group: "other" },
 ];
 
 /** Menu keys staff roles are allowed to be granted (excludes owner-only). */

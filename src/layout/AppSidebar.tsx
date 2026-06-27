@@ -6,18 +6,13 @@ import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
   AccountSettingsIcon,
-  BoxCubeIcon,
   BoxIcon,
   BoxIconLine,
-  CalenderIcon,
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
-  ListIcon,
-  PageIcon,
   PieChartIcon,
   PlugInIcon,
-  TableIcon,
   UserCircleIcon,
 } from "../icons/index";
 import { useTranslations } from "@/hooks/useTranslations";
@@ -49,22 +44,6 @@ const AppSidebar: React.FC = () => {
       '/product': 'ecommerce.productsList',
       '/add-product': 'ecommerce.addProduct',
       '/user-debt': 'userDebt',
-      '/calendar': 'calendar',
-      '/profile': 'userProfile',
-      '/form-elements': 'forms.formElements',
-      '/basic-tables': 'tables.basicTables',
-      '/blank': 'pages.blankPage',
-      '/error-404': 'pages.error404',
-      '/line-chart': 'charts.lineChart',
-      '/bar-chart': 'charts.barChart',
-      '/alerts': 'uiElements.alerts',
-      '/avatars': 'uiElements.avatar',
-      '/badge': 'uiElements.badge',
-      '/buttons': 'uiElements.buttons',
-      '/images': 'uiElements.images',
-      '/videos': 'uiElements.videos',
-      '/signin': 'authentication.signIn',
-      '/signup': 'authentication.signUp',
       '/subscription-management': 'subscriptionManagement',
       '/settings': 'settings',
       '/settings/receipts': 'settings.receipts',
@@ -125,16 +104,6 @@ const AppSidebar: React.FC = () => {
       ],
     },
     {
-      icon: <CalenderIcon />,
-      name: t('sidebar.calendar'),
-      path: "/calendar",
-    },
-    {
-      icon: <UserCircleIcon />,
-      name: t('sidebar.userProfile'),
-      path: "/profile",
-    },
-    {
       icon: <UserCircleIcon />,
       name: t('sidebar.userDebt'),
       path: "/user-debt",
@@ -167,55 +136,6 @@ const AppSidebar: React.FC = () => {
       name: t('sidebar.settings'),
       subItems: [
         { name: t('sidebar.receipts'), path: "/settings/receipts", pro: false },
-      ],
-    },
-    {
-      name: t('sidebar.forms'),
-      icon: <ListIcon />,
-      subItems: [{ name: t('sidebar.formElements'), path: "/form-elements", pro: false }],
-    },
-    {
-      name: t('sidebar.tables'),
-      icon: <TableIcon />,
-      subItems: [{ name: t('sidebar.basicTables'), path: "/basic-tables", pro: false }],
-    },
-    {
-      name: t('sidebar.pages'),
-      icon: <PageIcon />,
-      subItems: [
-        { name: t('sidebar.blankPage'), path: "/blank", pro: false },
-        { name: t('sidebar.error404'), path: "/error-404", pro: false },
-      ],
-    },
-  ]);
-
-  const othersItems: NavItem[] = filterMenuItems([
-    {
-      icon: <PieChartIcon />,
-      name: t('sidebar.charts'),
-      subItems: [
-        { name: t('sidebar.lineChart'), path: "/line-chart", pro: false },
-        { name: t('sidebar.barChart'), path: "/bar-chart", pro: false },
-      ],
-    },
-    {
-      icon: <BoxCubeIcon />,
-      name: t('sidebar.uiElements'),
-      subItems: [
-        { name: t('sidebar.alerts'), path: "/alerts", pro: false },
-        { name: t('sidebar.avatar'), path: "/avatars", pro: false },
-        { name: t('sidebar.badge'), path: "/badge", pro: false },
-        { name: t('sidebar.buttons'), path: "/buttons", pro: false },
-        { name: t('sidebar.images'), path: "/images", pro: false },
-        { name: t('sidebar.videos'), path: "/videos", pro: false },
-      ],
-    },
-    {
-      icon: <PlugInIcon />,
-      name: t('sidebar.authentication'),
-      subItems: [
-        { name: t('sidebar.signIn'), path: "/signin", pro: false },
-        { name: t('sidebar.signUp'), path: "/signup", pro: false },
       ],
     },
   ]);
@@ -361,21 +281,15 @@ const AppSidebar: React.FC = () => {
   useEffect(() => {
     // Check if the current path matches any submenu item
     let submenuMatched = false;
-    ["main", "others"].forEach((menuType) => {
-      const items = menuType === "main" ? navItems : othersItems;
-      items.forEach((nav, index) => {
-        if (nav.subItems) {
-          nav.subItems.forEach((subItem) => {
-            if (isActive(subItem.path)) {
-              setOpenSubmenu({
-                type: menuType as "main" | "others",
-                index,
-              });
-              submenuMatched = true;
-            }
-          });
-        }
-      });
+    navItems.forEach((nav, index) => {
+      if (nav.subItems) {
+        nav.subItems.forEach((subItem) => {
+          if (isActive(subItem.path)) {
+            setOpenSubmenu({ type: "main", index });
+            submenuMatched = true;
+          }
+        });
+      }
     });
 
     // If no submenu item matches, close the open submenu
@@ -476,23 +390,6 @@ const AppSidebar: React.FC = () => {
                 )}
               </h2>
               {renderMenuItems(navItems, "main")}
-            </div>
-
-            <div className="">
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  t('sidebar.others')
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              {renderMenuItems(othersItems, "others")}
             </div>
           </div>
         </nav>

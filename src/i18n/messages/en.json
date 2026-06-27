@@ -384,7 +384,10 @@
     "productName": "Product name",
     "vatIncluded": "incl. VAT {percent}%",
     "total": "TOTAL",
-    "thankYouMessage": "Thank you for your purchase!"
+    "thankYouMessage": "Thank you for your purchase!",
+    "saving": "Saving...",
+    "saved": "Receipt settings saved",
+    "saveFailed": "Failed to save receipt settings"
   },
   "checkout": {
     "title": "Checkout",

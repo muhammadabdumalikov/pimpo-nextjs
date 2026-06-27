@@ -1,17 +1,48 @@
 "use client";
-import React, { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
+import { useToast } from "@/context/ToastContext";
+import {
+  getReceiptSettings,
+  updateReceiptSettings,
+  uploadStorageFile,
+} from "@/lib/api";
 import ReceiptPreview from "./ReceiptPreview";
 import ReceiptSettings from "./ReceiptSettings";
 
+const DEFAULT_NAME = "Standart";
+
 export default function ReceiptManagement() {
   const { t } = useTranslations();
-  const router = useRouter();
-  const [receiptName, setReceiptName] = useState(t("receipt.title") || "Стандартный");
+  const { showToast } = useToast();
+
+  const [receiptName, setReceiptName] = useState(DEFAULT_NAME);
   const [showLogo, setShowLogo] = useState(true);
+  // `logo` is the preview src (persisted URL or a freshly-picked data URL).
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  // The last value loaded from / saved to the backend, used to reset and to
+  // tell whether the logo URL actually changed.
+  const [savedLogoUrl, setSavedLogoUrl] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getReceiptSettings()
+      .then((s) => {
+        if (cancelled) return;
+        setReceiptName(s.receiptName || DEFAULT_NAME);
+        setShowLogo(s.showLogo);
+        setLogo(s.logoUrl);
+        setSavedLogoUrl(s.logoUrl);
+      })
+      .catch((e) => {
+        if (!cancelled) showToast("error", e?.message || "Failed to load");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showToast]);
 
   const handleLogoUpload = (file: File) => {
     const reader = new FileReader();
@@ -28,19 +59,45 @@ export default function ReceiptManagement() {
   };
 
   const handleReset = () => {
-    setReceiptName(t("receipt.title") || "Стандартный");
+    setReceiptName(DEFAULT_NAME);
     setShowLogo(true);
-    setLogo(null);
+    setLogo(savedLogoUrl);
     setLogoFile(null);
   };
 
-  const handleSave = () => {
-    // TODO: Implement save functionality
-    console.log("Saving receipt settings:", {
-      receiptName,
-      showLogo,
-      logo: logoFile,
-    });
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // Resolve the logo URL: upload a freshly-picked file, keep the saved URL,
+      // or null it out when the logo was removed.
+      let logoUrl: string | null = savedLogoUrl;
+      if (logoFile) {
+        const uploaded = await uploadStorageFile(logoFile, "receipts");
+        logoUrl = uploaded.url;
+      } else if (logo === null) {
+        logoUrl = null;
+      }
+
+      const saved = await updateReceiptSettings({
+        receiptName: receiptName.trim() || DEFAULT_NAME,
+        showLogo,
+        logoUrl,
+      });
+
+      setReceiptName(saved.receiptName || DEFAULT_NAME);
+      setShowLogo(saved.showLogo);
+      setLogo(saved.logoUrl);
+      setSavedLogoUrl(saved.logoUrl);
+      setLogoFile(null);
+      showToast("success", t("receipt.saved") || "Saved");
+    } catch (e) {
+      showToast(
+        "error",
+        (e as Error)?.message || t("receipt.saveFailed") || "Failed to save",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -59,15 +116,19 @@ export default function ReceiptManagement() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleReset}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
           >
             {t("receipt.reset") || "Сбросить"}
           </button>
           <button
             onClick={handleSave}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 dark:bg-brand-500 dark:hover:bg-brand-600"
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-500 dark:hover:bg-brand-600"
           >
-            {t("receipt.save") || "Сохранить"}
+            {isSaving
+              ? t("receipt.saving") || "..."
+              : t("receipt.save") || "Сохранить"}
           </button>
         </div>
       </div>
