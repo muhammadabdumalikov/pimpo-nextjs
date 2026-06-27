@@ -7,12 +7,16 @@ interface ReceiptPreviewProps {
   receiptName: string;
   showLogo: boolean;
   logo: string | null;
+  vatEnabled: boolean;
+  vatRate: number;
 }
 
 export default function ReceiptPreview({
   receiptName,
   showLogo,
   logo,
+  vatEnabled,
+  vatRate,
 }: ReceiptPreviewProps) {
   const { t } = useTranslations();
   const currentDate = new Date().toLocaleString("ru-RU", {
@@ -23,6 +27,19 @@ export default function ReceiptPreview({
     minute: "2-digit",
     second: "2-digit",
   });
+
+  // Sample line on the preview is 100 000 (VAT-inclusive). Break out the tax
+  // portion using the configured rate.
+  const sampleTotal = 100000;
+  const vatPercentLabel = String(vatRate);
+  const vatAmount =
+    vatEnabled && vatRate > 0
+      ? Math.round((sampleTotal * vatRate) / (100 + vatRate))
+      : 0;
+  const vatAmountLabel = new Intl.NumberFormat("ru-RU").format(vatAmount);
+  const vatLine =
+    t("receipt.vatIncluded")?.replace("{percent}", vatPercentLabel) ||
+    `в т.ч. НДС ${vatPercentLabel}%`;
 
   return (
     <div className="bg-white dark:bg-gray-900 max-w-md mx-auto shadow-lg relative">
@@ -79,13 +96,15 @@ export default function ReceiptPreview({
           </div>
 
           {/* VAT with dashed line */}
-          <div className="flex items-center">
-            <span className="text-sm text-black/70 dark:text-white/70 whitespace-nowrap">
-              {t("receipt.vatIncluded")?.replace("{percent}", "15") || "в т.ч. НДС 15%"}
-            </span>
-            <div className="flex-1 border-t border-dashed border-black/30 dark:border-white/30 mx-3 h-px"></div>
-            <span className="text-sm text-black/70 dark:text-white/70 whitespace-nowrap">15 000 сум</span>
-          </div>
+          {vatEnabled && (
+            <div className="flex items-center">
+              <span className="text-sm text-black/70 dark:text-white/70 whitespace-nowrap">
+                {vatLine}
+              </span>
+              <div className="flex-1 border-t border-dashed border-black/30 dark:border-white/30 mx-3 h-px"></div>
+              <span className="text-sm text-black/70 dark:text-white/70 whitespace-nowrap">{vatAmountLabel} сум</span>
+            </div>
+          )}
         </div>
 
         {/* Total Section */}
@@ -101,13 +120,15 @@ export default function ReceiptPreview({
           </div>
 
           {/* Total VAT with dashed line */}
-          <div className="flex items-center">
-            <span className="text-sm text-black/70 dark:text-white/70 whitespace-nowrap">
-              {t("receipt.vatIncluded")?.replace("{percent}", "15") || "в т.ч. НДС 15%"}
-            </span>
-            <div className="flex-1 border-t border-dashed border-black/30 dark:border-white/30 mx-3 h-px"></div>
-            <span className="text-sm text-black/70 dark:text-white/70 whitespace-nowrap">15 000 сум</span>
-          </div>
+          {vatEnabled && (
+            <div className="flex items-center">
+              <span className="text-sm text-black/70 dark:text-white/70 whitespace-nowrap">
+                {vatLine}
+              </span>
+              <div className="flex-1 border-t border-dashed border-black/30 dark:border-white/30 mx-3 h-px"></div>
+              <span className="text-sm text-black/70 dark:text-white/70 whitespace-nowrap">{vatAmountLabel} сум</span>
+            </div>
+          )}
         </div>
 
         {/* Thank You Message - Centered */}

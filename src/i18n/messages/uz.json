@@ -386,7 +386,10 @@
     "thankYouMessage": "Xaridingiz uchun rahmat!",
     "saving": "Saqlanmoqda...",
     "saved": "Chek sozlamalari saqlandi",
-    "saveFailed": "Chek sozlamalarini saqlab bo'lmadi"
+    "saveFailed": "Chek sozlamalarini saqlab bo'lmadi",
+    "vatLabel": "QQS (НДС)",
+    "vatRate": "QQS stavkasi, %",
+    "vatHint": "Narxlar QQS bilan; chekda soliq qismi alohida ko'rsatiladi."
   },
   "checkout": {
     "title": "Buyurtma berish",
@@ -459,7 +462,8 @@
     "received": "Naqd qabul qilindi",
     "change": "Qaytim",
     "remaining": "Qoldiq",
-    "underpaid": "Summa jami summadan kam"
+    "underpaid": "Summa jami summadan kam",
+    "vatIncluded": "shu jumladan QQS {percent}%"
   },
   "roles": {
     "title": "Rollar",

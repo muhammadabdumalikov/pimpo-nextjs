@@ -387,7 +387,10 @@
     "thankYouMessage": "Thank you for your purchase!",
     "saving": "Saving...",
     "saved": "Receipt settings saved",
-    "saveFailed": "Failed to save receipt settings"
+    "saveFailed": "Failed to save receipt settings",
+    "vatLabel": "VAT (QQS)",
+    "vatRate": "VAT rate, %",
+    "vatHint": "Prices are VAT-inclusive; the tax portion is shown on the receipt."
   },
   "checkout": {
     "title": "Checkout",
@@ -460,7 +463,8 @@
     "received": "Cash received",
     "change": "Change",
     "remaining": "Remaining",
-    "underpaid": "Amount is less than the total"
+    "underpaid": "Amount is less than the total",
+    "vatIncluded": "incl. VAT {percent}%"
   },
   "roles": {
     "title": "Roles",

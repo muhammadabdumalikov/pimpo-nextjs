@@ -6,6 +6,7 @@ import { useToast } from "@/context/ToastContext";
 import {
   getProducts,
   createOrder,
+  getReceiptSettings,
   type Product,
 } from "@/lib/api";
 import CameraScanner from "./CameraScanner";
@@ -55,6 +56,8 @@ export default function Checkout() {
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [vatEnabled, setVatEnabled] = useState(false);
+  const [vatRate, setVatRate] = useState(0);
   const scanRef = useRef<HTMLInputElement>(null);
 
   const currency = t("checkout.currency") || "so'm";
@@ -73,6 +76,23 @@ export default function Checkout() {
 
   useEffect(() => {
     loadProducts();
+  }, []);
+
+  // Load the business VAT (QQS) config so the summary can break out the tax.
+  useEffect(() => {
+    let active = true;
+    getReceiptSettings()
+      .then((s) => {
+        if (!active) return;
+        setVatEnabled(s.vatEnabled);
+        setVatRate(Number(s.vatRate) || 0);
+      })
+      .catch(() => {
+        /* non-fatal: just hide the VAT line */
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Keep the scan box focused so a handheld scanner (keyboard-wedge) always
@@ -102,6 +122,10 @@ export default function Checkout() {
       .filter((v) => v >= total)
       .slice(0, 4);
   }, [total]);
+
+  // VAT (QQS) is inclusive — the tax portion of the total, shown for info.
+  const vatAmount =
+    vatEnabled && vatRate > 0 ? (total * vatRate) / (100 + vatRate) : 0;
 
   // Payment math derived from the chosen method.
   const cashNum = Number(cashReceived) || 0;
@@ -490,6 +514,19 @@ export default function Checkout() {
               <span className="font-medium text-gray-700 dark:text-gray-400">{t("checkout.total")}</span>
               <span className="text-lg font-semibold text-gray-800 dark:text-white/90">{formatMoney(total)}</span>
             </li>
+            {vatEnabled && vatRate > 0 && (
+              <li className="flex justify-between gap-5">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {(t("checkout.vatIncluded") || "incl. VAT {percent}%").replace(
+                    "{percent}",
+                    String(vatRate),
+                  )}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatMoney(vatAmount)}
+                </span>
+              </li>
+            )}
           </ul>
 
           {/* Payment method selector */}

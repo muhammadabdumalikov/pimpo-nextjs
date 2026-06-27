@@ -979,6 +979,8 @@ export interface Order {
   payments: PaymentSplit[] | null;
   amountPaid: string | null;
   changeAmount: string | null;
+  taxRate: string | null;
+  taxAmount: string | null;
   note: string | null;
   source: string;
   createdAt: string;
@@ -1069,6 +1071,8 @@ export interface ReceiptSettings {
   receiptName: string;
   showLogo: boolean;
   logoUrl: string | null;
+  vatEnabled: boolean;
+  vatRate: string;
   updatedAt?: string;
 }
 
@@ -1076,6 +1080,8 @@ export interface UpdateReceiptSettingsDto {
   receiptName?: string;
   showLogo?: boolean;
   logoUrl?: string | null;
+  vatEnabled?: boolean;
+  vatRate?: number;
 }
 
 export async function getReceiptSettings(): Promise<ReceiptSettings> {
