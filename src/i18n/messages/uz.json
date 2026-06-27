@@ -444,7 +444,16 @@
     "orderSuccess": "Buyurtma yakunlandi",
     "orderError": "Buyurtmani yakunlab bo‘lmadi",
     "total": "Jami",
-    "searchProducts": "Mahsulotlarni qidirish..."
+    "searchProducts": "Mahsulotlarni qidirish...",
+    "scanLabel": "Shtrix-kodni skanerlash",
+    "scanPlaceholder": "Shtrix-kod / kodni skanerlang yoki kiriting, so'ng Enter",
+    "scanNotFound": "Kod bo'yicha mahsulot yo'q",
+    "scanAdded": "Qo'shildi",
+    "cameraButton": "Kamera",
+    "cameraTitle": "Kamera bilan skanerlash",
+    "cameraHint": "Kamerani shtrix-kodga qarating",
+    "cameraClose": "Yopish",
+    "cameraError": "Kameraga kirib bo'lmadi"
   },
   "roles": {
     "title": "Rollar",

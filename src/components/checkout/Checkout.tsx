@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import {
@@ -8,6 +8,7 @@ import {
   createOrder,
   type Product,
 } from "@/lib/api";
+import CameraScanner from "./CameraScanner";
 
 type CartLine = {
   productId: string;
@@ -44,10 +45,14 @@ export default function Checkout() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [qty, setQty] = useState(1);
+  const [scanValue, setScanValue] = useState("");
+  const [lastScanned, setLastScanned] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const scanRef = useRef<HTMLInputElement>(null);
 
   const currency = t("checkout.currency") || "so'm";
 
@@ -67,6 +72,12 @@ export default function Checkout() {
     loadProducts();
   }, []);
 
+  // Keep the scan box focused so a handheld scanner (keyboard-wedge) always
+  // lands its keystrokes here, even after products finish loading.
+  useEffect(() => {
+    if (!isLoadingProducts) scanRef.current?.focus();
+  }, [isLoadingProducts]);
+
   const formatMoney = (value: number) =>
     `${new Intl.NumberFormat("uz-UZ").format(Math.round(value))} ${currency}`;
 
@@ -79,10 +90,7 @@ export default function Checkout() {
     [cart],
   );
 
-  const addToCart = () => {
-    const product = products.find((p) => p.id === selectedId);
-    if (!product) return;
-    const addQty = Math.max(1, qty);
+  const addProductToCart = (product: Product, addQty: number) => {
     setCart((prev) => {
       const existing = prev.find((l) => l.productId === product.id);
       if (existing) {
@@ -102,8 +110,53 @@ export default function Checkout() {
         },
       ];
     });
+  };
+
+  const addToCart = () => {
+    const product = products.find((p) => p.id === selectedId);
+    if (!product) return;
+    addProductToCart(product, Math.max(1, qty));
     setSelectedId("");
     setQty(1);
+  };
+
+  // Resolve + add a scanned/typed/camera code. Matches barcode first, then the
+  // internal code. Shared by the keyboard-wedge input and the camera scanner.
+  // Stable identity (useCallback) so the camera effect doesn't restart on every
+  // keystroke.
+  const processCode = useCallback(
+    (raw: string) => {
+      const q = raw.trim().toLowerCase();
+      if (!q) return;
+      const product =
+        products.find((p) => (p.barcode ?? "").toLowerCase() === q) ??
+        products.find((p) => (p.code ?? "").toLowerCase() === q);
+
+      if (!product) {
+        setLastScanned("");
+        showToast(
+          "error",
+          `${t("checkout.scanNotFound") || "No product for code"}: ${raw.trim()}`,
+        );
+        return;
+      }
+      if (product.quantity <= 0) {
+        setLastScanned("");
+        showToast("warning", `${product.name} — ${t("checkout.outOfStock")}`);
+        return;
+      }
+      addProductToCart(product, 1);
+      setLastScanned(product.name);
+    },
+    [products, showToast, t],
+  );
+
+  const handleScan = (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = scanValue;
+    setScanValue("");
+    scanRef.current?.focus();
+    processCode(raw);
   };
 
   const changeQty = (productId: string, next: number) => {
@@ -136,6 +189,8 @@ export default function Checkout() {
       setCart([]);
       setCustomerName("");
       setNote("");
+      setLastScanned("");
+      scanRef.current?.focus();
       // Refresh stock numbers after the sale.
       loadProducts();
     } catch (err: unknown) {
@@ -150,6 +205,62 @@ export default function Checkout() {
 
   return (
     <div className="border-b border-gray-200 p-4 sm:p-8 dark:border-gray-800">
+      {/* Scan area — camera is the primary, most-used action; the manual /
+          hardware-scanner input sits underneath as a secondary entry point. */}
+      <div className="mb-5 space-y-3">
+        <button
+          type="button"
+          onClick={() => setCameraOpen(true)}
+          disabled={isLoadingProducts}
+          className="flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-brand-500 text-base font-semibold text-white shadow-theme-md transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 0 1 2-2h1l1.5-2h9L18 7h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
+          {t("checkout.cameraTitle") || "Scan with camera"}
+        </button>
+
+        <form onSubmit={handleScan}>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" />
+                </svg>
+              </span>
+              <input
+                ref={scanRef}
+                type="text"
+                value={scanValue}
+                onChange={(e) => setScanValue(e.target.value)}
+                disabled={isLoadingProducts}
+                autoComplete="off"
+                placeholder={
+                  isLoadingProducts
+                    ? "..."
+                    : t("checkout.scanPlaceholder") || "Scan or type a barcode, then Enter"
+                }
+                className={`${inputClass} pl-11`}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoadingProducts || !scanValue.trim()}
+              className="h-11 shrink-0 rounded-lg border border-gray-300 bg-white px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              {t("checkout.add")}
+            </button>
+          </div>
+        </form>
+
+        {lastScanned && (
+          <p className="text-sm text-success-600 dark:text-success-500">
+            ✓ {t("checkout.scanAdded") || "Added"}: {lastScanned}
+          </p>
+        )}
+      </div>
+
       {/* Cart table */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
         <div className="custom-scrollbar overflow-x-auto">
@@ -333,6 +444,15 @@ export default function Checkout() {
           </button>
         </div>
       </div>
+
+      <CameraScanner
+        isOpen={cameraOpen}
+        onClose={() => {
+          setCameraOpen(false);
+          scanRef.current?.focus();
+        }}
+        onDetected={processCode}
+      />
     </div>
   );
 }

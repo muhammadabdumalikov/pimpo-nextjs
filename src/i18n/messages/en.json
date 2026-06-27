@@ -445,7 +445,16 @@
     "orderSuccess": "Order completed",
     "orderError": "Failed to complete order",
     "total": "Total",
-    "searchProducts": "Search products..."
+    "searchProducts": "Search products...",
+    "scanLabel": "Scan barcode",
+    "scanPlaceholder": "Scan or type a barcode / code, then Enter",
+    "scanNotFound": "No product for code",
+    "scanAdded": "Added",
+    "cameraButton": "Camera",
+    "cameraTitle": "Scan with camera",
+    "cameraHint": "Point the camera at a barcode",
+    "cameraClose": "Close",
+    "cameraError": "Could not access the camera"
   },
   "roles": {
     "title": "Roles",

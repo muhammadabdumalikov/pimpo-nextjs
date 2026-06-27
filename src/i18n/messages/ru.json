@@ -444,7 +444,16 @@
     "orderSuccess": "Заказ оформлен",
     "orderError": "Не удалось оформить заказ",
     "total": "Итого",
-    "searchProducts": "Поиск товаров..."
+    "searchProducts": "Поиск товаров...",
+    "scanLabel": "Сканировать штрихкод",
+    "scanPlaceholder": "Отсканируйте или введите штрихкод / код, затем Enter",
+    "scanNotFound": "Нет товара по коду",
+    "scanAdded": "Добавлено",
+    "cameraButton": "Камера",
+    "cameraTitle": "Сканировать камерой",
+    "cameraHint": "Наведите камеру на штрихкод",
+    "cameraClose": "Закрыть",
+    "cameraError": "Не удалось получить доступ к камере"
   },
   "roles": {
     "title": "Роли",
