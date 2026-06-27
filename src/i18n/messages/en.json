@@ -454,7 +454,8 @@
     "cameraTitle": "Scan with camera",
     "cameraHint": "Point the camera at a barcode",
     "cameraClose": "Close",
-    "cameraError": "Could not access the camera"
+    "cameraError": "Could not access the camera",
+    "cameraStop": "Stop camera"
   },
   "roles": {
     "title": "Roles",

@@ -453,7 +453,8 @@
     "cameraTitle": "Kamera bilan skanerlash",
     "cameraHint": "Kamerani shtrix-kodga qarating",
     "cameraClose": "Yopish",
-    "cameraError": "Kameraga kirib bo'lmadi"
+    "cameraError": "Kameraga kirib bo'lmadi",
+    "cameraStop": "Kamerani to'xtatish"
   },
   "roles": {
     "title": "Rollar",

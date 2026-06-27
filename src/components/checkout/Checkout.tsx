@@ -210,16 +210,32 @@ export default function Checkout() {
       <div className="mb-5 space-y-3">
         <button
           type="button"
-          onClick={() => setCameraOpen(true)}
+          onClick={() => setCameraOpen((o) => !o)}
           disabled={isLoadingProducts}
-          className="flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-brand-500 text-base font-semibold text-white shadow-theme-md transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+          className={`flex h-16 w-full items-center justify-center gap-3 rounded-2xl text-base font-semibold shadow-theme-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
+            cameraOpen
+              ? "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03]"
+              : "bg-brand-500 text-white hover:bg-brand-600"
+          }`}
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 0 1 2-2h1l1.5-2h9L18 7h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
             <circle cx="12" cy="13" r="3.5" />
           </svg>
-          {t("checkout.cameraTitle") || "Scan with camera"}
+          {cameraOpen
+            ? t("checkout.cameraStop") || "Stop camera"
+            : t("checkout.cameraTitle") || "Scan with camera"}
         </button>
+
+        <CameraScanner
+          isOpen={cameraOpen}
+          onClose={() => {
+            setCameraOpen(false);
+            scanRef.current?.focus();
+          }}
+          onDetected={processCode}
+          lastScanned={lastScanned}
+        />
 
         <form onSubmit={handleScan}>
           <div className="flex items-center gap-2">
@@ -254,7 +270,7 @@ export default function Checkout() {
           </div>
         </form>
 
-        {lastScanned && (
+        {lastScanned && !cameraOpen && (
           <p className="text-sm text-success-600 dark:text-success-500">
             ✓ {t("checkout.scanAdded") || "Added"}: {lastScanned}
           </p>
@@ -444,15 +460,6 @@ export default function Checkout() {
           </button>
         </div>
       </div>
-
-      <CameraScanner
-        isOpen={cameraOpen}
-        onClose={() => {
-          setCameraOpen(false);
-          scanRef.current?.focus();
-        }}
-        onDetected={processCode}
-      />
     </div>
   );
 }
