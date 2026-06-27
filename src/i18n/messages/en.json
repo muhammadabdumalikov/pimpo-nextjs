@@ -455,7 +455,12 @@
     "cameraHint": "Point the camera at a barcode",
     "cameraClose": "Close",
     "cameraError": "Could not access the camera",
-    "cameraStop": "Stop camera"
+    "cameraStop": "Stop camera",
+    "split": "Split",
+    "received": "Cash received",
+    "change": "Change",
+    "remaining": "Remaining",
+    "underpaid": "Amount is less than the total"
   },
   "roles": {
     "title": "Roles",

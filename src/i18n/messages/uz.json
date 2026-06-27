@@ -454,7 +454,12 @@
     "cameraHint": "Kamerani shtrix-kodga qarating",
     "cameraClose": "Yopish",
     "cameraError": "Kameraga kirib bo'lmadi",
-    "cameraStop": "Kamerani to'xtatish"
+    "cameraStop": "Kamerani to'xtatish",
+    "split": "Aralash",
+    "received": "Naqd qabul qilindi",
+    "change": "Qaytim",
+    "remaining": "Qoldiq",
+    "underpaid": "Summa jami summadan kam"
   },
   "roles": {
     "title": "Rollar",

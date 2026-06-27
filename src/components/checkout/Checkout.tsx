@@ -48,7 +48,10 @@ export default function Checkout() {
   const [scanValue, setScanValue] = useState("");
   const [lastScanned, setLastScanned] = useState("");
   const [customerName, setCustomerName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "split">("cash");
+  const [cashReceived, setCashReceived] = useState("");
+  const [splitCash, setSplitCash] = useState("");
+  const [splitCard, setSplitCard] = useState("");
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -89,6 +92,31 @@ export default function Checkout() {
     () => cart.reduce((sum, line) => sum + line.quantity, 0),
     [cart],
   );
+
+  // Cash quick-amount chips: the exact total plus the next round UZS amounts up.
+  const cashChips = useMemo(() => {
+    if (total <= 0) return [];
+    const roundUp = (step: number) => Math.ceil(total / step) * step;
+    const candidates = [total, roundUp(5000), roundUp(10000), roundUp(50000), roundUp(100000)];
+    return Array.from(new Set(candidates))
+      .filter((v) => v >= total)
+      .slice(0, 4);
+  }, [total]);
+
+  // Payment math derived from the chosen method.
+  const cashNum = Number(cashReceived) || 0;
+  const splitCashNum = Number(splitCash) || 0;
+  const splitCardNum = Number(splitCard) || 0;
+  const received = paymentMethod === "cash" && cashReceived !== "" ? cashNum : total;
+  const change = paymentMethod === "cash" ? Math.max(0, received - total) : 0;
+  const splitRemaining = total - (splitCashNum + splitCardNum);
+
+  const paymentValid =
+    paymentMethod === "card" ||
+    (paymentMethod === "cash" && (cashReceived === "" || cashNum >= total)) ||
+    (paymentMethod === "split" &&
+      splitCashNum + splitCardNum > 0 &&
+      Math.abs(splitRemaining) < 1);
 
   const addProductToCart = (product: Product, addQty: number) => {
     setCart((prev) => {
@@ -174,22 +202,48 @@ export default function Checkout() {
   };
 
   const handleComplete = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || !paymentValid) return;
     setIsSubmitting(true);
+
+    // Build the payment breakdown + cash tendered for the chosen method.
+    let payments: { method: string; amount: number }[];
+    let amountPaid: number;
+    if (paymentMethod === "split") {
+      payments = [
+        { method: "cash", amount: splitCashNum },
+        { method: "card", amount: splitCardNum },
+      ].filter((p) => p.amount > 0);
+      amountPaid = splitCashNum;
+    } else if (paymentMethod === "card") {
+      payments = [{ method: "card", amount: total }];
+      amountPaid = total;
+    } else {
+      payments = [{ method: "cash", amount: total }];
+      amountPaid = received;
+    }
+
     try {
       await createOrder({
         items: cart.map((l) => ({ productId: l.productId, quantity: l.quantity })),
         customerName: customerName.trim() || undefined,
         paymentMethod,
+        payments,
+        amountPaid,
         note: note.trim() || undefined,
         status: "Completed",
         source: "admin",
       });
-      showToast("success", t("checkout.orderSuccess") || "Order completed", "Success");
+      const changeMsg =
+        change > 0 ? ` — ${t("checkout.change") || "Change"}: ${formatMoney(change)}` : "";
+      showToast("success", `${t("checkout.orderSuccess") || "Order completed"}${changeMsg}`, "Success");
       setCart([]);
       setCustomerName("");
       setNote("");
       setLastScanned("");
+      setCashReceived("");
+      setSplitCash("");
+      setSplitCard("");
+      setPaymentMethod("cash");
       scanRef.current?.focus();
       // Refresh stock numbers after the sale.
       loadProducts();
@@ -409,19 +463,6 @@ export default function Checkout() {
           </div>
           <div>
             <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
-              {t("checkout.paymentMethod")}
-            </label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              className={`${inputClass} appearance-none`}
-            >
-              <option value="cash">{t("checkout.cash")}</option>
-              <option value="card">{t("checkout.card")}</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
               {t("checkout.note")}
             </label>
             <input
@@ -450,10 +491,133 @@ export default function Checkout() {
               <span className="text-lg font-semibold text-gray-800 dark:text-white/90">{formatMoney(total)}</span>
             </li>
           </ul>
+
+          {/* Payment method selector */}
+          <div className="mt-4">
+            <label className="mb-1.5 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
+              {t("checkout.paymentMethod")}
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["cash", "card", "split"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setPaymentMethod(m)}
+                  className={`h-10 rounded-lg border text-sm font-medium transition ${
+                    paymentMethod === m
+                      ? "border-brand-500 bg-brand-500 text-white"
+                      : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+                  }`}
+                >
+                  {t(`checkout.${m}`) || m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cash: amount received + change */}
+          {paymentMethod === "cash" && (
+            <div className="mt-4 space-y-2">
+              <label className="inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
+                {t("checkout.received") || "Cash received"}
+              </label>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={cashReceived}
+                onChange={(e) => setCashReceived(e.target.value)}
+                placeholder={formatMoney(total)}
+                className={inputClass}
+              />
+              {cashChips.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {cashChips.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCashReceived(String(c))}
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+                    >
+                      {formatMoney(c)}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-400">
+                  {t("checkout.change") || "Change"}
+                </span>
+                <span className="text-base font-semibold text-success-600 dark:text-success-500">
+                  {formatMoney(change)}
+                </span>
+              </div>
+              {cashReceived !== "" && cashNum < total && (
+                <p className="text-xs text-error-500">
+                  {t("checkout.underpaid") || "Amount is less than the total"}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Split: cash + card amounts that must sum to the total */}
+          {paymentMethod === "split" && (
+            <div className="mt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                    {t("checkout.cash")}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={splitCash}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setSplitCash(v);
+                      // Auto-fill the card side with whatever is left on the total.
+                      const left = total - (Number(v) || 0);
+                      setSplitCard(left > 0 ? String(left) : "0");
+                    }}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                    {t("checkout.card")}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={splitCard}
+                    onChange={(e) => setSplitCard(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-400">
+                  {t("checkout.remaining") || "Remaining"}
+                </span>
+                <span
+                  className={`text-base font-semibold ${
+                    Math.abs(splitRemaining) < 1
+                      ? "text-success-600 dark:text-success-500"
+                      : "text-error-500"
+                  }`}
+                >
+                  {formatMoney(splitRemaining)}
+                </span>
+              </div>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleComplete}
-            disabled={cart.length === 0 || isSubmitting}
+            disabled={cart.length === 0 || isSubmitting || !paymentValid}
             className="mt-5 h-12 w-full rounded-lg bg-brand-500 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting ? t("checkout.completing") : t("checkout.completeSale")}

@@ -962,6 +962,11 @@ export interface OrderItem {
   lineTotal: string;
 }
 
+export interface PaymentSplit {
+  method: string;
+  amount: number;
+}
+
 export interface Order {
   id: string;
   businessId: string;
@@ -971,6 +976,9 @@ export interface Order {
   totalAmount: string;
   itemCount: number;
   paymentMethod: string | null;
+  payments: PaymentSplit[] | null;
+  amountPaid: string | null;
+  changeAmount: string | null;
   note: string | null;
   source: string;
   createdAt: string;
@@ -984,6 +992,8 @@ export interface CreateOrderDto {
   customerName?: string;
   status?: string;
   paymentMethod?: string;
+  payments?: PaymentSplit[];
+  amountPaid?: number;
   note?: string;
   source?: string;
 }
