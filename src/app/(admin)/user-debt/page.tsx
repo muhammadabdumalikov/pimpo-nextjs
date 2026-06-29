@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function UserDebtPage() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="User Debt" />
+      <PageBreadcrumb pageTitle="User Debt" titleKey="sidebar.userDebt" />
       <div className="space-y-6">
         <UserDebtList />
       </div>

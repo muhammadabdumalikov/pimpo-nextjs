@@ -53,7 +53,10 @@
     "dateTo": "По",
     "clearFilters": "Сбросить",
     "ascending": "По возрастанию",
-    "descending": "По убыванию"
+    "descending": "По убыванию",
+    "selectDueDate": "Выберите дату",
+    "expand": "Развернуть",
+    "collapse": "Свернуть"
   },
   "products": {
     "title": "Список товаров",
@@ -186,6 +189,7 @@
     "currentPlan": "Текущий план",
     "upgrade": "Обновить",
     "downgrade": "Понизить",
+    "updating": "Обновление...",
     "soon": "Скоро",
     "comingSoon": "Скоро",
     "month": "/месяц",
@@ -197,7 +201,7 @@
     "features": {
       "free": {
         "userDebtList": "Список долгов пользователей",
-        "ecommerce": "Панель управления Ecommerce",
+        "ecommerceDashboard": "Панель управления Ecommerce",
         "productsList": "Список товаров",
         "debtsLimit": "До 20 долгов",
         "productsLimit": "До 20 товаров"
@@ -219,7 +223,8 @@
         "subscriptionManagement": "Управление подписками",
         "prioritySupport": "Приоритетная поддержка"
       }
-    }
+    },
+    "loadingPlans": "Загрузка тарифов..."
   },
   "sidebar": {
     "dashboard": "Панель управления",
@@ -571,5 +576,31 @@
       "passwordRequired": "Укажите пароль",
       "roleRequired": "Выберите роль"
     }
+  },
+  "common": {
+    "search": "Поиск...",
+    "searching": "Поиск…",
+    "noResults": "Нет результатов",
+    "noOptions": "Нет вариантов",
+    "selectOption": "Выберите вариант",
+    "loading": "Загрузка...",
+    "searchCommand": "Поиск или команда...",
+    "home": "Главная"
+  },
+  "auth": {
+    "backToDashboard": "Назад в панель",
+    "loginPlaceholder": "Введите логин",
+    "passwordPlaceholder": "Введите пароль",
+    "keepLoggedIn": "Запомнить меня",
+    "signIn": "Войти",
+    "signingIn": "Вход...",
+    "noAccount": "Нет аккаунта?",
+    "signUp": "Регистрация",
+    "businessLogin": "Вход для бизнеса",
+    "subtitle": "Введите логин и пароль для входа!",
+    "loginLabel": "Логин",
+    "passwordLabel": "Пароль",
+    "forgotPassword": "Забыли пароль?",
+    "signOut": "Выйти"
   }
 }

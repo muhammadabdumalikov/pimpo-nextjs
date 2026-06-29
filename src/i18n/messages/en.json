@@ -53,7 +53,10 @@
     "dateTo": "To",
     "clearFilters": "Clear",
     "ascending": "Ascending",
-    "descending": "Descending"
+    "descending": "Descending",
+    "selectDueDate": "Select due date",
+    "expand": "Expand",
+    "collapse": "Collapse"
   },
   "products": {
     "title": "Products List",
@@ -220,7 +223,8 @@
         "subscriptionManagement": "Subscription Management",
         "prioritySupport": "Priority Support"
       }
-    }
+    },
+    "loadingPlans": "Loading plans..."
   },
   "sidebar": {
     "dashboard": "Dashboard",
@@ -572,5 +576,31 @@
       "passwordRequired": "Password is required",
       "roleRequired": "Role is required"
     }
+  },
+  "common": {
+    "search": "Search...",
+    "searching": "Searching…",
+    "noResults": "No results",
+    "noOptions": "No options",
+    "selectOption": "Select option",
+    "loading": "Loading...",
+    "searchCommand": "Search or type command...",
+    "home": "Home"
+  },
+  "auth": {
+    "backToDashboard": "Back to dashboard",
+    "loginPlaceholder": "Enter your login",
+    "passwordPlaceholder": "Enter your password",
+    "keepLoggedIn": "Keep me logged in",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign Up",
+    "businessLogin": "Business Login",
+    "subtitle": "Enter your login and password to sign in!",
+    "loginLabel": "Login",
+    "passwordLabel": "Password",
+    "forgotPassword": "Forgot password?",
+    "signOut": "Sign out"
   }
 }

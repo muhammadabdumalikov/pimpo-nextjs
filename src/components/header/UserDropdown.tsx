@@ -3,8 +3,10 @@ import React, { useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { useAuth } from "@/context/AuthContext";
+import { useTranslations } from "@/hooks/useTranslations";
 
 export default function UserDropdown() {
+  const { t } = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
   const { logout, account } = useAuth();
 
@@ -88,7 +90,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
               fill=""
             />
           </svg>
-          Sign out
+          {t("auth.signOut")}
         </button>
       </Dropdown>
     </div>

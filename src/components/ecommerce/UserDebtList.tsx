@@ -622,7 +622,7 @@ export default function UserDebtList() {
                       <button
                         onClick={() => toggleUserExpansion(group.userName)}
                         className="p-1 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400 transition-transform"
-                        title={isExpanded ? "Collapse" : "Expand"}
+                        title={isExpanded ? t('userDebt.collapse') : t('userDebt.expand')}
                       >
                         {isExpanded ? (
                           <ChevronUpIcon className="w-4 h-4" />
@@ -744,7 +744,7 @@ export default function UserDebtList() {
                               <DatePicker
                                 id={`due-date-${debt.id}`}
                                 dateFormat="d.m.y" // should be in dd-mm-yy format
-                                placeholder="Select due date"
+                                placeholder={t('userDebt.selectDueDate')}
                                 mode="single"
                                 defaultDate={editFormData.dueDate ? (typeof editFormData.dueDate === 'string' ? new Date(editFormData.dueDate) : editFormData.dueDate) : undefined}
                                 onChange={handleDateChange}

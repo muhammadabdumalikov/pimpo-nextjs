@@ -53,7 +53,10 @@
     "dateTo": "Гача",
     "clearFilters": "Тозалаш",
     "ascending": "Ўсиш бўйича",
-    "descending": "Камайиш бўйича"
+    "descending": "Камайиш бўйича",
+    "selectDueDate": "Санани танланг",
+    "expand": "Очиш",
+    "collapse": "Ёпиш"
   },
   "products": {
     "title": "Маҳсулотлар рўйхати",
@@ -186,6 +189,7 @@
     "currentPlan": "Жорий режа",
     "upgrade": "Янгилаш",
     "downgrade": "Пастлаштириш",
+    "updating": "Янгиланмоқда...",
     "soon": "Тез орада",
     "comingSoon": "Тез орада",
     "month": "/ой",
@@ -197,7 +201,7 @@
     "features": {
       "free": {
         "userDebtList": "Фойдаланувчи қарзлари рўйхати",
-        "ecommerce": "Ecommerce бошқарув панели",
+        "ecommerceDashboard": "Ecommerce бошқарув панели",
         "productsList": "Маҳсулотлар рўйхати",
         "debtsLimit": "20 тагача қарз",
         "productsLimit": "20 тагача маҳсулот"
@@ -219,7 +223,8 @@
         "subscriptionManagement": "Обуна бошқаруви",
         "prioritySupport": "Устувор қўллаб-қувватлаш"
       }
-    }
+    },
+    "loadingPlans": "Режалар юкланмоқда..."
   },
   "sidebar": {
     "dashboard": "Бошқарув панели",
@@ -571,5 +576,31 @@
       "passwordRequired": "Парол керак",
       "roleRequired": "Рол керак"
     }
+  },
+  "common": {
+    "search": "Қидириш...",
+    "searching": "Қидирилмоқда…",
+    "noResults": "Натижа йўқ",
+    "noOptions": "Вариант йўқ",
+    "selectOption": "Вариантни танланг",
+    "loading": "Юкланмоқда...",
+    "searchCommand": "Қидириш ёки буйруқ киритинг...",
+    "home": "Бош саҳифа"
+  },
+  "auth": {
+    "backToDashboard": "Бошқарув панелига қайтиш",
+    "loginPlaceholder": "Логинингизни киритинг",
+    "passwordPlaceholder": "Паролингизни киритинг",
+    "keepLoggedIn": "Мени эслаб қол",
+    "signIn": "Кириш",
+    "signingIn": "Кирилмоқда...",
+    "noAccount": "Ҳисобингиз йўқми?",
+    "signUp": "Рўйхатдан ўтиш",
+    "businessLogin": "Бизнесга кириш",
+    "subtitle": "Кириш учун логин ва паролингизни киритинг!",
+    "loginLabel": "Логин",
+    "passwordLabel": "Парол",
+    "forgotPassword": "Паролни унутдингизми?",
+    "signOut": "Чиқиш"
   }
 }

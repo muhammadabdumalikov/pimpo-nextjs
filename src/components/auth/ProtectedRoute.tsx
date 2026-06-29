@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getAuthToken } from "@/lib/api";
+import { useTranslations } from "@/hooks/useTranslations";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface ProtectedRouteProps {
 const publicRoutes = ["/signin", "/signup", "/reset-password"];
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { t } = useTranslations();
   const router = useRouter();
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +36,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
+        <div className="text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
       </div>
     );
   }

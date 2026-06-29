@@ -157,7 +157,7 @@ export default function UpgradePlan() {
   if (isLoading || subscriptionLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-gray-500 dark:text-gray-400">Loading plans...</div>
+        <div className="text-gray-500 dark:text-gray-400">{t('upgradePlan.loadingPlans')}</div>
       </div>
     );
   }

@@ -53,7 +53,10 @@
     "dateTo": "Gacha",
     "clearFilters": "Tozalash",
     "ascending": "O'sish bo'yicha",
-    "descending": "Kamayish bo'yicha"
+    "descending": "Kamayish bo'yicha",
+    "selectDueDate": "Sanani tanlang",
+    "expand": "Ochish",
+    "collapse": "Yopish"
   },
   "products": {
     "title": "Mahsulotlar ro'yxati",
@@ -186,6 +189,7 @@
     "currentPlan": "Joriy reja",
     "upgrade": "Yangilash",
     "downgrade": "Pastlashtirish",
+    "updating": "Yangilanmoqda...",
     "soon": "Tez orada",
     "comingSoon": "Tez orada",
     "month": "/oy",
@@ -197,7 +201,7 @@
     "features": {
       "free": {
         "userDebtList": "Foydalanuvchi qarzlari ro'yxati",
-        "ecommerce": "Ecommerce boshqaruv paneli",
+        "ecommerceDashboard": "Ecommerce boshqaruv paneli",
         "productsList": "Mahsulotlar ro'yxati",
         "debtsLimit": "20 tagacha qarz",
         "productsLimit": "20 tagacha mahsulot"
@@ -219,7 +223,8 @@
         "subscriptionManagement": "Obuna boshqaruvi",
         "prioritySupport": "Ustuvor qo'llab-quvvatlash"
       }
-    }
+    },
+    "loadingPlans": "Rejalar yuklanmoqda..."
   },
   "sidebar": {
     "dashboard": "Boshqaruv paneli",
@@ -571,5 +576,31 @@
       "passwordRequired": "Parol kerak",
       "roleRequired": "Rol kerak"
     }
+  },
+  "common": {
+    "search": "Qidirish...",
+    "searching": "Qidirilmoqda…",
+    "noResults": "Natija yo'q",
+    "noOptions": "Variant yo'q",
+    "selectOption": "Variantni tanlang",
+    "loading": "Yuklanmoqda...",
+    "searchCommand": "Qidirish yoki buyruq kiriting...",
+    "home": "Bosh sahifa"
+  },
+  "auth": {
+    "backToDashboard": "Boshqaruv paneliga qaytish",
+    "loginPlaceholder": "Loginingizni kiriting",
+    "passwordPlaceholder": "Parolingizni kiriting",
+    "keepLoggedIn": "Meni eslab qol",
+    "signIn": "Kirish",
+    "signingIn": "Kirilmoqda...",
+    "noAccount": "Hisobingiz yo'qmi?",
+    "signUp": "Ro'yxatdan o'tish",
+    "businessLogin": "Biznesga kirish",
+    "subtitle": "Kirish uchun login va parolingizni kiriting!",
+    "loginLabel": "Login",
+    "passwordLabel": "Parol",
+    "forgotPassword": "Parolni unutdingizmi?",
+    "signOut": "Chiqish"
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDownIcon, CheckLineIcon } from "@/icons/index";
+import { useTranslations } from "@/hooks/useTranslations";
 
 interface Option {
   value: string;
@@ -57,6 +58,7 @@ export default function SelectField({
   className = "",
   buttonClassName = "",
 }: SelectFieldProps) {
+  const { t } = useTranslations();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -163,7 +165,7 @@ export default function SelectField({
                 type="text"
                 value={query}
                 onChange={(e) => runSearch(e.target.value)}
-                placeholder={searchPlaceholder || "Search..."}
+                placeholder={searchPlaceholder || t("common.search")}
                 className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />
             </div>
@@ -173,11 +175,11 @@ export default function SelectField({
             {loading ? (
               <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
-                <span>Searching…</span>
+                <span>{t("common.searching")}</span>
               </div>
             ) : filtered.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-gray-400">
-                {query.trim() ? "No results" : "No options"}
+                {query.trim() ? t("common.noResults") : t("common.noOptions")}
               </p>
             ) : (
               filtered.map((option) => {
