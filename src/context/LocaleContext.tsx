@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getTranslations, type Locale, defaultLocale } from '@/i18n';
+import { locales } from '@/i18n/config';
 
 type LocaleContextType = {
   locale: Locale;
@@ -18,7 +19,7 @@ export const LocaleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   useEffect(() => {
     // Initialize locale from localStorage
     const savedLocale = localStorage.getItem('locale') as Locale | null;
-    if (savedLocale && ['en', 'ru', 'uz'].includes(savedLocale)) {
+    if (savedLocale && locales.includes(savedLocale)) {
       setLocaleState(savedLocale);
     }
     setIsInitialized(true);

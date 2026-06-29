@@ -17,6 +17,7 @@ import SelectField from "../form/SelectField";
 import { Modal } from "../ui/modal";
 import { useModal } from "@/hooks/useModal";
 import { useTranslations } from "@/hooks/useTranslations";
+import { formatPhone } from "@/lib/phone";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { getDebtGroups, createDebt, updateDebt, deleteDebt, getDebtCount, getOrder, type Order, type DebtGroup } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
@@ -637,7 +638,7 @@ export default function UserDebtList() {
                     </TableCell>
                     <TableCell className="py-3 px-4 sm:px-6 w-[20%]">
                       <span className="text-gray-500 text-base dark:text-gray-400">
-                        {group.phone}
+                        {formatPhone(group.phone)}
                       </span>
                     </TableCell>
                     <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
@@ -706,7 +707,7 @@ export default function UserDebtList() {
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[20%]">
                             <span className="text-gray-500 text-base dark:text-gray-400">
-                            {debt.user?.phone || ''}
+                            {formatPhone(debt.user?.phone || '')}
                             </span>
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
@@ -904,7 +905,7 @@ export default function UserDebtList() {
                 type="text"
                 name="phone"
                 value={addFormData.phone}
-                onChange={(e) => handleAddFormChange("phone", e.target.value)}
+                onChange={(e) => handleAddFormChange("phone", formatPhone(e.target.value))}
                 placeholder={t('userDebt.phone') || "Phone number"}
                 required
               />

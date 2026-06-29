@@ -17,7 +17,7 @@ export default function MonthlySalesChart() {
   const options: ApexOptions = {
     colors: ["#465fff"],
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: "var(--font-gilroy), sans-serif",
       type: "bar",
       height: 200,
       toolbar: {
@@ -66,7 +66,7 @@ export default function MonthlySalesChart() {
       show: true,
       position: "top",
       horizontalAlign: "left",
-      fontFamily: "Outfit",
+      fontFamily: "var(--font-gilroy), sans-serif",
     },
     yaxis: {
       title: {

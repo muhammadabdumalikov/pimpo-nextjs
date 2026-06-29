@@ -4,7 +4,9 @@
 
 @theme {
   --font-*: initial;
-  --font-outfit: Outfit, sans-serif;
+  /* Gilroy (self-hosted) for Latin + Russian Cyrillic. The trailing families cover the
+     Uzbek-specific letters қ Қ ғ Ғ ҳ Ҳ that Gilroy lacks, via per-glyph fallback. */
+  --font-outfit: var(--font-gilroy), 'Segoe UI', 'Noto Sans', 'PT Sans', Arial, sans-serif;
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;
@@ -193,7 +195,7 @@
 }
 
 @utility menu-item {
-  @apply relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-theme-sm;
+  @apply relative flex items-center w-full gap-3 px-3 py-2 font-semibold rounded-lg text-theme-sm;
 }
 
 @utility menu-item-active {
@@ -229,7 +231,7 @@
 }
 
 @utility menu-dropdown-item {
-  @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium;
+  @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-semibold;
 }
 
 @utility menu-dropdown-item-active {

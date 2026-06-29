@@ -1,4 +1,4 @@
-import { Outfit } from 'next/font/google';
+import { gilroy } from './fonts';
 import './globals.css';
 import "flatpickr/dist/flatpickr.css";
 import { SidebarProvider } from '@/context/SidebarContext';
@@ -8,18 +8,14 @@ import { SubscriptionProvider } from '@/context/SubscriptionContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 
-const outfit = Outfit({
-  subsets: ["latin"],
-});
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${outfit.className} dark:bg-gray-900`} suppressHydrationWarning>
+    <html lang="en" className={gilroy.variable}>
+      <body className="dark:bg-gray-900" suppressHydrationWarning>
         <AuthProvider>
           <LocaleProvider>
             <SubscriptionProvider>

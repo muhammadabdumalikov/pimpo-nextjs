@@ -15,7 +15,7 @@ export default function ProfitChart() {
   const options: ApexOptions = {
     colors: ["#10b981"],
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: "var(--font-gilroy), sans-serif",
       type: "bar",
       height: 180,
       toolbar: {

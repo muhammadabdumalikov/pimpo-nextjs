@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
+import { formatPhone } from "@/lib/phone";
 import {
   getProducts,
   createOrder,
@@ -144,7 +145,7 @@ export default function Checkout() {
 
   const selectCustomer = (c: Customer) => {
     setCustomerName(c.name);
-    setPhone(c.phone);
+    setPhone(formatPhone(c.phone));
     setCustomerUserId(c.id);
     setCustomerResults([]);
     setCustomerFocused(false);
@@ -828,7 +829,7 @@ export default function Checkout() {
                                     {c.name}
                                   </span>
                                   <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
-                                    {c.phone}
+                                    {formatPhone(c.phone)}
                                   </span>
                                 </span>
                               </button>
@@ -846,7 +847,7 @@ export default function Checkout() {
                     <input
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => setPhone(formatPhone(e.target.value))}
                       placeholder={t("checkout.phonePlaceholder") || "+998 ..."}
                       className={inputClass}
                     />

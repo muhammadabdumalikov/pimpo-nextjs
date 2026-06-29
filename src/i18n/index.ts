@@ -2,11 +2,13 @@ import { defaultLocale, locales, type Locale } from './config';
 import enMessages from './messages/en.json';
 import ruMessages from './messages/ru.json';
 import uzMessages from './messages/uz.json';
+import uzcMessages from './messages/uzc.json';
 
 const messages = {
   en: enMessages,
   ru: ruMessages,
   uz: uzMessages,
+  uzc: uzcMessages,
 } as const;
 
 export function getMessages(locale: Locale) {
