@@ -24,7 +24,7 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  subItems?: { name: string; path: string; pro?: boolean; new?: boolean; comingSoon?: boolean }[];
 };
 
 const AppSidebar: React.FC = () => {
@@ -125,7 +125,7 @@ const AppSidebar: React.FC = () => {
       name: t('sidebar.procurement'),
       subItems: [
         { name: t('sidebar.suppliers'), path: "/suppliers", pro: false },
-        { name: t('sidebar.goodsReceipts'), path: "/receipts", pro: false },
+        { name: t('sidebar.goodsReceipts'), path: "/receipts", pro: false, comingSoon: true },
       ],
     },
     {
@@ -238,6 +238,20 @@ const AppSidebar: React.FC = () => {
               <ul className="mt-2 space-y-1 ml-9">
                 {nav.subItems.map((subItem) => (
                   <li key={subItem.name}>
+                    {subItem.comingSoon ? (
+                      <span
+                        className="menu-dropdown-item menu-dropdown-item-inactive cursor-not-allowed opacity-60"
+                        aria-disabled="true"
+                        title={t('sidebar.comingSoon')}
+                      >
+                        {subItem.name}
+                        <span className="flex items-center gap-1 ml-auto">
+                          <span className="menu-dropdown-badge menu-dropdown-badge-inactive">
+                            {t('sidebar.comingSoon')}
+                          </span>
+                        </span>
+                      </span>
+                    ) : (
                     <Link
                       href={subItem.path}
                       onClick={handleNavClick}
@@ -273,6 +287,7 @@ const AppSidebar: React.FC = () => {
                         )}
                       </span>
                     </Link>
+                    )}
                   </li>
                 ))}
               </ul>

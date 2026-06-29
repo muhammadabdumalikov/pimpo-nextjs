@@ -273,7 +273,8 @@
     "staff": "Staff",
     "procurement": "Procurement",
     "suppliers": "Suppliers",
-    "goodsReceipts": "Goods Receipts"
+    "goodsReceipts": "Goods Receipts",
+    "comingSoon": "Coming soon"
   },
   "inventory": {
     "title": "Inventory Management",

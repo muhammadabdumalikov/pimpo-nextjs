@@ -273,7 +273,8 @@
     "staff": "Xodimlar",
     "procurement": "Xaridlar",
     "suppliers": "Yetkazib beruvchilar",
-    "goodsReceipts": "Tovar kirimi"
+    "goodsReceipts": "Tovar kirimi",
+    "comingSoon": "Tez kunda"
   },
   "inventory": {
     "title": "Inventarizatsiya boshqaruvi",

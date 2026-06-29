@@ -273,7 +273,8 @@
     "staff": "Сотрудники",
     "procurement": "Закупки",
     "suppliers": "Поставщики",
-    "goodsReceipts": "Приход товаров"
+    "goodsReceipts": "Приход товаров",
+    "comingSoon": "Скоро"
   },
   "inventory": {
     "title": "Управление инвентаризацией",

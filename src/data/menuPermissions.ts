@@ -20,9 +20,7 @@ export const defaultMenuPermissions: MenuPermission[] = [
 
   // Procurement (suppliers + goods receipts)
   { menuItem: 'suppliers', allowedTiers: ['free', 'basic', 'pro'] },
-  // Goods receipts ("Приход товаров") temporarily disabled — no tier can see the
-  // menu. Re-enable by restoring the tiers: ['free', 'basic', 'pro'].
-  { menuItem: 'receipts', allowedTiers: [] },
+  { menuItem: 'receipts', allowedTiers: ['free', 'basic', 'pro'] },
 
   // Team management (role/staff access is further gated to the owner via role permissions)
   { menuItem: 'team.roles', allowedTiers: ['free', 'basic', 'pro'] },

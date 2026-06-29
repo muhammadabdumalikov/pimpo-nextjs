@@ -273,7 +273,8 @@
     "staff": "Ходимлар",
     "procurement": "Харидлар",
     "suppliers": "Етказиб берувчилар",
-    "goodsReceipts": "Товар кирими"
+    "goodsReceipts": "Товар кирими",
+    "comingSoon": "Тез кунда"
   },
   "inventory": {
     "title": "Инвентаризация бошқаруви",
