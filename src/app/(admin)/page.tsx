@@ -6,8 +6,8 @@ import RecentProducts from "@/components/ecommerce/RecentProducts";
 
 export const metadata: Metadata = {
   title:
-    "Next.js Product Dashboard | TailAdmin - Next.js Dashboard Template",
-  description: "This is Next.js Product Dashboard for TailAdmin Dashboard Template",
+    "Next.js Product Dashboard | Pimpo - Next.js Dashboard Template",
+  description: "This is Next.js Product Dashboard for Pimpo Dashboard Template",
 };
 
 export default function Ecommerce() {
