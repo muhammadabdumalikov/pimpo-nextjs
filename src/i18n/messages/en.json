@@ -270,7 +270,10 @@
     "pro": "pro",
     "team": "Team",
     "roles": "Roles",
-    "staff": "Staff"
+    "staff": "Staff",
+    "procurement": "Procurement",
+    "suppliers": "Suppliers",
+    "goodsReceipts": "Goods Receipts"
   },
   "inventory": {
     "title": "Inventory Management",
@@ -602,5 +605,70 @@
     "passwordLabel": "Password",
     "forgotPassword": "Forgot password?",
     "signOut": "Sign out"
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "description": "Manage suppliers for goods receipts",
+    "addSupplier": "Add supplier",
+    "addSupplierTitle": "New supplier",
+    "editSupplierTitle": "Edit supplier",
+    "nameLabel": "Name",
+    "namePlaceholder": "Enter supplier name",
+    "phoneLabel": "Phone",
+    "phonePlaceholder": "Enter phone",
+    "noteLabel": "Note",
+    "notePlaceholder": "Enter note",
+    "noSuppliers": "No suppliers found",
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "deleting": "Deleting...",
+    "deleteConfirmTitle": "Delete supplier?",
+    "deleteConfirm": "Are you sure you want to delete this supplier?",
+    "addSuccess": "Supplier created",
+    "editSuccess": "Supplier updated",
+    "deleteSuccess": "Supplier deleted",
+    "errors": {
+      "nameRequired": "Name is required"
+    }
+  },
+  "goodsReceipt": {
+    "title": "Goods Receipts",
+    "description": "Incoming stock received from suppliers",
+    "create": "New receipt",
+    "createTitle": "New goods receipt",
+    "createDescription": "Pick a supplier and add products — stock increases automatically",
+    "detailTitle": "Goods Receipt",
+    "supplierLabel": "Supplier",
+    "selectSupplier": "Select supplier",
+    "searchSupplier": "Search supplier...",
+    "noteLabel": "Note",
+    "notePlaceholder": "Enter note",
+    "note": "Note",
+    "product": "Product",
+    "selectProduct": "Select product",
+    "searchProduct": "Search product...",
+    "quantity": "Quantity",
+    "priceIn": "Purchase price",
+    "lineTotal": "Line total",
+    "total": "Total",
+    "addLine": "Add line",
+    "removeLine": "Remove line",
+    "date": "Date",
+    "supplier": "Supplier",
+    "itemCount": "Items",
+    "save": "Create receipt",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "createSuccess": "Receipt created — stock updated",
+    "noReceipts": "No receipts found",
+    "notFound": "Receipt not found",
+    "backToList": "Back to receipts",
+    "errors": {
+      "noItems": "Add at least one product",
+      "badQuantity": "Quantity must be at least 1"
+    }
   }
 }

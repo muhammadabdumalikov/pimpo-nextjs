@@ -270,7 +270,10 @@
     "pro": "про",
     "team": "Команда",
     "roles": "Роли",
-    "staff": "Сотрудники"
+    "staff": "Сотрудники",
+    "procurement": "Закупки",
+    "suppliers": "Поставщики",
+    "goodsReceipts": "Приход товаров"
   },
   "inventory": {
     "title": "Управление инвентаризацией",
@@ -602,5 +605,70 @@
     "passwordLabel": "Пароль",
     "forgotPassword": "Забыли пароль?",
     "signOut": "Выйти"
+  },
+  "suppliers": {
+    "title": "Поставщики",
+    "description": "Управление поставщиками для приходов товаров",
+    "addSupplier": "Добавить поставщика",
+    "addSupplierTitle": "Новый поставщик",
+    "editSupplierTitle": "Редактировать поставщика",
+    "nameLabel": "Название",
+    "namePlaceholder": "Введите название поставщика",
+    "phoneLabel": "Телефон",
+    "phonePlaceholder": "Введите телефон",
+    "noteLabel": "Примечание",
+    "notePlaceholder": "Введите примечание",
+    "noSuppliers": "Поставщики не найдены",
+    "edit": "Редактировать",
+    "delete": "Удалить",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "saving": "Сохранение...",
+    "deleting": "Удаление...",
+    "deleteConfirmTitle": "Удалить поставщика?",
+    "deleteConfirm": "Вы уверены, что хотите удалить этого поставщика?",
+    "addSuccess": "Поставщик создан",
+    "editSuccess": "Поставщик обновлён",
+    "deleteSuccess": "Поставщик удалён",
+    "errors": {
+      "nameRequired": "Название обязательно"
+    }
+  },
+  "goodsReceipt": {
+    "title": "Приход товаров",
+    "description": "Поступление товаров на склад от поставщиков",
+    "create": "Новый приход",
+    "createTitle": "Новый приход товаров",
+    "createDescription": "Выберите поставщика и добавьте товары — остатки увеличатся автоматически",
+    "detailTitle": "Приход товаров",
+    "supplierLabel": "Поставщик",
+    "selectSupplier": "Выберите поставщика",
+    "searchSupplier": "Поиск поставщика...",
+    "noteLabel": "Примечание",
+    "notePlaceholder": "Введите примечание",
+    "note": "Примечание",
+    "product": "Товар",
+    "selectProduct": "Выберите товар",
+    "searchProduct": "Поиск товара...",
+    "quantity": "Количество",
+    "priceIn": "Цена прихода",
+    "lineTotal": "Сумма",
+    "total": "Итого",
+    "addLine": "Добавить строку",
+    "removeLine": "Удалить строку",
+    "date": "Дата",
+    "supplier": "Поставщик",
+    "itemCount": "Кол-во",
+    "save": "Создать приход",
+    "saving": "Сохранение...",
+    "cancel": "Отмена",
+    "createSuccess": "Приход создан — остатки обновлены",
+    "noReceipts": "Приходы не найдены",
+    "notFound": "Приход не найден",
+    "backToList": "К списку приходов",
+    "errors": {
+      "noItems": "Добавьте хотя бы один товар",
+      "badQuantity": "Количество должно быть не менее 1"
+    }
   }
 }

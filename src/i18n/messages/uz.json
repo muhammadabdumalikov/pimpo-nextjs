@@ -270,7 +270,10 @@
     "pro": "pro",
     "team": "Jamoa",
     "roles": "Rollar",
-    "staff": "Xodimlar"
+    "staff": "Xodimlar",
+    "procurement": "Xaridlar",
+    "suppliers": "Yetkazib beruvchilar",
+    "goodsReceipts": "Tovar kirimi"
   },
   "inventory": {
     "title": "Inventarizatsiya boshqaruvi",
@@ -602,5 +605,70 @@
     "passwordLabel": "Parol",
     "forgotPassword": "Parolni unutdingizmi?",
     "signOut": "Chiqish"
+  },
+  "suppliers": {
+    "title": "Yetkazib beruvchilar",
+    "description": "Tovar kirimlari uchun yetkazib beruvchilarni boshqaring",
+    "addSupplier": "Yetkazib beruvchi qo'shish",
+    "addSupplierTitle": "Yangi yetkazib beruvchi",
+    "editSupplierTitle": "Yetkazib beruvchini tahrirlash",
+    "nameLabel": "Nomi",
+    "namePlaceholder": "Yetkazib beruvchi nomini kiriting",
+    "phoneLabel": "Telefon",
+    "phonePlaceholder": "Telefonni kiriting",
+    "noteLabel": "Izoh",
+    "notePlaceholder": "Izoh kiriting",
+    "noSuppliers": "Yetkazib beruvchilar topilmadi",
+    "edit": "Tahrirlash",
+    "delete": "O'chirish",
+    "cancel": "Bekor qilish",
+    "save": "Saqlash",
+    "saving": "Saqlanmoqda...",
+    "deleting": "O'chirilmoqda...",
+    "deleteConfirmTitle": "Yetkazib beruvchini o'chirasizmi?",
+    "deleteConfirm": "Ushbu yetkazib beruvchini o'chirishni xohlaysizmi?",
+    "addSuccess": "Yetkazib beruvchi yaratildi",
+    "editSuccess": "Yetkazib beruvchi yangilandi",
+    "deleteSuccess": "Yetkazib beruvchi o'chirildi",
+    "errors": {
+      "nameRequired": "Nomi majburiy"
+    }
+  },
+  "goodsReceipt": {
+    "title": "Tovar kirimi",
+    "description": "Yetkazib beruvchilardan omborga tovar kirimi",
+    "create": "Yangi kirim",
+    "createTitle": "Yangi tovar kirimi",
+    "createDescription": "Yetkazib beruvchini tanlang va tovarlarni qo'shing — qoldiq avtomatik oshadi",
+    "detailTitle": "Tovar kirimi",
+    "supplierLabel": "Yetkazib beruvchi",
+    "selectSupplier": "Yetkazib beruvchini tanlang",
+    "searchSupplier": "Yetkazib beruvchini qidirish...",
+    "noteLabel": "Izoh",
+    "notePlaceholder": "Izoh kiriting",
+    "note": "Izoh",
+    "product": "Tovar",
+    "selectProduct": "Tovarni tanlang",
+    "searchProduct": "Tovarni qidirish...",
+    "quantity": "Miqdori",
+    "priceIn": "Kirim narxi",
+    "lineTotal": "Summa",
+    "total": "Jami",
+    "addLine": "Qator qo'shish",
+    "removeLine": "Qatorni o'chirish",
+    "date": "Sana",
+    "supplier": "Yetkazib beruvchi",
+    "itemCount": "Soni",
+    "save": "Kirimni yaratish",
+    "saving": "Saqlanmoqda...",
+    "cancel": "Bekor qilish",
+    "createSuccess": "Kirim yaratildi — qoldiq yangilandi",
+    "noReceipts": "Kirimlar topilmadi",
+    "notFound": "Kirim topilmadi",
+    "backToList": "Kirimlar ro'yxatiga",
+    "errors": {
+      "noItems": "Kamida bitta tovar qo'shing",
+      "badQuantity": "Miqdori kamida 1 bo'lishi kerak"
+    }
   }
 }

@@ -54,6 +54,8 @@ const AppSidebar: React.FC = () => {
       '/settings/receipts': 'settings.receipts',
       '/checkout': 'checkout',
       '/inventory': 'inventory',
+      '/suppliers': 'suppliers',
+      '/receipts': 'receipts',
       '/product-performance': 'productPerformance',
       '/roles': 'team.roles',
       '/staff': 'team.staff',
@@ -117,6 +119,14 @@ const AppSidebar: React.FC = () => {
       icon: <BoxIconLine />,
       name: t('sidebar.inventory'),
       path: "/inventory",
+    },
+    {
+      icon: <BoxIcon />,
+      name: t('sidebar.procurement'),
+      subItems: [
+        { name: t('sidebar.suppliers'), path: "/suppliers", pro: false },
+        { name: t('sidebar.goodsReceipts'), path: "/receipts", pro: false },
+      ],
     },
     {
       icon: <PieChartIcon />,

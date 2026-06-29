@@ -1222,3 +1222,174 @@ export async function getProductPerformance(
     await parseError(response, 'Failed to fetch product performance');
   return response.json();
 }
+
+// ---------------------------------------------------------------------------
+// Suppliers API
+// ---------------------------------------------------------------------------
+
+export interface Supplier {
+  id: string;
+  businessId: string;
+  name: string;
+  phone: string | null;
+  note: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SuppliersResponse {
+  suppliers: Supplier[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface CreateSupplierDto {
+  name: string;
+  phone?: string;
+  note?: string;
+}
+
+export interface UpdateSupplierDto {
+  name?: string;
+  phone?: string;
+  note?: string;
+  isActive?: boolean;
+}
+
+export async function getSuppliers(
+  page?: number,
+  limit?: number,
+  search?: string,
+): Promise<SuppliersResponse> {
+  const params = new URLSearchParams();
+  if (page) params.set('page', String(page));
+  if (limit) params.set('limit', String(limit));
+  if (search) params.set('search', search);
+  const response = await fetch(`${API_BASE_URL}/suppliers?${params.toString()}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch suppliers');
+  return response.json();
+}
+
+export async function createSupplier(
+  data: CreateSupplierDto,
+): Promise<Supplier> {
+  const response = await fetch(`${API_BASE_URL}/suppliers`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create supplier');
+  const result = await response.json();
+  return result.supplier;
+}
+
+export async function updateSupplier(
+  id: string,
+  data: UpdateSupplierDto,
+): Promise<Supplier> {
+  const response = await fetch(`${API_BASE_URL}/suppliers/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update supplier');
+  const result = await response.json();
+  return result.supplier;
+}
+
+export async function deleteSupplier(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/suppliers/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to delete supplier');
+}
+
+// ---------------------------------------------------------------------------
+// Goods receipts API ("Приход товаров")
+// ---------------------------------------------------------------------------
+
+export interface GoodsReceiptItem {
+  id: string;
+  receiptId: string;
+  productId: string | null;
+  productName: string;
+  priceIn: string;
+  quantity: number;
+  lineTotal: string;
+}
+
+export interface GoodsReceipt {
+  id: string;
+  businessId: string;
+  supplierId: string | null;
+  supplierName: string | null;
+  status: string;
+  totalAmount: string;
+  itemCount: number;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items?: GoodsReceiptItem[];
+}
+
+export interface CreateReceiptDto {
+  items: { productId: string; quantity: number; priceIn: number }[];
+  supplierId?: string;
+  note?: string;
+}
+
+export interface ReceiptsResponse {
+  receipts: GoodsReceipt[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getReceipts(
+  page?: number,
+  limit?: number,
+  supplierId?: string,
+  startDate?: string,
+  endDate?: string,
+): Promise<ReceiptsResponse> {
+  const params = new URLSearchParams();
+  if (page) params.set('page', String(page));
+  if (limit) params.set('limit', String(limit));
+  if (supplierId) params.set('supplierId', supplierId);
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+  const response = await fetch(`${API_BASE_URL}/receipts?${params.toString()}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch receipts');
+  return response.json();
+}
+
+export async function getReceipt(id: string): Promise<GoodsReceipt> {
+  const response = await fetch(`${API_BASE_URL}/receipts/${id}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch receipt');
+  return response.json();
+}
+
+export async function createReceipt(
+  data: CreateReceiptDto,
+): Promise<GoodsReceipt> {
+  const response = await fetch(`${API_BASE_URL}/receipts`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create receipt');
+  const result = await response.json();
+  return result.receipt;
+}

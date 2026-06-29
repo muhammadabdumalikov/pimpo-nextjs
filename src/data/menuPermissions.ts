@@ -18,6 +18,10 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'inventory', allowedTiers: ['free', 'basic', 'pro'] },
   { menuItem: 'productPerformance', allowedTiers: ['free', 'basic', 'pro'] },
 
+  // Procurement (suppliers + goods receipts)
+  { menuItem: 'suppliers', allowedTiers: ['free', 'basic', 'pro'] },
+  { menuItem: 'receipts', allowedTiers: ['free', 'basic', 'pro'] },
+
   // Team management (role/staff access is further gated to the owner via role permissions)
   { menuItem: 'team.roles', allowedTiers: ['free', 'basic', 'pro'] },
   { menuItem: 'team.staff', allowedTiers: ['free', 'basic', 'pro'] },

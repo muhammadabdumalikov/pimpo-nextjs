@@ -31,6 +31,8 @@ export const menuCatalog: MenuCatalogItem[] = [
   { key: "ecommerce.products", labelKey: "sidebar.products", group: "catalog" },
   { key: "ecommerce.addProduct", labelKey: "sidebar.addProduct", group: "catalog" },
   { key: "inventory", labelKey: "sidebar.inventory", group: "catalog" },
+  { key: "suppliers", labelKey: "sidebar.suppliers", group: "catalog" },
+  { key: "receipts", labelKey: "sidebar.goodsReceipts", group: "catalog" },
 
   // Sales
   { key: "checkout", labelKey: "sidebar.checkout", group: "sales" },

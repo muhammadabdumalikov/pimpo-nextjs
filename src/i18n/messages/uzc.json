@@ -270,7 +270,10 @@
     "pro": "pro",
     "team": "Жамоа",
     "roles": "Роллар",
-    "staff": "Ходимлар"
+    "staff": "Ходимлар",
+    "procurement": "Харидлар",
+    "suppliers": "Етказиб берувчилар",
+    "goodsReceipts": "Товар кирими"
   },
   "inventory": {
     "title": "Инвентаризация бошқаруви",
@@ -602,5 +605,70 @@
     "passwordLabel": "Парол",
     "forgotPassword": "Паролни унутдингизми?",
     "signOut": "Чиқиш"
+  },
+  "suppliers": {
+    "title": "Етказиб берувчилар",
+    "description": "Товар киримлари учун етказиб берувчиларни бошқаринг",
+    "addSupplier": "Етказиб берувчи қўшиш",
+    "addSupplierTitle": "Янги етказиб берувчи",
+    "editSupplierTitle": "Етказиб берувчини таҳрирлаш",
+    "nameLabel": "Номи",
+    "namePlaceholder": "Етказиб берувчи номини киритинг",
+    "phoneLabel": "Телефон",
+    "phonePlaceholder": "Телефонни киритинг",
+    "noteLabel": "Изоҳ",
+    "notePlaceholder": "Изоҳ киритинг",
+    "noSuppliers": "Етказиб берувчилар топилмади",
+    "edit": "Таҳрирлаш",
+    "delete": "Ўчириш",
+    "cancel": "Бекор қилиш",
+    "save": "Сақлаш",
+    "saving": "Сақланмоқда...",
+    "deleting": "Ўчирилмоқда...",
+    "deleteConfirmTitle": "Етказиб берувчини ўчирасизми?",
+    "deleteConfirm": "Ушбу етказиб берувчини ўчиришни хоҳлайсизми?",
+    "addSuccess": "Етказиб берувчи яратилди",
+    "editSuccess": "Етказиб берувчи янгиланди",
+    "deleteSuccess": "Етказиб берувчи ўчирилди",
+    "errors": {
+      "nameRequired": "Номи мажбурий"
+    }
+  },
+  "goodsReceipt": {
+    "title": "Товар кирими",
+    "description": "Етказиб берувчилардан омборга товар кирими",
+    "create": "Янги кирим",
+    "createTitle": "Янги товар кирими",
+    "createDescription": "Етказиб берувчини танланг ва товарларни қўшинг — қолдиқ автоматик ошади",
+    "detailTitle": "Товар кирими",
+    "supplierLabel": "Етказиб берувчи",
+    "selectSupplier": "Етказиб берувчини танланг",
+    "searchSupplier": "Етказиб берувчини қидириш...",
+    "noteLabel": "Изоҳ",
+    "notePlaceholder": "Изоҳ киритинг",
+    "note": "Изоҳ",
+    "product": "Товар",
+    "selectProduct": "Товарни танланг",
+    "searchProduct": "Товарни қидириш...",
+    "quantity": "Миқдори",
+    "priceIn": "Кирим нархи",
+    "lineTotal": "Сумма",
+    "total": "Жами",
+    "addLine": "Қатор қўшиш",
+    "removeLine": "Қаторни ўчириш",
+    "date": "Сана",
+    "supplier": "Етказиб берувчи",
+    "itemCount": "Сони",
+    "save": "Киримни яратиш",
+    "saving": "Сақланмоқда...",
+    "cancel": "Бекор қилиш",
+    "createSuccess": "Кирим яратилди — қолдиқ янгиланди",
+    "noReceipts": "Киримлар топилмади",
+    "notFound": "Кирим топилмади",
+    "backToList": "Киримлар рўйхатига",
+    "errors": {
+      "noItems": "Камида битта товар қўшинг",
+      "badQuantity": "Миқдори камида 1 бўлиши керак"
+    }
   }
 }
