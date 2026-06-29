@@ -233,6 +233,8 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   placeholder={t('addProduct.categoryPlaceholder')}
                   onChange={handleSelectChange("categoryId")}
                   defaultValue={formData.categoryId}
+                  searchable
+                  searchPlaceholder={t('addProduct.categorySearch') || 'Search category...'}
                 />
               </div>
 

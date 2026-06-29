@@ -134,6 +134,7 @@
     "productNamePlaceholder": "Введите название товара",
     "category": "Категория",
     "categoryPlaceholder": "Выберите категорию (необязательно)",
+    "categorySearch": "Поиск категории...",
     "code": "Код товара",
     "codePlaceholder": "Введите код товара (необязательно)",
     "barcode": "Штрих-код",
@@ -448,6 +449,7 @@
       "total": "Итого"
     },
     "selectProduct": "Выберите товар",
+    "searchProduct": "Поиск товара...",
     "add": "Добавить",
     "inStock": "в наличии",
     "outOfStock": "Нет в наличии",
@@ -546,6 +548,7 @@
     "passwordEditHint": "Оставьте пустым, чтобы сохранить текущий пароль",
     "roleLabel": "Роль",
     "selectRole": "Выберите роль",
+    "searchRole": "Поиск роли...",
     "active": "Активен",
     "inactive": "Неактивен",
     "status": "Статус",

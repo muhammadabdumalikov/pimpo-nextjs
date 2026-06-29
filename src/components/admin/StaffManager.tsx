@@ -303,6 +303,8 @@ export default function StaffManager() {
                 value={form.roleId}
                 onChange={(value) => setForm((p) => ({ ...p, roleId: value }))}
                 placeholder={t("staff.selectRole")}
+                searchable
+                searchPlaceholder={t("staff.searchRole") || "Search role..."}
                 options={roles.map((role) => ({ value: role.id, label: role.name }))}
               />
             </div>

@@ -44,11 +44,13 @@ export default function Checkout() {
   const { t } = useTranslations();
   const { showToast } = useToast();
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [qty, setQty] = useState(1);
+  // Picker dropdown is loaded lazily by its own query (on open / search) — the
+  // catalog is no longer preloaded on page open.
+  const [productResults, setProductResults] = useState<Product[]>([]);
+  const [productSearchLoading, setProductSearchLoading] = useState(false);
   const [scanValue, setScanValue] = useState("");
   const [lastScanned, setLastScanned] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -72,23 +74,31 @@ export default function Checkout() {
   const [vatEnabled, setVatEnabled] = useState(false);
   const [vatRate, setVatRate] = useState(0);
   const scanRef = useRef<HTMLInputElement>(null);
+  const scanDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currency = t("checkout.currency") || "so'm";
 
-  const loadProducts = async () => {
-    try {
-      setIsLoadingProducts(true);
-      const res = await getProducts(1, 1000);
-      setProducts(res.products.filter((p) => p.isActive));
-    } catch (err: unknown) {
-      showToast("error", (err as Error)?.message || "Failed to load products", "Error");
-    } finally {
-      setIsLoadingProducts(false);
-    }
-  };
+  // Picker dropdown query — runs on open (empty term → first page) and on each
+  // debounced search keystroke. Separate from the scanner; nothing on page open.
+  const handleProductSearch = useCallback(
+    async (q: string) => {
+      setProductSearchLoading(true);
+      try {
+        const res = await getProducts(1, 20, q.trim() || undefined);
+        setProductResults(res.products.filter((p) => p.isActive));
+      } catch (err: unknown) {
+        showToast("error", (err as Error)?.message || "Failed to load products", "Error");
+        setProductResults([]);
+      } finally {
+        setProductSearchLoading(false);
+      }
+    },
+    [showToast],
+  );
 
-  useEffect(() => {
-    loadProducts();
+  // Clear any pending scan lookup on unmount.
+  useEffect(() => () => {
+    if (scanDebounceRef.current) clearTimeout(scanDebounceRef.current);
   }, []);
 
   // Load the business VAT (QQS) config so the summary can break out the tax.
@@ -148,10 +158,10 @@ export default function Checkout() {
   };
 
   // Keep the scan box focused so a handheld scanner (keyboard-wedge) always
-  // lands its keystrokes here, even after products finish loading.
+  // lands its keystrokes here.
   useEffect(() => {
-    if (!isLoadingProducts) scanRef.current?.focus();
-  }, [isLoadingProducts]);
+    scanRef.current?.focus();
+  }, []);
 
   const formatMoney = (value: number) =>
     `${new Intl.NumberFormat("uz-UZ").format(Math.round(value))} ${currency}`;
@@ -226,50 +236,74 @@ export default function Checkout() {
   };
 
   const addToCart = () => {
-    const product = products.find((p) => p.id === selectedId);
+    const product = productResults.find((p) => p.id === selectedId);
     if (!product) return;
     addProductToCart(product, Math.max(1, qty));
     setSelectedId("");
     setQty(1);
   };
 
-  // Resolve + add a scanned/typed/camera code. Matches barcode first, then the
-  // internal code. Shared by the keyboard-wedge input and the camera scanner.
+  // Resolve + add a scanned/typed/camera code via the backend (exact barcode or
+  // code match). Shared by the keyboard-wedge input and the camera scanner.
+  // `silent` suppresses the not-found toast for debounced mid-typing lookups.
   // Stable identity (useCallback) so the camera effect doesn't restart on every
   // keystroke.
-  const processCode = useCallback(
-    (raw: string) => {
-      const q = raw.trim().toLowerCase();
-      if (!q) return;
-      const product =
-        products.find((p) => (p.barcode ?? "").toLowerCase() === q) ??
-        products.find((p) => (p.code ?? "").toLowerCase() === q);
-
-      if (!product) {
-        setLastScanned("");
-        showToast(
-          "error",
-          `${t("checkout.scanNotFound") || "No product for code"}: ${raw.trim()}`,
+  const resolveCode = useCallback(
+    async (raw: string, opts?: { silent?: boolean }) => {
+      const term = raw.trim();
+      if (!term) return;
+      try {
+        const res = await getProducts(1, 5, term);
+        const lc = term.toLowerCase();
+        const product = res.products.find(
+          (p) =>
+            (p.barcode ?? "").toLowerCase() === lc ||
+            (p.code ?? "").toLowerCase() === lc,
         );
-        return;
+
+        if (!product) {
+          if (!opts?.silent) {
+            setLastScanned("");
+            showToast(
+              "error",
+              `${t("checkout.scanNotFound") || "No product for code"}: ${term}`,
+            );
+          }
+          return;
+        }
+        if (product.quantity <= 0) {
+          setLastScanned("");
+          setScanValue("");
+          showToast("warning", `${product.name} — ${t("checkout.outOfStock")}`);
+          return;
+        }
+        addProductToCart(product, 1);
+        setLastScanned(product.name);
+        setScanValue("");
+      } catch (err: unknown) {
+        if (!opts?.silent) {
+          showToast("error", (err as Error)?.message || "Failed to look up product", "Error");
+        }
       }
-      if (product.quantity <= 0) {
-        setLastScanned("");
-        showToast("warning", `${product.name} — ${t("checkout.outOfStock")}`);
-        return;
-      }
-      addProductToCart(product, 1);
-      setLastScanned(product.name);
     },
-    [products, showToast, t],
+    [showToast, t],
   );
+
+  // Debounce the request while the scanner streams characters (no Enter needed);
+  // mid-typing misses stay silent so we don't toast on every partial code.
+  const handleScanInput = (val: string) => {
+    setScanValue(val);
+    if (scanDebounceRef.current) clearTimeout(scanDebounceRef.current);
+    if (!val.trim()) return;
+    scanDebounceRef.current = setTimeout(() => resolveCode(val, { silent: true }), 300);
+  };
 
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
+    if (scanDebounceRef.current) clearTimeout(scanDebounceRef.current);
     const raw = scanValue;
-    setScanValue("");
     scanRef.current?.focus();
-    processCode(raw);
+    resolveCode(raw); // explicit submit — surface not-found
   };
 
   const changeQty = (productId: string, next: number) => {
@@ -350,8 +384,6 @@ export default function Checkout() {
       setCustomerFocused(false);
       setPaymentMethod("cash");
       scanRef.current?.focus();
-      // Refresh stock numbers after the sale.
-      loadProducts();
     } catch (err: unknown) {
       showToast("error", (err as Error)?.message || t("checkout.orderError") || "Failed", "Error");
     } finally {
@@ -370,7 +402,6 @@ export default function Checkout() {
         <button
           type="button"
           onClick={() => setCameraOpen((o) => !o)}
-          disabled={isLoadingProducts}
           className={`flex h-16 w-full items-center justify-center gap-3 rounded-2xl text-base font-semibold shadow-theme-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
             cameraOpen
               ? "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03]"
@@ -392,7 +423,7 @@ export default function Checkout() {
             setCameraOpen(false);
             scanRef.current?.focus();
           }}
-          onDetected={processCode}
+          onDetected={resolveCode}
           lastScanned={lastScanned}
         />
 
@@ -408,20 +439,15 @@ export default function Checkout() {
                 ref={scanRef}
                 type="text"
                 value={scanValue}
-                onChange={(e) => setScanValue(e.target.value)}
-                disabled={isLoadingProducts}
+                onChange={(e) => handleScanInput(e.target.value)}
                 autoComplete="off"
-                placeholder={
-                  isLoadingProducts
-                    ? "..."
-                    : t("checkout.scanPlaceholder") || "Scan or type a barcode, then Enter"
-                }
+                placeholder={t("checkout.scanPlaceholder") || "Scan or type a barcode, then Enter"}
                 className={`${inputClass} pl-11`}
               />
             </div>
             <button
               type="submit"
-              disabled={isLoadingProducts || !scanValue.trim()}
+              disabled={!scanValue.trim()}
               className="h-11 shrink-0 rounded-lg border border-gray-300 bg-white px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
             >
               {t("checkout.add")}
@@ -512,9 +538,11 @@ export default function Checkout() {
               <SelectField
                 value={selectedId}
                 onChange={setSelectedId}
-                disabled={isLoadingProducts}
-                placeholder={isLoadingProducts ? "..." : t("checkout.selectProduct")}
-                options={products.map((p) => ({
+                onSearch={handleProductSearch}
+                loading={productSearchLoading}
+                searchPlaceholder={t("checkout.searchProduct") || "Search product..."}
+                placeholder={t("checkout.selectProduct")}
+                options={productResults.map((p) => ({
                   value: p.id,
                   label: `${p.name} — ${formatMoney(Number(p.priceOut))} (${p.quantity} ${t("checkout.inStock")})`,
                   disabled: p.quantity <= 0,

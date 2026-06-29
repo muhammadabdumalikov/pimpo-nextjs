@@ -134,6 +134,7 @@
     "productNamePlaceholder": "Mahsulot nomini kiriting",
     "category": "Kategoriya",
     "categoryPlaceholder": "Kategoriyani tanlang (ixtiyoriy)",
+    "categorySearch": "Kategoriyani qidirish...",
     "code": "Mahsulot kodi",
     "codePlaceholder": "Mahsulot kodini kiriting (ixtiyoriy)",
     "barcode": "Shtrix-kod",
@@ -448,6 +449,7 @@
       "total": "Jami"
     },
     "selectProduct": "Mahsulotni tanlang",
+    "searchProduct": "Mahsulotni qidirish...",
     "add": "Qo'shish",
     "inStock": "omborda",
     "outOfStock": "Omborda yo‘q",
@@ -546,6 +548,7 @@
     "passwordEditHint": "Joriy parolni saqlash uchun bo‘sh qoldiring",
     "roleLabel": "Rol",
     "selectRole": "Rolni tanlang",
+    "searchRole": "Rolni qidirish...",
     "active": "Faol",
     "inactive": "Faol emas",
     "status": "Holat",

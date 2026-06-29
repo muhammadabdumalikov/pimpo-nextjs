@@ -134,6 +134,7 @@
     "productNamePlaceholder": "Enter product name",
     "category": "Category",
     "categoryPlaceholder": "Select category (optional)",
+    "categorySearch": "Search category...",
     "code": "Product Code",
     "codePlaceholder": "Enter product code (optional)",
     "barcode": "Barcode",
@@ -449,6 +450,7 @@
       "total": "Total"
     },
     "selectProduct": "Select a product",
+    "searchProduct": "Search product...",
     "add": "Add",
     "inStock": "in stock",
     "outOfStock": "Out of stock",
@@ -547,6 +549,7 @@
     "passwordEditHint": "Leave blank to keep the current password",
     "roleLabel": "Role",
     "selectRole": "Select a role",
+    "searchRole": "Search role...",
     "active": "Active",
     "inactive": "Inactive",
     "status": "Status",

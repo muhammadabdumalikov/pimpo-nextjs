@@ -13,6 +13,9 @@ interface SelectProps {
   onChange: (value: string) => void;
   className?: string;
   defaultValue?: string;
+  /** Show a filter box in the dropdown — use for long, API-driven lists. */
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 /**
@@ -26,6 +29,8 @@ const Select: React.FC<SelectProps> = ({
   onChange,
   className = "",
   defaultValue = "",
+  searchable = false,
+  searchPlaceholder,
 }) => {
   const [value, setValue] = useState<string>(defaultValue);
 
@@ -46,6 +51,8 @@ const Select: React.FC<SelectProps> = ({
       onChange={handleChange}
       placeholder={placeholder}
       className={className}
+      searchable={searchable}
+      searchPlaceholder={searchPlaceholder}
     />
   );
 };
