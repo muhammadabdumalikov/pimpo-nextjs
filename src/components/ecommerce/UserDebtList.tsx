@@ -13,11 +13,12 @@ import DatePicker from "../form/date-picker";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Select from "../form/Select";
+import SelectField from "../form/SelectField";
 import { Modal } from "../ui/modal";
 import { useModal } from "@/hooks/useModal";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
-import { getDebts, getDebtsByUser, createDebt, updateDebt, deleteDebt, getDebtCount } from "@/lib/api";
+import { getDebtGroups, createDebt, updateDebt, deleteDebt, getDebtCount, getOrder, type Order, type DebtGroup } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 
 // Define the TypeScript interface for the debt (matching backend)
@@ -25,9 +26,10 @@ interface UserDebt {
   id: string;
   businessId: string;
   userId: string;
+  orderId?: string | null;
   amount: string;
   status: "Paid" | "Pending" | "Overdue";
-  dueDate: string | Date;
+  dueDate: string | Date | null;
   createdAt: string | Date;
   description?: string | null;
   user?: {
@@ -36,31 +38,48 @@ interface UserDebt {
   };
 }
 
-interface UserDebtGroup {
-  userName: string;
-  phone: string;
-  userId: string;
-  totalDebt: number;
-  debts: UserDebt[];
-}
-
 export default function UserDebtList() {
   const { t } = useTranslations();
   const { getLimit, isLimitReached } = useSubscription();
   const { showToast } = useToast();
-  const [debts, setDebts] = useState<UserDebt[]>([]);
+  // Customer groups come pre-grouped, sorted, paginated from the backend.
+  const [groups, setGroups] = useState<DebtGroup[]>([]);
+  const [totalGroups, setTotalGroups] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  // Filters + sort.
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "amount" | "count">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalDebts, setTotalDebts] = useState(0);
   const [selectedDebts, setSelectedDebts] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<UserDebt>>({});
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
-  const [loadingUsers, setLoadingUsers] = useState<Set<string>>(new Set());
-  const [userDebtsCache, setUserDebtsCache] = useState<Record<string, UserDebt[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const addDebtModal = useModal();
+  // Order/receipt drill-in for a debt that came from a POS sale.
+  const orderModal = useModal();
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
+  const [orderLoading, setOrderLoading] = useState(false);
+
+  const handleViewOrder = async (orderId: string) => {
+    orderModal.openModal();
+    setViewingOrder(null);
+    setOrderLoading(true);
+    try {
+      const order = await getOrder(orderId);
+      setViewingOrder(order);
+    } catch (e) {
+      showToast("error", (e as Error)?.message || "Failed to load order");
+    } finally {
+      setOrderLoading(false);
+    }
+  };
   const [addFormData, setAddFormData] = useState({
     userName: "",
     phone: "",
@@ -81,26 +100,53 @@ export default function UserDebtList() {
     return parseFloat(amount.replace(/[$,]/g, "")) || 0;
   };
 
-  // Helper function to format number to currency string
+  // Helper function to format number to a UZS currency string (so'm).
   const formatAmount = (amount: number | string): string => {
     const numAmount = typeof amount === 'string' ? parseAmount(amount) : amount;
-    return `$${numAmount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return `${new Intl.NumberFormat('uz-UZ').format(Math.round(numAmount))} so'm`;
   };
 
   // Format date helper
-  const formatDate = (date: string | Date): string => {
-    if (!date) return '';
+  const formatDate = (date: string | Date | null): string => {
+    if (!date) return '—';
     const d = typeof date === 'string' ? new Date(date) : date;
     return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  // Load debts from API
-  const loadDebts = async () => {
+  // Date + time (with hours/minutes) for precise debt/sale timestamps.
+  const formatDateTime = (date: string | Date | null): string => {
+    if (!date) return '—';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  };
+
+  // Load customer groups (grouped + sorted + paginated server-side).
+  const loadGroups = async () => {
     try {
       setIsLoading(true);
-      const response = await getDebts(currentPage, itemsPerPage, searchQuery || undefined);
-      setDebts(response.debts);
-      setTotalDebts(response.total);
+      const [response, countRes] = await Promise.all([
+        getDebtGroups(
+          currentPage,
+          itemsPerPage,
+          searchQuery || undefined,
+          statusFilter || undefined,
+          dateFrom || undefined,
+          dateTo || undefined,
+          sortBy,
+          sortDir,
+        ),
+        getDebtCount().catch(() => totalDebts),
+      ]);
+      setGroups(response.groups);
+      setTotalGroups(response.total);
+      setTotalDebts(countRes);
     } catch (error: any) {
       console.error('Failed to load debts:', error);
       showToast('error', error.message || 'Failed to load debts', 'Error');
@@ -109,21 +155,21 @@ export default function UserDebtList() {
     }
   };
 
-  // Fetch debts from API when page changes
+  // Reload when the page changes.
   useEffect(() => {
-    loadDebts();
+    loadGroups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
-  // Debounce search and reset to page 1
+  // Debounce search / filters / sort and reset to page 1.
   useEffect(() => {
     if (searchDebounceTimeout.current) {
       clearTimeout(searchDebounceTimeout.current);
     }
     searchDebounceTimeout.current = setTimeout(() => {
-      setCurrentPage(1); // Reset to page 1 on new search
-      loadDebts();
-    }, 500); // Debounce for 500ms
+      setCurrentPage(1); // Reset to page 1 on new search/filter/sort
+      loadGroups();
+    }, 400);
 
     return () => {
       if (searchDebounceTimeout.current) {
@@ -131,92 +177,21 @@ export default function UserDebtList() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  }, [searchQuery, statusFilter, dateFrom, dateTo, sortBy, sortDir]);
 
-  // Group debts by user
-  const groupDebtsByUser = (debtsList: UserDebt[]): UserDebtGroup[] => {
-    const grouped = debtsList.reduce((acc, debt) => {
-      const userName = debt.user?.name || 'Unknown User';
-      const userPhone = debt.user?.phone || '';
-      const userId = debt.userId;
-      const key = userId;
-      if (!acc[key]) {
-        acc[key] = {
-          userName,
-          phone: userPhone,
-          userId,
-          totalDebt: 0,
-          debts: [],
-        };
-      }
-      acc[key].debts.push(debt);
-      acc[key].totalDebt += parseAmount(debt.amount);
-      return acc;
-    }, {} as Record<string, UserDebtGroup>);
-
-    return Object.values(grouped);
-  };
-
-  // Group debts
-  const userGroups = groupDebtsByUser(debts);
-
-  // Calculate pagination for user groups
-  const totalPages = Math.ceil(userGroups.length / itemsPerPage);
+  // The server already returns the page, grouped + sorted.
+  const paginatedGroups = groups;
+  const totalPages = Math.max(1, Math.ceil(totalGroups / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedGroups = userGroups.slice(startIndex, endIndex);
 
-  // Toggle user expansion with loading state - fetch user debts from API
-  const toggleUserExpansion = async (userName: string, userId: string) => {
-    const isCurrentlyExpanded = expandedUsers.has(userName);
-    
-    if (isCurrentlyExpanded) {
-      // Collapse immediately
-      setExpandedUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(userName);
-        return newSet;
-      });
-    } else {
-      // Expand and show loading
-      setExpandedUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.add(userName);
-        return newSet;
-      });
-      
-      // Set loading state
-      setLoadingUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.add(userName);
-        return newSet;
-      });
-      
-      try {
-        // Fetch user debts from API using userId
-        const userDebtsList = await getDebtsByUser(userId);
-        // Cache the user debts
-        setUserDebtsCache(prev => ({
-          ...prev,
-          [userName]: userDebtsList,
-        }));
-      } catch (error: any) {
-        console.error('Failed to load user debts:', error);
-        showToast('error', error.message || 'Failed to load user debts', 'Error');
-        // Collapse on error
-        setExpandedUsers(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(userName);
-          return newSet;
-        });
-      } finally {
-        setLoadingUsers(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(userName);
-          return newSet;
-        });
-      }
-    }
+  // Toggle a customer's row; their debts are already nested in the group.
+  const toggleUserExpansion = (userName: string) => {
+    setExpandedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userName)) next.delete(userName);
+      else next.add(userName);
+      return next;
+    });
   };
 
   const handlePageChange = (page: number) => {
@@ -224,23 +199,16 @@ export default function UserDebtList() {
   };
 
   const handleSelectAll = (checked: boolean) => {
+    // Debt IDs from the expanded customers on the current page.
+    const pageIds: string[] = [];
+    paginatedGroups.forEach(group => {
+      if (expandedUsers.has(group.userName)) {
+        pageIds.push(...group.debts.map(d => d.id));
+      }
+    });
     if (checked) {
-      // Get all debt IDs from expanded groups on current page
-      const pageIds: string[] = [];
-      paginatedGroups.forEach(group => {
-        if (expandedUsers.has(group.userName) && userDebtsCache[group.userName]) {
-          pageIds.push(...userDebtsCache[group.userName].map(d => d.id));
-        }
-      });
       setSelectedDebts([...new Set([...selectedDebts, ...pageIds])]);
     } else {
-      // Remove all debt IDs from current page
-      const pageIds: string[] = [];
-      paginatedGroups.forEach(group => {
-        if (expandedUsers.has(group.userName) && userDebtsCache[group.userName]) {
-          pageIds.push(...userDebtsCache[group.userName].map(d => d.id));
-        }
-      });
       setSelectedDebts(selectedDebts.filter(id => !pageIds.includes(id)));
     }
   };
@@ -283,7 +251,11 @@ export default function UserDebtList() {
     setEditFormData({
       amount: debt.amount,
       status: debt.status,
-      dueDate: typeof debt.dueDate === 'string' ? debt.dueDate : debt.dueDate.toISOString(),
+      dueDate: debt.dueDate
+        ? typeof debt.dueDate === 'string'
+          ? debt.dueDate
+          : debt.dueDate.toISOString()
+        : "",
       description: debt.description || "",
     });
   };
@@ -300,20 +272,8 @@ export default function UserDebtList() {
       showToast('success', t('userDebt.updateSuccess') || 'Debt updated successfully', 'Success');
       setEditingId(null);
       setEditFormData({});
-      // Reload debts
-      await loadDebts();
-      // Reload user debts if expanded
-      const debt = debts.find(d => d.id === id);
-      if (debt && debt.userId) {
-        const group = userGroups.find(g => g.userId === debt.userId);
-        if (group && expandedUsers.has(group.userName)) {
-          const userDebtsList = await getDebtsByUser(debt.userId);
-          setUserDebtsCache(prev => ({
-            ...prev,
-            [group.userName]: userDebtsList,
-          }));
-        }
-      }
+      // Reload groups (nested debts refresh with it).
+      await loadGroups();
     } catch (error: any) {
       console.error('Failed to update debt:', error);
       showToast('error', error.message || t('userDebt.updateError') || 'Failed to update debt', 'Error');
@@ -356,7 +316,7 @@ export default function UserDebtList() {
         dueDate: "",
         description: "",
       });
-      await loadDebts();
+      await loadGroups();
     } catch (error: any) {
       console.error('Failed to create debt:', error);
       showToast('error', error.message || t('userDebt.addError') || 'Failed to add debt', 'Error');
@@ -388,20 +348,8 @@ export default function UserDebtList() {
         setEditingId(null);
         setEditFormData({});
       }
-      // Reload debts
-      await loadDebts();
-      // Reload user debts if expanded
-      const debt = debts.find(d => d.id === id);
-      if (debt && debt.userId) {
-        const group = userGroups.find(g => g.userId === debt.userId);
-        if (group && expandedUsers.has(group.userName)) {
-          const userDebtsList = await getDebtsByUser(debt.userId);
-          setUserDebtsCache(prev => ({
-            ...prev,
-            [group.userName]: userDebtsList,
-          }));
-        }
-      }
+      // Reload groups (nested debts refresh with it).
+      await loadGroups();
     } catch (error: any) {
       console.error('Failed to delete debt:', error);
       showToast('error', error.message || t('userDebt.deleteError') || 'Failed to delete debt', 'Error');
@@ -493,45 +441,104 @@ export default function UserDebtList() {
           />
         </div>
 
-        <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-          <svg
-            className="stroke-current fill-white dark:fill-gray-800 w-4 h-4"
-            width="16"
-            height="16"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+        <div className="flex items-center gap-3">
+          {/* Sort groups */}
+          <SelectField
+            className="min-w-[170px]"
+            value={sortBy}
+            onChange={(value) => setSortBy(value as "date" | "amount" | "count")}
+            options={[
+              { value: "date", label: t('userDebt.sortByDate') || 'Sort: Date' },
+              { value: "amount", label: t('userDebt.sortByAmount') || 'Sort: Total debt' },
+              { value: "count", label: t('userDebt.sortByCount') || 'Sort: Debt count' },
+            ]}
+          />
+          <button
+            type="button"
+            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+            title={sortDir === "asc" ? (t('userDebt.ascending') || 'Ascending') : (t('userDebt.descending') || 'Descending')}
+            aria-label={sortDir === "asc" ? (t('userDebt.ascending') || 'Ascending') : (t('userDebt.descending') || 'Descending')}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
           >
-            <path
-              d="M2.29004 5.90393H17.7067"
-              stroke=""
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M17.7075 14.0961H2.29085"
-              stroke=""
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M12.0826 3.33331C13.5024 3.33331 14.6534 4.48431 14.6534 5.90414C14.6534 7.32398 13.5024 8.47498 12.0826 8.47498C10.6627 8.47498 9.51172 7.32398 9.51172 5.90415C9.51172 4.48432 10.6627 3.33331 12.0826 3.33331Z"
-              fill=""
-              stroke=""
-              strokeWidth="1.5"
-            />
-            <path
-              d="M7.91745 11.525C6.49762 11.525 5.34662 12.676 5.34662 14.0959C5.34661 15.5157 6.49762 16.6667 7.91745 16.6667C9.33728 16.6667 10.4883 15.5157 10.4883 14.0959C10.4883 12.676 9.33728 11.525 7.91745 11.525Z"
-              fill=""
-              stroke=""
-              strokeWidth="1.5"
-            />
-          </svg>
-          {t('userDebt.filter')}
-        </button>
+            {/* Up/down sort icon */}
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M7 3.5 3 8.5h3V20h2V8.5h3L7 3.5Zm10 17 4-5h-3V4h-2v11.5h-3l4 5Z" />
+            </svg>
+          </button>
+
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-theme-sm font-medium shadow-theme-xs transition ${
+              showFilters || statusFilter || dateFrom || dateTo
+                ? 'border-brand-300 bg-brand-50 text-brand-600 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-400'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200'
+            }`}
+          >
+            <svg className="w-4 h-4" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2.29004 5.90393H17.7067" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M17.7075 14.0961H2.29085" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M12.0826 3.33331C13.5024 3.33331 14.6534 4.48431 14.6534 5.90414C14.6534 7.32398 13.5024 8.47498 12.0826 8.47498C10.6627 8.47498 9.51172 7.32398 9.51172 5.90415C9.51172 4.48432 10.6627 3.33331 12.0826 3.33331Z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M7.91745 11.525C6.49762 11.525 5.34662 12.676 5.34662 14.0959C5.34661 15.5157 6.49762 16.6667 7.91745 16.6667C9.33728 16.6667 10.4883 15.5157 10.4883 14.0959C10.4883 12.676 9.33728 11.525 7.91745 11.525Z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+            {t('userDebt.filter')}
+          </button>
+        </div>
       </div>
+
+      {/* Filter panel */}
+      {showFilters && (
+        <div className="mb-4 grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900 sm:grid-cols-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t('userDebt.status') || 'Status'}</label>
+            <SelectField
+              className="w-full"
+              buttonClassName="h-10"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              placeholder={t('userDebt.allStatuses') || 'All statuses'}
+              options={[
+                { value: "", label: t('userDebt.allStatuses') || 'All statuses' },
+                { value: "Pending", label: t('userDebt.pending') || 'Pending' },
+                { value: "Overdue", label: t('userDebt.overdue') || 'Overdue' },
+                { value: "Paid", label: t('userDebt.paid') || 'Paid' },
+              ]}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t('userDebt.dateFrom') || 'From'}</label>
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t('userDebt.dateTo') || 'To'}</label>
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setStatusFilter("");
+                setDateFrom("");
+                setDateTo("");
+              }}
+              disabled={!statusFilter && !dateFrom && !dateTo}
+              className="h-10 w-full rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              {t('userDebt.clearFilters') || 'Clear'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Debts Table */}
       <div className="w-full overflow-x-auto -mx-4 sm:-mx-6" style={{ scrollbarGutter: 'stable' }}>
@@ -612,7 +619,7 @@ export default function UserDebtList() {
                   <TableRow className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02] bg-gray-50/50 dark:bg-white/[0.02]">
                     <TableCell className="py-3 px-4 sm:px-6 w-12">
                       <button
-                        onClick={() => toggleUserExpansion(group.userName, group.userId)}
+                        onClick={() => toggleUserExpansion(group.userName)}
                         className="p-1 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400 transition-transform"
                         title={isExpanded ? "Collapse" : "Expand"}
                       >
@@ -657,18 +664,7 @@ export default function UserDebtList() {
 
                   {/* Individual Debt Rows - Shown when expanded */}
                   {isExpanded && (
-                    loadingUsers.has(group.userName) ? (
-                      // Loading state
-                      <TableRow className="bg-white dark:bg-gray-900/50">
-                        <TableCell colSpan={7} className="py-8 px-4 sm:px-6">
-                          <div className="flex items-center justify-center gap-3">
-                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400"></div>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">{t('userDebt.loadingDebts')}</span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      (userDebtsCache[group.userName] || group.debts).map((debt) => {
+                      group.debts.map((debt) => {
                         const isEditing = editingId === debt.id;
                         return (
                           <TableRow key={debt.id} className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02] bg-white dark:bg-gray-900/50">
@@ -685,9 +681,27 @@ export default function UserDebtList() {
                               className="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                             />
                           ) : (
-                            <p className={`font-normal text-base ${debt.description ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 italic'}`}>
-                              {debt.description || t('userDebt.noDescription')}
-                            </p>
+                            <div>
+                              <p className={`font-normal text-base ${debt.description ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 italic'}`}>
+                                {debt.description || t('userDebt.noDescription')}
+                              </p>
+                              <p className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
+                                <span>{formatDate(debt.createdAt)}</span>
+                                {debt.orderId && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleViewOrder(debt.orderId!)}
+                                    className="inline-flex items-center gap-1 rounded bg-brand-50 px-1.5 py-0.5 font-medium text-brand-600 transition hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                                      <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v9a.5.5 0 0 1-.74.44L11.5 12l-1.5.94L8.5 12 7 12.94 5.5 12l-1.76.94A.5.5 0 0 1 3 12.5v-9Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                                      <path d="M5.5 5.5h5M5.5 8h5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                                    </svg>
+                                    {t('userDebt.viewItems') || 'View items'}
+                                  </button>
+                                )}
+                              </p>
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[20%]">
@@ -711,24 +725,12 @@ export default function UserDebtList() {
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
                           {isEditing ? (
-                            <div className="relative">
-                              <select
-                                value={editFormData.status || ""}
-                                onChange={(e) => handleEditChange("status", e.target.value as UserDebt["status"])}
-                                className="h-9 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-3 py-2 pr-10 text-base text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                              >
-                                {statusOptions.map((option) => (
-                                  <option key={option.value} value={option.value} className="text-gray-700 dark:bg-gray-900 dark:text-gray-400">
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                              <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none">
-                                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4.792 7.396 10 12.604l5.208-5.208"></path>
-                                </svg>
-                              </span>
-                            </div>
+                            <SelectField
+                              buttonClassName="h-9"
+                              value={editFormData.status || ""}
+                              onChange={(value) => handleEditChange("status", value as UserDebt["status"])}
+                              options={statusOptions}
+                            />
                           ) : (
                             <Badge color={getStatusBadgeColor(debt.status)}>
                               {t(`userDebt.${debt.status.toLowerCase()}`)}
@@ -791,7 +793,6 @@ export default function UserDebtList() {
                       </TableRow>
                         );
                       })
-                    )
                   )}
                 </React.Fragment>
               );
@@ -803,8 +804,8 @@ export default function UserDebtList() {
       {/* Pagination */}
       <div className="flex flex-col gap-4 pt-4 mt-4 -mx-4 sm:-mx-6 px-4 sm:px-6 border-t border-gray-100 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          {t('userDebt.showing')} {userGroups.length > 0 ? startIndex + 1 : 0} {t('userDebt.to')}{" "}
-          {Math.min(endIndex, userGroups.length)} {t('userDebt.of')} {userGroups.length} {t('userDebt.results')}
+          {t('userDebt.showing')} {totalGroups > 0 ? startIndex + 1 : 0} {t('userDebt.to')}{" "}
+          {startIndex + paginatedGroups.length} {t('userDebt.of')} {totalGroups} {t('userDebt.results')}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -915,24 +916,18 @@ export default function UserDebtList() {
                 name="amount"
                 value={addFormData.amount}
                 onChange={(e) => handleAddFormChange("amount", e.target.value)}
-                placeholder="$0.00"
+                placeholder="0"
                 required
               />
             </div>
             <div>
               <Label>{t('userDebt.status')}</Label>
-              <div className="relative">
-                <Select
-                  options={statusOptions}
-                  placeholder={t('userDebt.status') || "Select status"}
-                  onChange={(value) => handleAddFormChange("status", value)}
-                  defaultValue={addFormData.status}
-                  className="dark:bg-gray-900"
-                />
-                <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                  <ChevronDownIcon />
-                </span>
-              </div>
+              <Select
+                options={statusOptions}
+                placeholder={t('userDebt.status') || "Select status"}
+                onChange={(value) => handleAddFormChange("status", value)}
+                defaultValue={addFormData.status}
+              />
             </div>
             <div>
               <Label>{t('userDebt.dueDate')} *</Label>
@@ -973,6 +968,88 @@ export default function UserDebtList() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Order / receipt detail for a debt that came from a POS sale */}
+      <Modal
+        isOpen={orderModal.isOpen}
+        onClose={orderModal.closeModal}
+        className="max-w-[520px] p-5 lg:p-8"
+      >
+        <h4 className="mb-1 text-title-sm font-semibold text-gray-800 dark:text-white/90">
+          {t('userDebt.orderItems') || 'Items bought'}
+        </h4>
+        {orderLoading ? (
+          <div className="flex items-center justify-center gap-3 py-12">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
+            <span className="text-sm text-gray-500 dark:text-gray-400">{t('userDebt.loadingDebts')}</span>
+          </div>
+        ) : viewingOrder ? (
+          <div>
+            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+              {viewingOrder.customerName || ''}
+              {viewingOrder.customerName ? ' · ' : ''}
+              {formatDateTime(viewingOrder.createdAt)}
+            </p>
+
+            <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr className="text-gray-500 dark:text-gray-400">
+                    <th className="px-4 py-2.5 font-medium">{t('checkout.table.products')}</th>
+                    <th className="px-4 py-2.5 text-center font-medium">{t('checkout.table.quantity')}</th>
+                    <th className="px-4 py-2.5 text-right font-medium">{t('checkout.table.total')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {(viewingOrder.items || []).map((it) => (
+                    <tr key={it.id}>
+                      <td className="px-4 py-2.5 text-gray-800 dark:text-white/90">
+                        {it.productName}
+                        <span className="ml-1 text-xs text-gray-400">
+                          ({formatAmount(it.priceOut)})
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400">{it.quantity}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">{formatAmount(it.lineTotal)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <dl className="mt-4 space-y-1.5 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-gray-500 dark:text-gray-400">{t('checkout.total')}</dt>
+                <dd className="font-medium text-gray-800 dark:text-white/90">{formatAmount(viewingOrder.totalAmount)}</dd>
+              </div>
+
+              {/* Per-method breakdown of what was paid now (cash / card) */}
+              {(viewingOrder.payments ?? []).map((p, i) => (
+                <div key={i} className="flex justify-between pl-3 text-xs text-gray-500 dark:text-gray-400">
+                  <dt>{t(`checkout.${p.method}`) || p.method}</dt>
+                  <dd>{formatAmount(p.amount)}</dd>
+                </div>
+              ))}
+
+              <div className="flex justify-between">
+                <dt className="font-medium text-gray-600 dark:text-gray-300">{t('userDebt.paidAmount') || 'Paid'}</dt>
+                <dd className="font-medium text-success-600 dark:text-success-500">
+                  {formatAmount(viewingOrder.amountPaid || '0')}
+                </dd>
+              </div>
+
+              <div className="flex justify-between border-t border-gray-200 pt-1.5 dark:border-gray-800">
+                <dt className="font-medium text-gray-700 dark:text-gray-300">{t('userDebt.debtAmount') || 'Debt'}</dt>
+                <dd className="font-semibold text-warning-600 dark:text-warning-400">
+                  {formatAmount(Number(viewingOrder.totalAmount) - Number(viewingOrder.amountPaid || 0))}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        ) : (
+          <p className="py-10 text-center text-sm text-gray-400">—</p>
+        )}
       </Modal>
     </div>
   );

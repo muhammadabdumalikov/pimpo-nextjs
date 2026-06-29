@@ -1,4 +1,6 @@
+"use client";
 import React, { useState } from "react";
+import SelectField from "./SelectField";
 
 interface Option {
   value: string;
@@ -13,6 +15,11 @@ interface SelectProps {
   defaultValue?: string;
 }
 
+/**
+ * Uncontrolled select that keeps the original API (options/defaultValue/onChange)
+ * but renders the fully-themed {@link SelectField} dropdown instead of a native
+ * <select>, so the open list matches the app's UI system everywhere it's used.
+ */
 const Select: React.FC<SelectProps> = ({
   options,
   placeholder = "Select an option",
@@ -20,44 +27,26 @@ const Select: React.FC<SelectProps> = ({
   className = "",
   defaultValue = "",
 }) => {
-  // Manage the selected value
-  const [selectedValue, setSelectedValue] = useState<string>(defaultValue);
+  const [value, setValue] = useState<string>(defaultValue);
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    setSelectedValue(value);
-    onChange(value); // Trigger parent handler
+  // Keep in sync if the parent swaps defaultValue (e.g. an edit form loads data).
+  React.useEffect(() => {
+    setValue(defaultValue);
+  }, [defaultValue]);
+
+  const handleChange = (next: string) => {
+    setValue(next);
+    onChange(next);
   };
 
   return (
-    <select
-      className={`h-11 w-full appearance-none rounded-lg border border-gray-300  px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 ${
-        selectedValue
-          ? "text-gray-800 dark:text-white/90"
-          : "text-gray-400 dark:text-gray-400"
-      } ${className}`}
-      value={selectedValue}
+    <SelectField
+      options={options}
+      value={value}
       onChange={handleChange}
-    >
-      {/* Placeholder option */}
-      <option
-        value=""
-        disabled
-        className="text-gray-700 dark:bg-gray-900 dark:text-gray-400"
-      >
-        {placeholder}
-      </option>
-      {/* Map over options */}
-      {options.map((option) => (
-        <option
-          key={option.value}
-          value={option.value}
-          className="text-gray-700 dark:bg-gray-900 dark:text-gray-400"
-        >
-          {option.label}
-        </option>
-      ))}
-    </select>
+      placeholder={placeholder}
+      className={className}
+    />
   );
 };
 

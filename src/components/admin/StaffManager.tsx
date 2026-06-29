@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
+import SelectField from "@/components/form/SelectField";
 import Button from "@/components/ui/button/Button";
 import { PlusIcon, PencilIcon, TrashBinIcon } from "@/icons/index";
 import {
@@ -138,8 +139,6 @@ export default function StaffManager() {
     }
   };
 
-  const selectClass =
-    "h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90";
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
@@ -300,20 +299,12 @@ export default function StaffManager() {
               <Label>
                 {t("staff.roleLabel")} <span className="text-error-500">*</span>
               </Label>
-              <select
+              <SelectField
                 value={form.roleId}
-                onChange={(e) => setForm((p) => ({ ...p, roleId: e.target.value }))}
-                className={selectClass}
-              >
-                <option value="" disabled>
-                  {t("staff.selectRole")}
-                </option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setForm((p) => ({ ...p, roleId: value }))}
+                placeholder={t("staff.selectRole")}
+                options={roles.map((role) => ({ value: role.id, label: role.name }))}
+              />
             </div>
 
             {editing && (

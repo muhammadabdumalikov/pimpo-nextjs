@@ -7,9 +7,12 @@ import {
   getProducts,
   createOrder,
   getReceiptSettings,
+  searchCustomers,
   type Product,
+  type Customer,
 } from "@/lib/api";
 import CameraScanner from "./CameraScanner";
+import SelectField from "../form/SelectField";
 
 type CartLine = {
   productId: string;
@@ -49,10 +52,20 @@ export default function Checkout() {
   const [scanValue, setScanValue] = useState("");
   const [lastScanned, setLastScanned] = useState("");
   const [customerName, setCustomerName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "split">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "split" | "debt">("cash");
   const [cashReceived, setCashReceived] = useState("");
   const [splitCash, setSplitCash] = useState("");
   const [splitCard, setSplitCard] = useState("");
+  const [phone, setPhone] = useState("");
+  const [dueDate, setDueDate] = useState(""); // optional
+  // Optional down payment on a debt sale: pay some now, owe the rest.
+  const [paidNow, setPaidNow] = useState("");
+  const [paidNowMethod, setPaidNowMethod] = useState<"cash" | "card">("cash");
+  // Customer search (clients history) for debt sales. The Client field doubles
+  // as the search box: typing searches history; picking a result locks it in.
+  const [customerUserId, setCustomerUserId] = useState<string | null>(null);
+  const [customerResults, setCustomerResults] = useState<Customer[]>([]);
+  const [customerFocused, setCustomerFocused] = useState(false);
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -95,6 +108,45 @@ export default function Checkout() {
     };
   }, []);
 
+  // Debounced client search (from clients history) for debt sales. The Client
+  // name field is the query; skip once a client is locked in.
+  useEffect(() => {
+    const q = customerName.trim();
+    if (paymentMethod !== "debt" || customerUserId !== null || q === "") {
+      setCustomerResults([]);
+      return;
+    }
+    let active = true;
+    const id = setTimeout(() => {
+      searchCustomers(q, 6)
+        .then((r) => {
+          if (active) setCustomerResults(r);
+        })
+        .catch(() => {
+          /* non-fatal */
+        });
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(id);
+    };
+  }, [customerName, customerUserId, paymentMethod]);
+
+  const selectCustomer = (c: Customer) => {
+    setCustomerName(c.name);
+    setPhone(c.phone);
+    setCustomerUserId(c.id);
+    setCustomerResults([]);
+    setCustomerFocused(false);
+  };
+
+  const clearCustomer = () => {
+    setCustomerName("");
+    setPhone("");
+    setCustomerUserId(null);
+    setCustomerResults([]);
+  };
+
   // Keep the scan box focused so a handheld scanner (keyboard-wedge) always
   // lands its keystrokes here, even after products finish loading.
   useEffect(() => {
@@ -135,12 +187,21 @@ export default function Checkout() {
   const change = paymentMethod === "cash" ? Math.max(0, received - total) : 0;
   const splitRemaining = total - (splitCashNum + splitCardNum);
 
+  // Debt: optional down payment paid now, the rest is owed.
+  const paidNowNum = Number(paidNow) || 0;
+  const debtRemaining = total - paidNowNum;
+
   const paymentValid =
     paymentMethod === "card" ||
     (paymentMethod === "cash" && (cashReceived === "" || cashNum >= total)) ||
     (paymentMethod === "split" &&
       splitCashNum + splitCardNum > 0 &&
-      Math.abs(splitRemaining) < 1);
+      Math.abs(splitRemaining) < 1) ||
+    (paymentMethod === "debt" &&
+      customerName.trim() !== "" &&
+      phone.trim() !== "" &&
+      paidNowNum >= 0 &&
+      debtRemaining > 0);
 
   const addProductToCart = (product: Product, addQty: number) => {
     setCart((prev) => {
@@ -232,7 +293,11 @@ export default function Checkout() {
     // Build the payment breakdown + cash tendered for the chosen method.
     let payments: { method: string; amount: number }[];
     let amountPaid: number;
-    if (paymentMethod === "split") {
+    if (paymentMethod === "debt") {
+      // A down payment (if any) is paid now; the remainder becomes the debt.
+      payments = paidNowNum > 0 ? [{ method: paidNowMethod, amount: paidNowNum }] : [];
+      amountPaid = paidNowMethod === "cash" ? paidNowNum : 0;
+    } else if (paymentMethod === "split") {
       payments = [
         { method: "cash", amount: splitCashNum },
         { method: "card", amount: splitCardNum },
@@ -250,16 +315,25 @@ export default function Checkout() {
       await createOrder({
         items: cart.map((l) => ({ productId: l.productId, quantity: l.quantity })),
         customerName: customerName.trim() || undefined,
+        userId: paymentMethod === "debt" ? customerUserId ?? undefined : undefined,
         paymentMethod,
         payments,
         amountPaid,
+        phone: paymentMethod === "debt" ? phone.trim() : undefined,
+        dueDate: paymentMethod === "debt" && dueDate ? dueDate : undefined,
         note: note.trim() || undefined,
         status: "Completed",
         source: "admin",
       });
-      const changeMsg =
-        change > 0 ? ` — ${t("checkout.change") || "Change"}: ${formatMoney(change)}` : "";
-      showToast("success", `${t("checkout.orderSuccess") || "Order completed"}${changeMsg}`, "Success");
+      const successMsg =
+        paymentMethod === "debt"
+          ? `${t("checkout.debtSold") || "Sold on credit"} — ${
+              t("checkout.debtRemaining") || "Debt"
+            }: ${formatMoney(debtRemaining)}`
+          : `${t("checkout.orderSuccess") || "Order completed"}${
+              change > 0 ? ` — ${t("checkout.change") || "Change"}: ${formatMoney(change)}` : ""
+            }`;
+      showToast("success", successMsg, "Success");
       setCart([]);
       setCustomerName("");
       setNote("");
@@ -267,6 +341,13 @@ export default function Checkout() {
       setCashReceived("");
       setSplitCash("");
       setSplitCard("");
+      setPhone("");
+      setDueDate("");
+      setPaidNow("");
+      setPaidNowMethod("cash");
+      setCustomerUserId(null);
+      setCustomerResults([]);
+      setCustomerFocused(false);
       setPaymentMethod("cash");
       scanRef.current?.focus();
       // Refresh stock numbers after the sale.
@@ -428,22 +509,17 @@ export default function Checkout() {
               <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
                 {t("checkout.table.products")}
               </label>
-              <select
+              <SelectField
                 value={selectedId}
-                onChange={(e) => setSelectedId(e.target.value)}
+                onChange={setSelectedId}
                 disabled={isLoadingProducts}
-                className={`${inputClass} appearance-none`}
-                required
-              >
-                <option value="" disabled>
-                  {isLoadingProducts ? "..." : t("checkout.selectProduct")}
-                </option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id} disabled={p.quantity <= 0}>
-                    {p.name} — {formatMoney(Number(p.priceOut))} ({p.quantity} {t("checkout.inStock")})
-                  </option>
-                ))}
-              </select>
+                placeholder={isLoadingProducts ? "..." : t("checkout.selectProduct")}
+                options={products.map((p) => ({
+                  value: p.id,
+                  label: `${p.name} — ${formatMoney(Number(p.priceOut))} (${p.quantity} ${t("checkout.inStock")})`,
+                  disabled: p.quantity <= 0,
+                }))}
+              />
             </div>
             <div className="w-full lg:col-span-3">
               <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
@@ -473,18 +549,21 @@ export default function Checkout() {
       {/* Customer + payment + summary */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-4">
-          <div>
-            <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
-              {t("checkout.client")}
-            </label>
-            <input
-              type="text"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder={t("checkout.clientPlaceholder")}
-              className={inputClass}
-            />
-          </div>
+          {/* For a debt sale the customer is captured in the payment panel. */}
+          {paymentMethod !== "debt" && (
+            <div>
+              <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
+                {t("checkout.client")}
+              </label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder={t("checkout.clientPlaceholder")}
+                className={inputClass}
+              />
+            </div>
+          )}
           <div>
             <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
               {t("checkout.note")}
@@ -534,8 +613,8 @@ export default function Checkout() {
             <label className="mb-1.5 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
               {t("checkout.paymentMethod")}
             </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(["cash", "card", "split"] as const).map((m) => (
+            <div className="grid grid-cols-2 gap-2">
+              {(["cash", "card", "split", "debt"] as const).map((m) => (
                 <button
                   key={m}
                   type="button"
@@ -651,13 +730,195 @@ export default function Checkout() {
             </div>
           )}
 
+          {/* Debt: sell on credit — pick a client from history or add a new one */}
+          {paymentMethod === "debt" && (
+            <div className="mt-4 space-y-3">
+              {customerUserId ? (
+                /* Locked-in client picked from history */
+                <div className="flex items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2.5 dark:border-brand-500/30 dark:bg-brand-500/10">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
+                    {customerName.trim().charAt(0).toUpperCase() || "?"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-gray-800 dark:text-white/90">
+                      {customerName}
+                    </p>
+                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">{phone}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearCustomer}
+                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition hover:bg-white hover:text-gray-700 dark:hover:bg-white/[0.06] dark:hover:text-gray-200"
+                  >
+                    {t("checkout.changeClient") || "Change"}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Client name doubles as the history search box */}
+                  <div className="relative">
+                    <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                      {t("checkout.client")}
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                          <path d="M9 3.5a5.5 5.5 0 1 0 3.5 9.74l3.38 3.38a.75.75 0 1 0 1.06-1.06l-3.38-3.38A5.5 5.5 0 0 0 9 3.5Zm-4 5.5a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" fill="currentColor" />
+                        </svg>
+                      </span>
+                      <input
+                        type="text"
+                        value={customerName}
+                        onChange={(e) => {
+                          setCustomerName(e.target.value);
+                          setCustomerUserId(null);
+                        }}
+                        onFocus={() => setCustomerFocused(true)}
+                        onBlur={() => setTimeout(() => setCustomerFocused(false), 150)}
+                        placeholder={t("checkout.searchClientPlaceholder") || "Name or phone"}
+                        className={`${inputClass} pl-10`}
+                        autoComplete="off"
+                      />
+                    </div>
+                    {customerFocused &&
+                      customerName.trim() !== "" &&
+                      customerResults.length > 0 && (
+                        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">
+                          {customerResults.map((c) => (
+                            <li key={c.id}>
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => selectCustomer(c)}
+                                className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                              >
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600 dark:bg-white/[0.06] dark:text-gray-300">
+                                  {c.name.charAt(0).toUpperCase()}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-sm font-medium text-gray-800 dark:text-white/90">
+                                    {c.name}
+                                  </span>
+                                  <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                                    {c.phone}
+                                  </span>
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                  </div>
+
+                  {/* Phone — for a new client (or to confirm) */}
+                  <div>
+                    <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                      {t("checkout.phone") || "Phone"}
+                    </label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder={t("checkout.phonePlaceholder") || "+998 ..."}
+                      className={inputClass}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Optional down payment — pay part now, owe the rest */}
+              <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900/40">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-400">
+                    {t("checkout.paidNow") || "Paid now"}{" "}
+                    <span className="font-normal text-gray-400">
+                      ({t("checkout.optional") || "optional"})
+                    </span>
+                  </label>
+                  <div className="flex gap-1">
+                    {(["cash", "card"] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setPaidNowMethod(m)}
+                        className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                          paidNowMethod === m
+                            ? "bg-brand-500 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/[0.06] dark:text-gray-300 dark:hover:bg-white/[0.1]"
+                        }`}
+                      >
+                        {t(`checkout.${m}`) || m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <input
+                  type="number"
+                  min={0}
+                  max={total}
+                  inputMode="numeric"
+                  value={paidNow}
+                  onChange={(e) => setPaidNow(e.target.value)}
+                  placeholder="0"
+                  className={inputClass}
+                />
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-400">
+                    {t("checkout.debtRemaining") || "Debt (remaining)"}
+                  </span>
+                  <span
+                    className={`text-base font-semibold ${
+                      debtRemaining > 0 && paidNowNum <= total
+                        ? "text-warning-600 dark:text-warning-400"
+                        : "text-error-500"
+                    }`}
+                  >
+                    {formatMoney(Math.max(0, debtRemaining))}
+                  </span>
+                </div>
+                {paidNowNum > total && (
+                  <p className="mt-1 text-xs text-error-500">
+                    {t("checkout.paidExceedsTotal") || "Paid amount exceeds the total"}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                  {t("checkout.dueDate") || "Due date"}{" "}
+                  <span className="font-normal text-gray-400">
+                    ({t("checkout.optional") || "optional"})
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+
+              <p className="flex items-start gap-2 rounded-lg bg-warning-50 px-3 py-2 text-xs text-warning-700 dark:bg-warning-500/10 dark:text-warning-400">
+                <span className="text-sm leading-none">ⓘ</span>
+                <span>
+                  {t("checkout.debtHintPartial") ||
+                    "The remaining amount will be recorded as the customer's debt for this order."}
+                </span>
+              </p>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleComplete}
             disabled={cart.length === 0 || isSubmitting || !paymentValid}
             className="mt-5 h-12 w-full rounded-lg bg-brand-500 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? t("checkout.completing") : t("checkout.completeSale")}
+            {isSubmitting
+              ? t("checkout.completing")
+              : paymentMethod === "debt"
+                ? t("checkout.sellOnCredit") || "Sell on credit"
+                : t("checkout.completeSale")}
           </button>
         </div>
       </div>

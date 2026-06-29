@@ -585,13 +585,44 @@ export async function uploadStorageFile(
 }
 
 // Debt API
+// A customer ("client") record. The `users` table is the clients table.
+export interface Customer {
+  id: string;
+  businessId: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  address: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Search the business's clients by name or phone (from clients history). */
+export async function searchCustomers(
+  search: string,
+  limit = 8,
+): Promise<Customer[]> {
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  params.set('limit', String(limit));
+  const response = await fetch(`${API_BASE_URL}/users?${params.toString()}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to search customers');
+  const data = await response.json();
+  return data.users ?? [];
+}
+
 export interface UserDebt {
   id: string;
   businessId: string;
   userId: string;
+  orderId?: string | null;
   amount: string;
   status: 'Paid' | 'Pending' | 'Overdue';
-  dueDate: Date | string;
+  dueDate: Date | string | null;
   description: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -631,6 +662,8 @@ export async function getDebts(
   limit: number = 10,
   search?: string,
   status?: string,
+  dateFrom?: string,
+  dateTo?: string,
 ): Promise<DebtListResponse> {
   const token = getAuthToken();
   if (!token) {
@@ -646,6 +679,12 @@ export async function getDebts(
   if (status) {
     queryParams.append('status', status);
   }
+  if (dateFrom) {
+    queryParams.append('dateFrom', dateFrom);
+  }
+  if (dateTo) {
+    queryParams.append('dateTo', dateTo);
+  }
 
   const response = await fetch(`${API_BASE_URL}/debts?${queryParams.toString()}`, {
     method: 'GET',
@@ -660,6 +699,52 @@ export async function getDebts(
     throw new Error(error.message || 'Failed to fetch debts');
   }
 
+  return response.json();
+}
+
+// Debts grouped by customer, sorted + paginated server-side.
+export interface DebtGroup {
+  userId: string;
+  userName: string;
+  phone: string;
+  totalDebt: number;
+  debtCount: number;
+  latestDate: string | null;
+  debts: UserDebt[];
+}
+
+export interface DebtGroupsResponse {
+  groups: DebtGroup[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getDebtGroups(
+  page: number = 1,
+  limit: number = 10,
+  search?: string,
+  status?: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sortBy?: 'date' | 'amount' | 'count',
+  sortDir?: 'asc' | 'desc',
+): Promise<DebtGroupsResponse> {
+  const params = new URLSearchParams();
+  params.append('page', page.toString());
+  params.append('limit', limit.toString());
+  if (search) params.append('search', search);
+  if (status) params.append('status', status);
+  if (dateFrom) params.append('dateFrom', dateFrom);
+  if (dateTo) params.append('dateTo', dateTo);
+  if (sortBy) params.append('sortBy', sortBy);
+  if (sortDir) params.append('sortDir', sortDir);
+
+  const response = await fetch(`${API_BASE_URL}/debts/grouped?${params.toString()}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch debts');
   return response.json();
 }
 
@@ -996,6 +1081,8 @@ export interface CreateOrderDto {
   paymentMethod?: string;
   payments?: PaymentSplit[];
   amountPaid?: number;
+  phone?: string;
+  dueDate?: string;
   note?: string;
   source?: string;
 }

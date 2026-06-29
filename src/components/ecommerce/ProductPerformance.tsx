@@ -11,6 +11,7 @@ import Image from "next/image";
 import { DownloadIcon, ArrowUpIcon, ArrowDownIcon, CalenderIcon } from "@/icons/index";
 import { useTranslations } from "@/hooks/useTranslations";
 import Badge from "../ui/badge/Badge";
+import SelectField from "../form/SelectField";
 import flatpickr from "flatpickr";
 import { getProductPerformance, type ProductPerformanceRow } from "@/lib/api";
 
@@ -239,15 +240,16 @@ export default function ProductPerformance() {
             </span>
           </div>
 
-          <select
+          <SelectField
+            className="min-w-[180px]"
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortKey)}
-            className="h-11 rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90"
-          >
-            <option value="revenue">{t('productPerformance.sortByRevenue')}</option>
-            <option value="profit">{t('productPerformance.sortByProfit')}</option>
-            <option value="sales">{t('productPerformance.sortBySales')}</option>
-          </select>
+            onChange={(value) => setSortBy(value as SortKey)}
+            options={[
+              { value: "revenue", label: t('productPerformance.sortByRevenue') },
+              { value: "profit", label: t('productPerformance.sortByProfit') },
+              { value: "sales", label: t('productPerformance.sortBySales') },
+            ]}
+          />
         </div>
 
         {/* Table */}

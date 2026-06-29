@@ -5,7 +5,6 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Select from "../form/Select";
 import ImageUpload from "../form/ImageUpload";
-import { ChevronDownIcon } from "@/icons/index";
 import Button from "../ui/button/Button";
 import { useTranslations } from "@/hooks/useTranslations";
 import { createProduct, updateProduct, generateProductCode, getProduct, getCategories, type Product } from "@/lib/api";
@@ -228,18 +227,13 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
 
               <div className="col-span-full">
                 <Label htmlFor="category">{t('addProduct.category')}</Label>
-                <div className="relative">
-                  <Select
-                    key={isEditMode ? (isLoadingProduct ? "loading" : productId) : "new"}
-                    options={categories.map((c) => ({ value: c.id, label: c.name }))}
-                    placeholder={t('addProduct.categoryPlaceholder')}
-                    onChange={handleSelectChange("categoryId")}
-                    defaultValue={formData.categoryId}
-                  />
-                  <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                    <ChevronDownIcon />
-                  </span>
-                </div>
+                <Select
+                  key={isEditMode ? (isLoadingProduct ? "loading" : productId) : "new"}
+                  options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                  placeholder={t('addProduct.categoryPlaceholder')}
+                  onChange={handleSelectChange("categoryId")}
+                  defaultValue={formData.categoryId}
+                />
               </div>
 
               <div>
@@ -392,17 +386,12 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
 
               <div>
                 <Label htmlFor="quantityType">{t('addProduct.quantityType')}</Label>
-                <div className="relative">
-                  <Select
-                    options={quantityTypeOptions}
-                    placeholder={t('addProduct.quantityTypePlaceholder')}
-                    onChange={handleSelectChange("quantityType")}
-                    defaultValue={formData.quantityType}
-                  />
-                  <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                    <ChevronDownIcon />
-                  </span>
-                </div>
+                <Select
+                  options={quantityTypeOptions}
+                  placeholder={t('addProduct.quantityTypePlaceholder')}
+                  onChange={handleSelectChange("quantityType")}
+                  defaultValue={formData.quantityType}
+                />
               </div>
             </div>
           </form>
