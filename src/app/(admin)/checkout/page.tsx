@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function CheckoutPage() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="Checkout" />
+      <PageBreadcrumb pageTitle="Checkout" titleKey="sidebar.checkout" />
       <div className="space-y-6">
         <Checkout />
       </div>

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function CategoriesPage() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="Categories" />
+      <PageBreadcrumb pageTitle="Categories" titleKey="sidebar.categories" />
       <div className="space-y-6">
         <CategoriesList />
       </div>

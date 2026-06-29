@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function SubscriptionManagementPage() {
   return (
     <>
-      <PageBreadcrumb pageTitle="Subscription Management" />
+      <PageBreadcrumb pageTitle="Subscription Management" titleKey="sidebar.subscriptionManagement" />
       <SubscriptionManagement />
     </>
   );

@@ -274,7 +274,9 @@
     "procurement": "Харидлар",
     "suppliers": "Етказиб берувчилар",
     "goodsReceipts": "Товар кирими",
-    "comingSoon": "Тез кунда"
+    "comingSoon": "Тез кунда",
+    "editProduct": "Маҳсулотни таҳрирлаш",
+    "receiptManagement": "Чекларни бошқариш"
   },
   "inventory": {
     "title": "Инвентаризация бошқаруви",
@@ -503,7 +505,16 @@
     "paidNow": "Ҳозир тўланди",
     "debtRemaining": "Қарз (қолдиқ)",
     "paidExceedsTotal": "Тўлов жами суммадан ошиб кетди",
-    "debtHintPartial": "Қолган сумма шу буюртма бўйича мижоз қарзи сифатида ёзилади."
+    "debtHintPartial": "Қолган сумма шу буюртма бўйича мижоз қарзи сифатида ёзилади.",
+    "orderDetails": "Буюртма тафсилотлари",
+    "clearAll": "Ҳаммасини тозалаш",
+    "scanShort": "Сканер",
+    "searchAddPlaceholder": "Номи, штрих-код ёки артикул бўйича қидириш",
+    "moreOptions": "Кўпроқ",
+    "fewerOptions": "Ёпиш",
+    "invoice": "Ҳисоб-фактура",
+    "totalPayable": "Тўлаш учун",
+    "searchHint": "Штрих-кодни сканерланг ёки ёзинг, сўнг Enter босинг"
   },
   "roles": {
     "title": "Роллар",

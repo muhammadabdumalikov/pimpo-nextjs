@@ -274,7 +274,9 @@
     "procurement": "Procurement",
     "suppliers": "Suppliers",
     "goodsReceipts": "Goods Receipts",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "editProduct": "Edit Product",
+    "receiptManagement": "Receipt Management"
   },
   "inventory": {
     "title": "Inventory Management",
@@ -503,7 +505,16 @@
     "paidNow": "Paid now",
     "debtRemaining": "Debt (remaining)",
     "paidExceedsTotal": "Paid amount exceeds the total",
-    "debtHintPartial": "The remaining amount will be recorded as the customer's debt for this order."
+    "debtHintPartial": "The remaining amount will be recorded as the customer's debt for this order.",
+    "orderDetails": "Order details",
+    "clearAll": "Clear all",
+    "scanShort": "Scan",
+    "searchAddPlaceholder": "Search by name, barcode or SKU",
+    "moreOptions": "More options",
+    "fewerOptions": "Fewer options",
+    "invoice": "Invoice",
+    "totalPayable": "Total payable",
+    "searchHint": "Scan a barcode or type to search, then press Enter"
   },
   "roles": {
     "title": "Roles",

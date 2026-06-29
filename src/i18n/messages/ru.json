@@ -274,7 +274,9 @@
     "procurement": "Закупки",
     "suppliers": "Поставщики",
     "goodsReceipts": "Приход товаров",
-    "comingSoon": "Скоро"
+    "comingSoon": "Скоро",
+    "editProduct": "Редактировать товар",
+    "receiptManagement": "Управление чеками"
   },
   "inventory": {
     "title": "Управление инвентаризацией",
@@ -503,7 +505,16 @@
     "paidNow": "Оплачено сейчас",
     "debtRemaining": "Долг (остаток)",
     "paidExceedsTotal": "Оплата превышает итог",
-    "debtHintPartial": "Остаток будет записан как долг клиента по этому заказу."
+    "debtHintPartial": "Остаток будет записан как долг клиента по этому заказу.",
+    "orderDetails": "Детали заказа",
+    "clearAll": "Очистить всё",
+    "scanShort": "Скан",
+    "searchAddPlaceholder": "Поиск по названию, штрихкоду или артикулу",
+    "moreOptions": "Ещё",
+    "fewerOptions": "Свернуть",
+    "invoice": "Счёт",
+    "totalPayable": "К оплате",
+    "searchHint": "Отсканируйте штрихкод или введите запрос, затем Enter"
   },
   "roles": {
     "title": "Роли",

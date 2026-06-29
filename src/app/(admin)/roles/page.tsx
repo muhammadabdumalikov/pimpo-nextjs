@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function RolesPage() {
   return (
     <>
-      <PageBreadcrumb pageTitle="Roles" />
+      <PageBreadcrumb pageTitle="Roles" titleKey="sidebar.roles" />
       <RolesManager />
     </>
   );

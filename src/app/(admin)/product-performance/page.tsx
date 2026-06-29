@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function ProductPerformancePage() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="Product Performance" />
+      <PageBreadcrumb pageTitle="Product Performance" titleKey="sidebar.productPerformance" />
       <div className="space-y-6">
         <ProductPerformance />
       </div>

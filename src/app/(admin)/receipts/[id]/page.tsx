@@ -16,7 +16,7 @@ export default async function ReceiptDetailPage({
   const { id } = await params;
   return (
     <div>
-      <PageBreadcrumb pageTitle="Goods Receipt" />
+      <PageBreadcrumb pageTitle="Goods Receipt" titleKey="goodsReceipt.detailTitle" />
       <div className="space-y-6">
         <ReceiptDetail id={id} />
       </div>

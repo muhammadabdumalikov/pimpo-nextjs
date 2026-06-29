@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function SuppliersPage() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="Suppliers" />
+      <PageBreadcrumb pageTitle="Suppliers" titleKey="sidebar.suppliers" />
       <div className="space-y-6">
         <SuppliersManagement />
       </div>

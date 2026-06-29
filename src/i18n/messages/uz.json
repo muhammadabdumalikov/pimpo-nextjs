@@ -274,7 +274,9 @@
     "procurement": "Xaridlar",
     "suppliers": "Yetkazib beruvchilar",
     "goodsReceipts": "Mahsulot kirimi",
-    "comingSoon": "Tez kunda"
+    "comingSoon": "Tez kunda",
+    "editProduct": "Mahsulotni tahrirlash",
+    "receiptManagement": "Cheklarni boshqarish"
   },
   "inventory": {
     "title": "Inventarizatsiya boshqaruvi",
@@ -503,7 +505,16 @@
     "paidNow": "Hozir to'landi",
     "debtRemaining": "Qarz (qoldiq)",
     "paidExceedsTotal": "To'lov jami summadan oshib ketdi",
-    "debtHintPartial": "Qolgan summa shu buyurtma bo'yicha mijoz qarzi sifatida yoziladi."
+    "debtHintPartial": "Qolgan summa shu buyurtma bo'yicha mijoz qarzi sifatida yoziladi.",
+    "orderDetails": "Buyurtma tafsilotlari",
+    "clearAll": "Hammasini tozalash",
+    "scanShort": "Skaner",
+    "searchAddPlaceholder": "Nomi, shtrix-kod yoki artikul bo'yicha qidirish",
+    "moreOptions": "Ko'proq",
+    "fewerOptions": "Yopish",
+    "invoice": "Hisob-faktura",
+    "totalPayable": "To'lash uchun",
+    "searchHint": "Shtrix-kodni skanerlang yoki yozing, so'ng Enter bosing"
   },
   "roles": {
     "title": "Rollar",

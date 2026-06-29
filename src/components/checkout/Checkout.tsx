@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import { formatPhone } from "@/lib/phone";
@@ -13,7 +14,6 @@ import {
   type Customer,
 } from "@/lib/api";
 import CameraScanner from "./CameraScanner";
-import SelectField from "../form/SelectField";
 
 type CartLine = {
   productId: string;
@@ -21,11 +21,12 @@ type CartLine = {
   price: number;
   quantity: number;
   stock: number;
+  image: string | null;
 };
 
 const DeleteIcon = () => (
   <svg
-    className="cursor-pointer fill-gray-700 hover:fill-error-500 dark:fill-gray-400 dark:hover:fill-error-500"
+    className="fill-gray-400 transition group-hover:fill-error-500"
     width="20"
     height="20"
     viewBox="0 0 20 20"
@@ -41,19 +42,65 @@ const DeleteIcon = () => (
   </svg>
 );
 
+/** Product thumbnail with a graceful placeholder when there's no image. */
+function ProductThumb({
+  src,
+  alt,
+  size = 44,
+}: {
+  src: string | null;
+  alt: string;
+  size?: number;
+}) {
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+      style={{ width: size, height: size }}
+    >
+      {src ? (
+        <Image
+          width={size}
+          height={size}
+          src={src}
+          alt={alt}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <svg
+          className="h-1/2 w-1/2 text-gray-400 dark:text-gray-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      )}
+    </div>
+  );
+}
+
 export default function Checkout() {
   const { t } = useTranslations();
   const { showToast } = useToast();
 
   const [cart, setCart] = useState<CartLine[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [qty, setQty] = useState(1);
-  // Picker dropdown is loaded lazily by its own query (on open / search) — the
-  // catalog is no longer preloaded on page open.
-  const [productResults, setProductResults] = useState<Product[]>([]);
-  const [productSearchLoading, setProductSearchLoading] = useState(false);
-  const [scanValue, setScanValue] = useState("");
+
+  // Unified product entry: one box that searches by name/barcode/SKU, doubles as
+  // the hardware-scanner target (auto-focused), and shows a click-to-add result
+  // list. Exact barcode/code matches auto-add (so keyboard-wedge scanners that
+  // don't send Enter still work). The camera is a secondary entry point.
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [lastScanned, setLastScanned] = useState("");
+
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "split" | "debt">("cash");
   const [cashReceived, setCashReceived] = useState("");
@@ -70,36 +117,21 @@ export default function Checkout() {
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
   const [customerFocused, setCustomerFocused] = useState(false);
   const [note, setNote] = useState("");
+  // Advanced options (Split/Credit, client, note) stay tucked away so the common
+  // cash sale is one tap. Selecting Credit forces them open.
+  const [showMore, setShowMore] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [vatEnabled, setVatEnabled] = useState(false);
   const [vatRate, setVatRate] = useState(0);
-  const scanRef = useRef<HTMLInputElement>(null);
-  const scanDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currency = t("checkout.currency") || "so'm";
 
-  // Picker dropdown query — runs on open (empty term → first page) and on each
-  // debounced search keystroke. Separate from the scanner; nothing on page open.
-  const handleProductSearch = useCallback(
-    async (q: string) => {
-      setProductSearchLoading(true);
-      try {
-        const res = await getProducts(1, 20, q.trim() || undefined);
-        setProductResults(res.products.filter((p) => p.isActive));
-      } catch (err: unknown) {
-        showToast("error", (err as Error)?.message || "Failed to load products", "Error");
-        setProductResults([]);
-      } finally {
-        setProductSearchLoading(false);
-      }
-    },
-    [showToast],
-  );
-
-  // Clear any pending scan lookup on unmount.
+  // Clear any pending search lookup on unmount.
   useEffect(() => () => {
-    if (scanDebounceRef.current) clearTimeout(scanDebounceRef.current);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
   }, []);
 
   // Load the business VAT (QQS) config so the summary can break out the tax.
@@ -158,10 +190,10 @@ export default function Checkout() {
     setCustomerResults([]);
   };
 
-  // Keep the scan box focused so a handheld scanner (keyboard-wedge) always
+  // Keep the search box focused so a handheld scanner (keyboard-wedge) always
   // lands its keystrokes here.
   useEffect(() => {
-    scanRef.current?.focus();
+    searchRef.current?.focus();
   }, []);
 
   const formatMoney = (value: number) =>
@@ -231,24 +263,29 @@ export default function Checkout() {
           price: Number(product.priceOut),
           quantity: Math.min(addQty, product.quantity || addQty),
           stock: product.quantity,
+          image: product.image,
         },
       ];
     });
   };
 
-  const addToCart = () => {
-    const product = productResults.find((p) => p.id === selectedId);
-    if (!product) return;
-    addProductToCart(product, Math.max(1, qty));
-    setSelectedId("");
-    setQty(1);
+  // Add a product from the search result list (click) and reset the box for the
+  // next item, keeping focus so scanning/searching can continue uninterrupted.
+  const addFromSearch = (product: Product) => {
+    if (product.quantity <= 0) {
+      showToast("warning", `${product.name} — ${t("checkout.outOfStock")}`);
+      return;
+    }
+    addProductToCart(product, 1);
+    setLastScanned(product.name);
+    setSearchTerm("");
+    setSearchResults([]);
+    searchRef.current?.focus();
   };
 
-  // Resolve + add a scanned/typed/camera code via the backend (exact barcode or
-  // code match). Shared by the keyboard-wedge input and the camera scanner.
-  // `silent` suppresses the not-found toast for debounced mid-typing lookups.
-  // Stable identity (useCallback) so the camera effect doesn't restart on every
-  // keystroke.
+  // Resolve + add a scanned/camera code via the backend (exact barcode or code
+  // match). Used by the camera scanner. `silent` suppresses the not-found toast.
+  // Stable identity (useCallback) so the camera effect doesn't restart.
   const resolveCode = useCallback(
     async (raw: string, opts?: { silent?: boolean }) => {
       const term = raw.trim();
@@ -264,8 +301,6 @@ export default function Checkout() {
 
         if (!product) {
           if (!opts?.silent) {
-            setLastScanned("");
-            setScanValue("");
             showToast(
               "error",
               `${t("checkout.scanNotFound") || "No product for code"}: ${term}`,
@@ -274,14 +309,11 @@ export default function Checkout() {
           return;
         }
         if (product.quantity <= 0) {
-          setLastScanned("");
-          setScanValue("");
           showToast("warning", `${product.name} — ${t("checkout.outOfStock")}`);
           return;
         }
         addProductToCart(product, 1);
         setLastScanned(product.name);
-        setScanValue("");
       } catch (err: unknown) {
         if (!opts?.silent) {
           showToast("error", (err as Error)?.message || "Failed to look up product", "Error");
@@ -291,21 +323,57 @@ export default function Checkout() {
     [showToast, t],
   );
 
-  // Debounce the request while the scanner streams characters (no Enter needed);
-  // mid-typing misses stay silent so we don't toast on every partial code.
-  const handleScanInput = (val: string) => {
-    setScanValue(val);
-    if (scanDebounceRef.current) clearTimeout(scanDebounceRef.current);
-    if (!val.trim()) return;
-    scanDebounceRef.current = setTimeout(() => resolveCode(val, { silent: true }), 300);
+  // Debounced search as the user types/scans. Populates the click-to-add result
+  // list; an exact barcode/code hit auto-adds (so wedge scanners work without
+  // Enter) and clears the box.
+  const handleSearchInput = (val: string) => {
+    setSearchTerm(val);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    const term = val.trim();
+    if (!term) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await getProducts(1, 8, term);
+        const lc = term.toLowerCase();
+        const exact = res.products.find(
+          (p) =>
+            (p.barcode ?? "").toLowerCase() === lc ||
+            (p.code ?? "").toLowerCase() === lc,
+        );
+        if (exact && exact.quantity > 0) {
+          // Scanned/typed an exact code → add it straight away.
+          addProductToCart(exact, 1);
+          setLastScanned(exact.name);
+          setSearchTerm("");
+          setSearchResults([]);
+        } else {
+          setSearchResults(res.products.filter((p) => p.isActive));
+        }
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
   };
 
-  const handleScan = (e: React.FormEvent) => {
+  // Enter on the search box: add the first matching result, else surface a
+  // not-found toast for the exact code.
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (scanDebounceRef.current) clearTimeout(scanDebounceRef.current);
-    const raw = scanValue;
-    scanRef.current?.focus();
-    resolveCode(raw); // explicit submit — surface not-found
+    const term = searchTerm.trim();
+    if (!term) return;
+    const first = searchResults.find((p) => p.quantity > 0);
+    if (first) {
+      addFromSearch(first);
+    } else {
+      resolveCode(term);
+    }
   };
 
   const changeQty = (productId: string, next: number) => {
@@ -320,6 +388,12 @@ export default function Checkout() {
 
   const removeLine = (productId: string) => {
     setCart((prev) => prev.filter((l) => l.productId !== productId));
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    setLastScanned("");
+    searchRef.current?.focus();
   };
 
   const handleComplete = async () => {
@@ -385,7 +459,8 @@ export default function Checkout() {
       setCustomerResults([]);
       setCustomerFocused(false);
       setPaymentMethod("cash");
-      scanRef.current?.focus();
+      setShowMore(false);
+      searchRef.current?.focus();
     } catch (err: unknown) {
       showToast("error", (err as Error)?.message || t("checkout.orderError") || "Failed", "Error");
     } finally {
@@ -396,562 +471,656 @@ export default function Checkout() {
   const inputClass =
     "h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
 
+  // Show the result dropdown only when the box is focused and we have something.
+  const showResults =
+    searchFocused && searchTerm.trim() !== "" && (searchLoading || searchResults.length > 0);
+
   return (
-    <div className="border-b border-gray-200 p-4 sm:p-8 dark:border-gray-800">
-      {/* Scan area — camera is the primary, most-used action; the manual /
-          hardware-scanner input sits underneath as a secondary entry point. */}
-      <div className="mb-5 space-y-3">
+    <div className="space-y-5">
+      {/* ── Top toolbar: one search box (scan + search) + camera ───────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <form onSubmit={handleSearchSubmit} className="relative flex-1">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M3.04 9.374a6.333 6.333 0 1 1 11.318 3.92l2.82 2.82a.75.75 0 1 1-1.06 1.06l-2.82-2.82A6.333 6.333 0 0 1 3.04 9.374Zm6.333-4.832a4.833 4.833 0 1 0 0 9.666 4.833 4.833 0 0 0 0-9.666Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <input
+            ref={searchRef}
+            type="text"
+            value={searchTerm}
+            onChange={(e) => handleSearchInput(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+            autoComplete="off"
+            placeholder={t("checkout.searchAddPlaceholder") || "Search by name, barcode or SKU"}
+            className="h-14 w-full rounded-xl border border-gray-300 bg-white pl-12 pr-4 text-base text-gray-800 placeholder:text-gray-400 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          />
+
+          {/* Click-to-add results */}
+          {showResults && (
+            <ul className="absolute left-0 right-0 z-30 mt-1.5 max-h-80 overflow-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark">
+              {searchLoading && searchResults.length === 0 ? (
+                <li className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500" />
+                  {t("common.searching") || "Searching..."}
+                </li>
+              ) : (
+                searchResults.map((p) => {
+                  const out = p.quantity <= 0;
+                  return (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        disabled={out}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => addFromSearch(p)}
+                        className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition ${
+                          out
+                            ? "cursor-not-allowed opacity-50"
+                            : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                        }`}
+                      >
+                        <ProductThumb src={p.image} alt={p.name} size={40} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-gray-800 dark:text-white/90">
+                            {p.name}
+                          </span>
+                          <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                            {out
+                              ? t("checkout.outOfStock")
+                              : `${p.quantity} ${t("checkout.inStock")}`}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-sm font-semibold text-gray-800 dark:text-white/90">
+                          {formatMoney(Number(p.priceOut))}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          )}
+        </form>
+
         <button
           type="button"
           onClick={() => setCameraOpen((o) => !o)}
-          className={`flex h-16 w-full items-center justify-center gap-3 rounded-2xl text-base font-semibold shadow-theme-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`flex h-14 shrink-0 items-center justify-center gap-2.5 rounded-xl px-6 text-base font-semibold shadow-theme-xs transition active:scale-[0.99] ${
             cameraOpen
-              ? "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03]"
+              ? "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
               : "bg-brand-500 text-white hover:bg-brand-600"
           }`}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 0 1 2-2h1l1.5-2h9L18 7h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
             <circle cx="12" cy="13" r="3.5" />
           </svg>
-          {cameraOpen
-            ? t("checkout.cameraStop") || "Stop camera"
-            : t("checkout.cameraTitle") || "Scan with camera"}
+          {cameraOpen ? t("checkout.cameraStop") || "Stop camera" : t("checkout.scanShort") || "Scan"}
         </button>
-
-        <CameraScanner
-          isOpen={cameraOpen}
-          onClose={() => {
-            setCameraOpen(false);
-            scanRef.current?.focus();
-          }}
-          onDetected={resolveCode}
-          lastScanned={lastScanned}
-        />
-
-        <form onSubmit={handleScan}>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" />
-                </svg>
-              </span>
-              <input
-                ref={scanRef}
-                type="text"
-                value={scanValue}
-                onChange={(e) => handleScanInput(e.target.value)}
-                autoComplete="off"
-                placeholder={t("checkout.scanPlaceholder") || "Scan or type a barcode, then Enter"}
-                className={`${inputClass} pl-11`}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!scanValue.trim()}
-              className="h-11 shrink-0 rounded-lg border border-gray-300 bg-white px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-            >
-              {t("checkout.add")}
-            </button>
-          </div>
-        </form>
-
-        {lastScanned && !cameraOpen && (
-          <p className="text-sm text-success-600 dark:text-success-500">
-            ✓ {t("checkout.scanAdded") || "Added"}: {lastScanned}
-          </p>
-        )}
       </div>
 
-      {/* Cart table */}
-      <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
-        <div className="custom-scrollbar overflow-x-auto">
-          <table className="min-w-full text-left text-sm text-gray-700 dark:border-gray-800">
-            <thead className="bg-gray-50 dark:bg-gray-900">
-              <tr className="border-b border-gray-100 whitespace-nowrap dark:border-gray-800">
-                <th className="px-5 py-4 text-sm font-medium text-gray-700 dark:text-gray-400">{t("checkout.table.serial")}</th>
-                <th className="px-5 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">{t("checkout.table.products")}</th>
-                <th className="px-5 py-4 text-sm font-medium text-gray-700 dark:text-gray-400">{t("checkout.table.quantity")}</th>
-                <th className="px-5 py-4 text-sm font-medium text-gray-700 dark:text-gray-400">{t("checkout.table.unitCost")}</th>
-                <th className="px-5 py-4 text-sm font-medium text-gray-700 dark:text-gray-400">{t("checkout.table.total")}</th>
-                <th className="relative px-5 py-4 text-sm font-medium text-gray-700 dark:text-gray-400">
-                  <span className="sr-only">{t("checkout.table.actions")}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-white/[0.03]">
-              {cart.map((line, idx) => (
-                <tr key={line.productId}>
-                  <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400">{idx + 1}</td>
-                  <td className="px-5 py-4 text-sm font-medium text-gray-800 dark:text-white/90">{line.name}</td>
-                  <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400">
+      <CameraScanner
+        isOpen={cameraOpen}
+        onClose={() => {
+          setCameraOpen(false);
+          searchRef.current?.focus();
+        }}
+        onDetected={resolveCode}
+        lastScanned={lastScanned}
+      />
+
+      {/* ── Two columns: cart on the left, invoice/payment on the right ─────── */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+        {/* Cart */}
+        <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
+          <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
+                {t("checkout.orderDetails") || "Order details"}
+              </h2>
+              {cart.length > 0 && (
+                <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                  {itemCount} {t("checkout.pieces")}
+                </span>
+              )}
+            </div>
+            {cart.length > 0 && (
+              <button
+                type="button"
+                onClick={clearCart}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-error-500 transition hover:bg-error-50 dark:hover:bg-error-500/10"
+              >
+                {t("checkout.clearAll") || "Clear all"}
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {cart.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+              <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h2l2.4 12.3a1 1 0 0 0 1 .8h8.7a1 1 0 0 0 1-.78L21 8H6" />
+                  <circle cx="9" cy="20" r="1.4" />
+                  <circle cx="18" cy="20" r="1.4" />
+                </svg>
+              </span>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                {t("checkout.emptyCart")}
+              </p>
+              <p className="mt-1 max-w-xs text-xs text-gray-400">
+                {t("checkout.searchHint") || "Scan a barcode or type to search, then press Enter"}
+              </p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+              {cart.map((line) => (
+                <li
+                  key={line.productId}
+                  className="flex items-center gap-3 px-4 py-3 sm:px-5"
+                >
+                  <ProductThumb src={line.image} alt={line.name} size={48} />
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-gray-800 dark:text-white/90">
+                      {line.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatMoney(line.price)}
+                    </p>
+                  </div>
+
+                  {/* Quantity stepper — large touch targets for fast use */}
+                  <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                    <button
+                      type="button"
+                      aria-label="-"
+                      onClick={() => changeQty(line.productId, line.quantity - 1)}
+                      className="flex h-10 w-10 items-center justify-center text-lg text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+                      disabled={line.quantity <= 1}
+                    >
+                      −
+                    </button>
                     <input
                       type="number"
                       min={1}
                       max={line.stock || undefined}
                       value={line.quantity}
                       onChange={(e) => changeQty(line.productId, Number(e.target.value))}
-                      className="h-9 w-20 rounded-lg border border-gray-300 bg-white px-2 text-center text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                      className="h-10 w-12 border-x border-gray-200 bg-white text-center text-sm font-medium text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
                     />
-                  </td>
-                  <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400">{formatMoney(line.price)}</td>
-                  <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400">{formatMoney(line.price * line.quantity)}</td>
-                  <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    <div
-                      className="flex items-center justify-center"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => removeLine(line.productId)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") removeLine(line.productId);
-                      }}
+                    <button
+                      type="button"
+                      aria-label="+"
+                      onClick={() => changeQty(line.productId, line.quantity + 1)}
+                      className="flex h-10 w-10 items-center justify-center text-lg text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+                      disabled={!!line.stock && line.quantity >= line.stock}
                     >
-                      <DeleteIcon />
-                    </div>
-                  </td>
-                </tr>
+                      +
+                    </button>
+                  </div>
+
+                  <div className="w-24 shrink-0 text-right text-sm font-semibold text-gray-800 dark:text-white/90">
+                    {formatMoney(line.price * line.quantity)}
+                  </div>
+
+                  <button
+                    type="button"
+                    aria-label={t("checkout.removeItem") || "Remove"}
+                    onClick={() => removeLine(line.productId)}
+                    className="group flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition hover:bg-error-50 dark:hover:bg-error-500/10"
+                  >
+                    <DeleteIcon />
+                  </button>
+                </li>
               ))}
-              {cart.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-gray-400">
-                    {t("checkout.emptyCart")}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Add product row */}
-      <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50 p-4 sm:p-6 dark:border-gray-800 dark:bg-gray-900">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            addToCart();
-          }}
-        >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12">
-            <div className="w-full lg:col-span-7">
-              <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
-                {t("checkout.table.products")}
-              </label>
-              <SelectField
-                value={selectedId}
-                onChange={setSelectedId}
-                onSearch={handleProductSearch}
-                loading={productSearchLoading}
-                searchPlaceholder={t("checkout.searchProduct") || "Search product..."}
-                placeholder={t("checkout.selectProduct")}
-                options={productResults.map((p) => ({
-                  value: p.id,
-                  label: `${p.name} — ${formatMoney(Number(p.priceOut))} (${p.quantity} ${t("checkout.inStock")})`,
-                  disabled: p.quantity <= 0,
-                }))}
-              />
-            </div>
-            <div className="w-full lg:col-span-3">
-              <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
-                {t("checkout.form.quantityLabel")}
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={qty}
-                onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
-                className={inputClass}
-              />
-            </div>
-            <div className="flex w-full items-end lg:col-span-2">
-              <button
-                type="submit"
-                disabled={!selectedId}
-                className="h-11 w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {t("checkout.add")}
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-
-      {/* Customer + payment + summary */}
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
-          {/* For a debt sale the customer is captured in the payment panel. */}
-          {paymentMethod !== "debt" && (
-            <div>
-              <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
-                {t("checkout.client")}
-              </label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder={t("checkout.clientPlaceholder")}
-                className={inputClass}
-              />
-            </div>
+            </ul>
           )}
-          <div>
-            <label className="mb-1 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
-              {t("checkout.note")}
-            </label>
-            <input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={t("checkout.notePlaceholder")}
-              className={inputClass}
-            />
-          </div>
         </div>
 
-        <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-900">
-          <p className="mb-4 text-sm font-medium text-gray-800 dark:text-white/90">
-            {t("checkout.summary.title")}
-          </p>
-          <ul className="space-y-2">
-            <li className="flex justify-between gap-5">
-              <span className="text-sm text-gray-500 dark:text-gray-400">{t("checkout.table.quantity")}</span>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-400">
-                {itemCount} {t("checkout.pieces")}
-              </span>
-            </li>
-            <li className="flex items-center justify-between border-t border-gray-200 pt-2 dark:border-gray-800">
-              <span className="font-medium text-gray-700 dark:text-gray-400">{t("checkout.total")}</span>
-              <span className="text-lg font-semibold text-gray-800 dark:text-white/90">{formatMoney(total)}</span>
-            </li>
-            {vatEnabled && vatRate > 0 && (
-              <li className="flex justify-between gap-5">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {(t("checkout.vatIncluded") || "incl. VAT {percent}%").replace(
-                    "{percent}",
-                    String(vatRate),
-                  )}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {formatMoney(vatAmount)}
+        {/* Invoice + payment (sticky on desktop) */}
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.02]">
+            <h2 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
+              {t("checkout.invoice") || t("checkout.summary.title")}
+            </h2>
+
+            {/* Summary */}
+            <ul className="space-y-2.5">
+              <li className="flex justify-between gap-5 text-sm">
+                <span className="text-gray-500 dark:text-gray-400">{t("checkout.subtotal")}</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {formatMoney(total)}
                 </span>
               </li>
-            )}
-          </ul>
+              {vatEnabled && vatRate > 0 && (
+                <li className="flex justify-between gap-5 text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {(t("checkout.vatIncluded") || "incl. VAT {percent}%").replace(
+                      "{percent}",
+                      String(vatRate),
+                    )}
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-400">{formatMoney(vatAmount)}</span>
+                </li>
+              )}
+              <li className="flex items-center justify-between gap-5 border-t border-gray-200 pt-3 dark:border-gray-800">
+                <span className="font-semibold text-gray-800 dark:text-white/90">
+                  {t("checkout.totalPayable") || t("checkout.total")}
+                </span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white">
+                  {formatMoney(total)}
+                </span>
+              </li>
+            </ul>
 
-          {/* Payment method selector */}
-          <div className="mt-4">
-            <label className="mb-1.5 inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
-              {t("checkout.paymentMethod")}
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {(["cash", "card", "split", "debt"] as const).map((m) => (
+            {/* Payment method — Cash/Card up front, Split/Credit behind More */}
+            <div className="mt-5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  {t("checkout.paymentMethod")}
+                </span>
                 <button
-                  key={m}
                   type="button"
-                  onClick={() => setPaymentMethod(m)}
-                  className={`h-10 rounded-lg border text-sm font-medium transition ${
-                    paymentMethod === m
-                      ? "border-brand-500 bg-brand-500 text-white"
-                      : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-                  }`}
+                  onClick={() => {
+                    setShowMore((v) => {
+                      const next = !v;
+                      // Collapsing while on a tucked-away method falls back to cash.
+                      if (!next && (paymentMethod === "split" || paymentMethod === "debt")) {
+                        setPaymentMethod("cash");
+                      }
+                      return next;
+                    });
+                  }}
+                  className="text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
                 >
-                  {t(`checkout.${m}`) || m}
+                  {showMore
+                    ? t("checkout.fewerOptions") || "Fewer options"
+                    : t("checkout.moreOptions") || "More options"}
                 </button>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          {/* Cash: amount received + change */}
-          {paymentMethod === "cash" && (
-            <div className="mt-4 space-y-2">
-              <label className="inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
-                {t("checkout.received") || "Cash received"}
-              </label>
-              <input
-                type="number"
-                min={0}
-                inputMode="numeric"
-                value={cashReceived}
-                onChange={(e) => setCashReceived(e.target.value)}
-                placeholder={formatMoney(total)}
-                className={inputClass}
-              />
-              {cashChips.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {cashChips.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setCashReceived(String(c))}
-                      className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-                    >
-                      {formatMoney(c)}
-                    </button>
+              <div className="grid grid-cols-2 gap-2">
+                {(["cash", "card"] as const).map((m) => (
+                  <PayTile
+                    key={m}
+                    active={paymentMethod === m}
+                    label={t(`checkout.${m}`) || m}
+                    onClick={() => setPaymentMethod(m)}
+                  />
+                ))}
+              </div>
+
+              {showMore && (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {(["split", "debt"] as const).map((m) => (
+                    <PayTile
+                      key={m}
+                      active={paymentMethod === m}
+                      label={t(`checkout.${m}`) || m}
+                      onClick={() => setPaymentMethod(m)}
+                    />
                   ))}
                 </div>
               )}
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-400">
-                  {t("checkout.change") || "Change"}
-                </span>
-                <span className="text-base font-semibold text-success-600 dark:text-success-500">
-                  {formatMoney(change)}
-                </span>
-              </div>
-              {cashReceived !== "" && cashNum < total && (
-                <p className="text-xs text-error-500">
-                  {t("checkout.underpaid") || "Amount is less than the total"}
-                </p>
-              )}
             </div>
-          )}
 
-          {/* Split: cash + card amounts that must sum to the total */}
-          {paymentMethod === "split" && (
-            <div className="mt-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
-                    {t("checkout.cash")}
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    value={splitCash}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setSplitCash(v);
-                      // Auto-fill the card side with whatever is left on the total.
-                      const left = total - (Number(v) || 0);
-                      setSplitCard(left > 0 ? String(left) : "0");
-                    }}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
-                    {t("checkout.card")}
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    value={splitCard}
-                    onChange={(e) => setSplitCard(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-400">
-                  {t("checkout.remaining") || "Remaining"}
-                </span>
-                <span
-                  className={`text-base font-semibold ${
-                    Math.abs(splitRemaining) < 1
-                      ? "text-success-600 dark:text-success-500"
-                      : "text-error-500"
-                  }`}
-                >
-                  {formatMoney(splitRemaining)}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Debt: sell on credit — pick a client from history or add a new one */}
-          {paymentMethod === "debt" && (
-            <div className="mt-4 space-y-3">
-              {customerUserId ? (
-                /* Locked-in client picked from history */
-                <div className="flex items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2.5 dark:border-brand-500/30 dark:bg-brand-500/10">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                    {customerName.trim().charAt(0).toUpperCase() || "?"}
+            {/* Cash: amount received + change */}
+            {paymentMethod === "cash" && (
+              <div className="mt-4 space-y-2">
+                <label className="inline-block text-sm font-semibold text-gray-700 dark:text-gray-400">
+                  {t("checkout.received") || "Cash received"}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  value={cashReceived}
+                  onChange={(e) => setCashReceived(e.target.value)}
+                  placeholder={formatMoney(total)}
+                  className={inputClass}
+                />
+                {cashChips.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {cashChips.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCashReceived(String(c))}
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+                      >
+                        {formatMoney(c)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-400">
+                    {t("checkout.change") || "Change"}
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-gray-800 dark:text-white/90">
-                      {customerName}
-                    </p>
-                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">{phone}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={clearCustomer}
-                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition hover:bg-white hover:text-gray-700 dark:hover:bg-white/[0.06] dark:hover:text-gray-200"
-                  >
-                    {t("checkout.changeClient") || "Change"}
-                  </button>
+                  <span className="text-base font-semibold text-success-600 dark:text-success-500">
+                    {formatMoney(change)}
+                  </span>
                 </div>
-              ) : (
-                <>
-                  {/* Client name doubles as the history search box */}
-                  <div className="relative">
-                    <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
-                      {t("checkout.client")}
-                    </label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
-                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                          <path d="M9 3.5a5.5 5.5 0 1 0 3.5 9.74l3.38 3.38a.75.75 0 1 0 1.06-1.06l-3.38-3.38A5.5 5.5 0 0 0 9 3.5Zm-4 5.5a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" fill="currentColor" />
-                        </svg>
-                      </span>
-                      <input
-                        type="text"
-                        value={customerName}
-                        onChange={(e) => {
-                          setCustomerName(e.target.value);
-                          setCustomerUserId(null);
-                        }}
-                        onFocus={() => setCustomerFocused(true)}
-                        onBlur={() => setTimeout(() => setCustomerFocused(false), 150)}
-                        placeholder={t("checkout.searchClientPlaceholder") || "Name or phone"}
-                        className={`${inputClass} pl-10`}
-                        autoComplete="off"
-                      />
-                    </div>
-                    {customerFocused &&
-                      customerName.trim() !== "" &&
-                      customerResults.length > 0 && (
-                        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">
-                          {customerResults.map((c) => (
-                            <li key={c.id}>
-                              <button
-                                type="button"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => selectCustomer(c)}
-                                className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/[0.04]"
-                              >
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600 dark:bg-white/[0.06] dark:text-gray-300">
-                                  {c.name.charAt(0).toUpperCase()}
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-sm font-medium text-gray-800 dark:text-white/90">
-                                    {c.name}
-                                  </span>
-                                  <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
-                                    {formatPhone(c.phone)}
-                                  </span>
-                                </span>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                  </div>
+                {cashReceived !== "" && cashNum < total && (
+                  <p className="text-xs text-error-500">
+                    {t("checkout.underpaid") || "Amount is less than the total"}
+                  </p>
+                )}
+              </div>
+            )}
 
-                  {/* Phone — for a new client (or to confirm) */}
+            {/* Split: cash + card that must sum to the total */}
+            {paymentMethod === "split" && (
+              <div className="mt-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
-                      {t("checkout.phone") || "Phone"}
+                      {t("checkout.cash")}
                     </label>
                     <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(formatPhone(e.target.value))}
-                      placeholder={t("checkout.phonePlaceholder") || "+998 ..."}
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      value={splitCash}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setSplitCash(v);
+                        const left = total - (Number(v) || 0);
+                        setSplitCard(left > 0 ? String(left) : "0");
+                      }}
                       className={inputClass}
                     />
                   </div>
-                </>
-              )}
+                  <div>
+                    <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                      {t("checkout.card")}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      value={splitCard}
+                      onChange={(e) => setSplitCard(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-400">
+                    {t("checkout.remaining") || "Remaining"}
+                  </span>
+                  <span
+                    className={`text-base font-semibold ${
+                      Math.abs(splitRemaining) < 1
+                        ? "text-success-600 dark:text-success-500"
+                        : "text-error-500"
+                    }`}
+                  >
+                    {formatMoney(splitRemaining)}
+                  </span>
+                </div>
+              </div>
+            )}
 
-              {/* Optional down payment — pay part now, owe the rest */}
-              <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900/40">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-400">
-                    {t("checkout.paidNow") || "Paid now"}{" "}
+            {/* Debt: sell on credit — pick a client from history or add a new one */}
+            {paymentMethod === "debt" && (
+              <div className="mt-4 space-y-3">
+                {customerUserId ? (
+                  <div className="flex items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2.5 dark:border-brand-500/30 dark:bg-brand-500/10">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
+                      {customerName.trim().charAt(0).toUpperCase() || "?"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-800 dark:text-white/90">
+                        {customerName}
+                      </p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{phone}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearCustomer}
+                      className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition hover:bg-white hover:text-gray-700 dark:hover:bg-white/[0.06] dark:hover:text-gray-200"
+                    >
+                      {t("checkout.changeClient") || "Change"}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                        {t("checkout.client")}
+                      </label>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                            <path d="M9 3.5a5.5 5.5 0 1 0 3.5 9.74l3.38 3.38a.75.75 0 1 0 1.06-1.06l-3.38-3.38A5.5 5.5 0 0 0 9 3.5Zm-4 5.5a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" fill="currentColor" />
+                          </svg>
+                        </span>
+                        <input
+                          type="text"
+                          value={customerName}
+                          onChange={(e) => {
+                            setCustomerName(e.target.value);
+                            setCustomerUserId(null);
+                          }}
+                          onFocus={() => setCustomerFocused(true)}
+                          onBlur={() => setTimeout(() => setCustomerFocused(false), 150)}
+                          placeholder={t("checkout.searchClientPlaceholder") || "Name or phone"}
+                          className={`${inputClass} pl-10`}
+                          autoComplete="off"
+                        />
+                      </div>
+                      {customerFocused &&
+                        customerName.trim() !== "" &&
+                        customerResults.length > 0 && (
+                          <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">
+                            {customerResults.map((c) => (
+                              <li key={c.id}>
+                                <button
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => selectCustomer(c)}
+                                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                                >
+                                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600 dark:bg-white/[0.06] dark:text-gray-300">
+                                    {c.name.charAt(0).toUpperCase()}
+                                  </span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-sm font-medium text-gray-800 dark:text-white/90">
+                                      {c.name}
+                                    </span>
+                                    <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                                      {formatPhone(c.phone)}
+                                    </span>
+                                  </span>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                    </div>
+
+                    <div>
+                      <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                        {t("checkout.phone") || "Phone"}
+                      </label>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(formatPhone(e.target.value))}
+                        placeholder={t("checkout.phonePlaceholder") || "+998 ..."}
+                        className={inputClass}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Optional down payment — pay part now, owe the rest */}
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <label className="text-xs font-semibold text-gray-700 dark:text-gray-400">
+                      {t("checkout.paidNow") || "Paid now"}{" "}
+                      <span className="font-normal text-gray-400">
+                        ({t("checkout.optional") || "optional"})
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      {(["cash", "card"] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setPaidNowMethod(m)}
+                          className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                            paidNowMethod === m
+                              ? "bg-brand-500 text-white"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/[0.06] dark:text-gray-300 dark:hover:bg-white/[0.1]"
+                          }`}
+                        >
+                          {t(`checkout.${m}`) || m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    max={total}
+                    inputMode="numeric"
+                    value={paidNow}
+                    onChange={(e) => setPaidNow(e.target.value)}
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-400">
+                      {t("checkout.debtRemaining") || "Debt (remaining)"}
+                    </span>
+                    <span
+                      className={`text-base font-semibold ${
+                        debtRemaining > 0 && paidNowNum <= total
+                          ? "text-warning-600 dark:text-warning-400"
+                          : "text-error-500"
+                      }`}
+                    >
+                      {formatMoney(Math.max(0, debtRemaining))}
+                    </span>
+                  </div>
+                  {paidNowNum > total && (
+                    <p className="mt-1 text-xs text-error-500">
+                      {t("checkout.paidExceedsTotal") || "Paid amount exceeds the total"}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                    {t("checkout.dueDate") || "Due date"}{" "}
                     <span className="font-normal text-gray-400">
                       ({t("checkout.optional") || "optional"})
                     </span>
                   </label>
-                  <div className="flex gap-1">
-                    {(["cash", "card"] as const).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setPaidNowMethod(m)}
-                        className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
-                          paidNowMethod === m
-                            ? "bg-brand-500 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/[0.06] dark:text-gray-300 dark:hover:bg-white/[0.1]"
-                        }`}
-                      >
-                        {t(`checkout.${m}`) || m}
-                      </button>
-                    ))}
-                  </div>
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className={inputClass}
+                  />
                 </div>
-                <input
-                  type="number"
-                  min={0}
-                  max={total}
-                  inputMode="numeric"
-                  value={paidNow}
-                  onChange={(e) => setPaidNow(e.target.value)}
-                  placeholder="0"
-                  className={inputClass}
-                />
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-400">
-                    {t("checkout.debtRemaining") || "Debt (remaining)"}
+
+                <p className="flex items-start gap-2 rounded-lg bg-warning-50 px-3 py-2 text-xs text-warning-700 dark:bg-warning-500/10 dark:text-warning-400">
+                  <span className="text-sm leading-none">ⓘ</span>
+                  <span>
+                    {t("checkout.debtHintPartial") ||
+                      "The remaining amount will be recorded as the customer's debt for this order."}
                   </span>
-                  <span
-                    className={`text-base font-semibold ${
-                      debtRemaining > 0 && paidNowNum <= total
-                        ? "text-warning-600 dark:text-warning-400"
-                        : "text-error-500"
-                    }`}
-                  >
-                    {formatMoney(Math.max(0, debtRemaining))}
-                  </span>
+                </p>
+              </div>
+            )}
+
+            {/* Optional client + note (non-debt) — kept out of the way under More */}
+            {showMore && paymentMethod !== "debt" && (
+              <div className="mt-4 space-y-3 border-t border-gray-100 pt-4 dark:border-gray-800">
+                <div>
+                  <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                    {t("checkout.client")}{" "}
+                    <span className="font-normal text-gray-400">
+                      ({t("checkout.optional") || "optional"})
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder={t("checkout.clientPlaceholder")}
+                    className={inputClass}
+                  />
                 </div>
-                {paidNowNum > total && (
-                  <p className="mt-1 text-xs text-error-500">
-                    {t("checkout.paidExceedsTotal") || "Paid amount exceeds the total"}
-                  </p>
-                )}
+                <div>
+                  <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
+                    {t("checkout.note")}
+                  </label>
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder={t("checkout.notePlaceholder")}
+                    className={inputClass}
+                  />
+                </div>
               </div>
+            )}
 
-              <div>
-                <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
-                  {t("checkout.dueDate") || "Due date"}{" "}
-                  <span className="font-normal text-gray-400">
-                    ({t("checkout.optional") || "optional"})
-                  </span>
-                </label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-
-              <p className="flex items-start gap-2 rounded-lg bg-warning-50 px-3 py-2 text-xs text-warning-700 dark:bg-warning-500/10 dark:text-warning-400">
-                <span className="text-sm leading-none">ⓘ</span>
-                <span>
-                  {t("checkout.debtHintPartial") ||
-                    "The remaining amount will be recorded as the customer's debt for this order."}
-                </span>
-              </p>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={handleComplete}
-            disabled={cart.length === 0 || isSubmitting || !paymentValid}
-            className="mt-5 h-12 w-full rounded-lg bg-brand-500 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSubmitting
-              ? t("checkout.completing")
-              : paymentMethod === "debt"
-                ? t("checkout.sellOnCredit") || "Sell on credit"
-                : t("checkout.completeSale")}
-          </button>
-        </div>
+            {/* Primary action */}
+            <button
+              type="button"
+              onClick={handleComplete}
+              disabled={cart.length === 0 || isSubmitting || !paymentValid}
+              className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 text-base font-semibold text-white shadow-theme-md transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSubmitting
+                ? t("checkout.completing")
+                : paymentMethod === "debt"
+                  ? t("checkout.sellOnCredit") || "Sell on credit"
+                  : `${t("checkout.completeSale")}${total > 0 ? ` · ${formatMoney(total)}` : ""}`}
+            </button>
+          </div>
+        </aside>
       </div>
     </div>
+  );
+}
+
+/** A large, finger-friendly payment-method tile. */
+function PayTile({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-12 rounded-xl border text-sm font-semibold transition active:scale-[0.98] ${
+        active
+          ? "border-brand-500 bg-brand-500 text-white shadow-theme-xs"
+          : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+      }`}
+    >
+      {label}
+    </button>
   );
 }

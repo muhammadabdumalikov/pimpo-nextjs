@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function UpgradePlanPage() {
   return (
     <>
-      <PageBreadcrumb pageTitle="Upgrade Plan" />
+      <PageBreadcrumb pageTitle="Upgrade Plan" titleKey="sidebar.upgradePlan" />
       <UpgradePlan />
     </>
   );

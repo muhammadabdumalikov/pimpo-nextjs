@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function StaffPage() {
   return (
     <>
-      <PageBreadcrumb pageTitle="Staff" />
+      <PageBreadcrumb pageTitle="Staff" titleKey="sidebar.staff" />
       <StaffManager />
     </>
   );

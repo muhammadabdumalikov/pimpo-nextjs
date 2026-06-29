@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function NewReceiptPage() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="New Goods Receipt" />
+      <PageBreadcrumb pageTitle="New Goods Receipt" titleKey="goodsReceipt.createTitle" />
       <div className="space-y-6">
         <CreateReceipt />
       </div>

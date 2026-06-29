@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function InventoryPage() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="Inventory" />
+      <PageBreadcrumb pageTitle="Inventory" titleKey="sidebar.inventory" />
       <div className="space-y-6">
         <InventoryManagement />
       </div>
