@@ -4,15 +4,15 @@ import { Metadata } from "next";
 import React from "react";
 
 export const metadata: Metadata = {
-  title: "Checkout | Pimpo - Next.js Dashboard Template",
+  title: "Cart | Pimpo - Next.js Dashboard Template",
   description:
-    "This is Checkout page for Pimpo Tailwind CSS Admin Dashboard Template",
+    "This is Cart page for Pimpo Tailwind CSS Admin Dashboard Template",
 };
 
-export default function CheckoutPage() {
+export default function CartPage() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="Checkout" titleKey="sidebar.checkout" />
+      <PageBreadcrumb pageTitle="Cart" titleKey="sidebar.checkout" />
       <div className="space-y-6">
         <Checkout />
       </div>

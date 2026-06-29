@@ -171,7 +171,9 @@
       "priceInRequired": "Price in is required and must be greater than 0",
       "priceOutRequired": "Price out is required and must be greater than 0",
       "createFailed": "Failed to create product"
-    }
+    },
+    "scanBarcode": "Scan barcode",
+    "barcodeScanned": "Barcode scanned"
   },
   "upgradePlan": {
     "headline": "Flexible Plans Tailored to Fit Your Needs!",
@@ -234,7 +236,7 @@
     "products": "Products",
     "productsList": "Products List",
     "addProduct": "Add Product",
-    "checkout": "Checkout",
+    "checkout": "Cart",
     "calendar": "Calendar",
     "userProfile": "User Profile",
     "userDebt": "User Debt",
@@ -514,7 +516,15 @@
     "fewerOptions": "Fewer options",
     "invoice": "Invoice",
     "totalPayable": "Total payable",
-    "searchHint": "Scan a barcode or type to search, then press Enter"
+    "searchHint": "Scan a barcode or type to search, then press Enter",
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "search": "Search",
+      "move": "Move",
+      "qty": "Quantity",
+      "remove": "Remove",
+      "pay": "Pay"
+    }
   },
   "roles": {
     "title": "Roles",

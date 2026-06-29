@@ -171,7 +171,9 @@
       "priceInRequired": "Xarid narxi majburiy va 0 dan katta bo'lishi kerak",
       "priceOutRequired": "Sotuv narxi majburiy va 0 dan katta bo'lishi kerak",
       "createFailed": "Mahsulotni yaratishda xatolik yuz berdi"
-    }
+    },
+    "scanBarcode": "Shtrix-kodni skanerlash",
+    "barcodeScanned": "Shtrix-kod skanerlandi"
   },
   "upgradePlan": {
     "headline": "Sizning ehtiyojlaringizga mos moslashuvchan rejalar!",
@@ -234,7 +236,7 @@
     "products": "Mahsulotlar",
     "productsList": "Mahsulotlar ro'yxati",
     "addProduct": "Mahsulot qo'shish",
-    "checkout": "Buyurtma berish",
+    "checkout": "Savat",
     "calendar": "Taqvim",
     "userProfile": "Foydalanuvchi profili",
     "userDebt": "Foydalanuvchi qarzi",
@@ -514,7 +516,15 @@
     "fewerOptions": "Yopish",
     "invoice": "Hisob-faktura",
     "totalPayable": "To'lash uchun",
-    "searchHint": "Shtrix-kodni skanerlang yoki yozing, so'ng Enter bosing"
+    "searchHint": "Shtrix-kodni skanerlang yoki yozing, so'ng Enter bosing",
+    "shortcuts": {
+      "title": "Tezkor tugmalar",
+      "search": "Qidirish",
+      "move": "Ko‘chirish",
+      "qty": "Miqdor",
+      "remove": "O‘chirish",
+      "pay": "To‘lash"
+    }
   },
   "roles": {
     "title": "Rollar",

@@ -6,6 +6,9 @@ import Input from "../form/input/InputField";
 import Select from "../form/Select";
 import ImageUpload from "../form/ImageUpload";
 import Button from "../ui/button/Button";
+// Camera barcode scanning is parked for now — physical (keyboard-wedge) scanners
+// only. Keep the import so it can be re-enabled later.
+// import CameraScanner from "../checkout/CameraScanner";
 import { useTranslations } from "@/hooks/useTranslations";
 import { createProduct, updateProduct, generateProductCode, getProduct, getCategories, type Product } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
@@ -35,6 +38,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   const [image, setImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  // const [scannerOpen, setScannerOpen] = useState(false); // camera scan (parked)
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
@@ -107,6 +111,26 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
       setIsGeneratingCode(false);
     }
   };
+
+  // A handheld (keyboard-wedge) scanner types the barcode into the focused field
+  // and ends with Enter. Swallow that Enter so it never submits the form — the
+  // scanned value just lands in the field.
+  const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  };
+
+  // Camera scan (parked — physical scanners only for now). Fills the barcode
+  // field from a camera-decoded value; re-enable with the CameraScanner import.
+  // const handleBarcodeDetected = (raw: string) => {
+  //   const value = raw.replace(/\D/g, "").slice(0, 14);
+  //   if (!value) return;
+  //   setFormData((prev) => ({ ...prev, barcode: value }));
+  //   setScannerOpen(false);
+  //   showToast("success", `${t('addProduct.barcodeScanned') || 'Barcode scanned'}: ${value}`);
+  // };
 
   const quantityTypeOptions = [
     { value: "kg", label: t('addProduct.quantityTypeKg') },
@@ -282,6 +306,8 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
 
               <div>
                 <Label htmlFor="barcode">{t('addProduct.barcode') || 'Barcode'}</Label>
+                {/* Physical (handheld) scanner: focus the field and scan — the
+                    scanner types the code and the Enter terminator is swallowed. */}
                 <Input
                   id="barcode"
                   name="barcode"
@@ -289,8 +315,38 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   placeholder={t('addProduct.barcodePlaceholder') || 'Enter barcode (optional)'}
                   value={formData.barcode}
                   onChange={handleInputChange}
+                  onKeyDown={handleBarcodeKeyDown}
                   maxLength={14}
                 />
+                {/* Camera barcode scan — parked, physical scanners only for now.
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScannerOpen((o) => !o)}
+                    className={`inline-flex items-center justify-center h-11 w-11 rounded-lg border shadow-theme-xs transition disabled:opacity-50 ${
+                      scannerOpen
+                        ? "border-brand-500 bg-brand-500 text-white hover:bg-brand-600"
+                        : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+                    }`}
+                    title={t('addProduct.scanBarcode') || 'Scan barcode'}
+                    aria-label={t('addProduct.scanBarcode') || 'Scan barcode'}
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 0 1 2-2h1l1.5-2h9L18 7h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
+                      <circle cx="12" cy="13" r="3.5" />
+                    </svg>
+                  </button>
+                </div>
+                {scannerOpen && (
+                  <div className="mt-3">
+                    <CameraScanner
+                      isOpen={scannerOpen}
+                      onClose={() => setScannerOpen(false)}
+                      onDetected={handleBarcodeDetected}
+                    />
+                  </div>
+                )}
+                */}
               </div>
 
               <div>

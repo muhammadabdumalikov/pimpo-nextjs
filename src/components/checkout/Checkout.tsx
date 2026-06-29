@@ -100,6 +100,12 @@ export default function Checkout() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [lastScanned, setLastScanned] = useState("");
+  // Keyboard-driven selection: the highlighted cart row that ↑/↓ moves and
+  // ←/→ adjusts the quantity of. Tracked by productId so it survives reordering.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Cmd+Enter (Mac) vs Ctrl+Enter (others) — resolved after mount to avoid a
+  // hydration mismatch.
+  const [isMac, setIsMac] = useState(false);
 
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "split" | "debt">("cash");
@@ -247,6 +253,9 @@ export default function Checkout() {
       debtRemaining > 0);
 
   const addProductToCart = (product: Product, addQty: number) => {
+    // Newly added (or topped-up) line becomes the keyboard selection, so ←/→
+    // adjust the item you just added without reaching for the mouse.
+    setSelectedId(product.id);
     setCart((prev) => {
       const existing = prev.find((l) => l.productId === product.id);
       if (existing) {
@@ -390,6 +399,50 @@ export default function Checkout() {
     setCart((prev) => prev.filter((l) => l.productId !== productId));
   };
 
+  // ── Keyboard selection helpers ──────────────────────────────────────────
+  // Move the highlight up/down the cart (clamped to the ends).
+  const selectRelative = (dir: 1 | -1) => {
+    if (cart.length === 0) return;
+    const idx = cart.findIndex((l) => l.productId === selectedId);
+    const base = idx === -1 ? (dir > 0 ? -1 : 0) : idx;
+    const next = Math.max(0, Math.min(cart.length - 1, base + dir));
+    setSelectedId(cart[next].productId);
+  };
+
+  // Bump the selected line's quantity by ±1 (changeQty clamps to 1..stock).
+  const changeSelectedQty = (delta: number) => {
+    const line = cart.find((l) => l.productId === selectedId);
+    if (!line) return;
+    changeQty(line.productId, line.quantity + delta);
+  };
+
+  // Remove the selected line and move the highlight to a neighbour.
+  const removeSelected = () => {
+    if (!selectedId) return;
+    const idx = cart.findIndex((l) => l.productId === selectedId);
+    if (idx === -1) return;
+    const neighbour = cart[idx + 1] ?? cart[idx - 1];
+    removeLine(selectedId);
+    setSelectedId(neighbour ? neighbour.productId : null);
+  };
+
+  // Keep the selection valid as the cart changes (default to the last line).
+  useEffect(() => {
+    if (cart.length === 0) {
+      if (selectedId !== null) setSelectedId(null);
+    } else if (!cart.some((l) => l.productId === selectedId)) {
+      setSelectedId(cart[cart.length - 1].productId);
+    }
+  }, [cart, selectedId]);
+
+  // Keep the highlighted row in view when moved by keyboard.
+  useEffect(() => {
+    if (!selectedId) return;
+    document
+      .querySelector(`[data-cart-row="${selectedId}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selectedId]);
+
   const clearCart = () => {
     setCart([]);
     setLastScanned("");
@@ -467,6 +520,87 @@ export default function Checkout() {
       setIsSubmitting(false);
     }
   };
+
+  // Detect the platform once (client-only) for the right Pay shortcut label.
+  useEffect(() => {
+    const ua = `${navigator.platform || ""} ${navigator.userAgent || ""}`;
+    setIsMac(/Mac|iPhone|iPad|iPod/.test(ua));
+  }, []);
+
+  // Latest state/actions for the global key handler, so it can attach once and
+  // never re-bind (avoids stale closures without re-subscribing every render).
+  const kbdRef = useRef({
+    cartLen: 0,
+    selectRelative,
+    changeSelectedQty,
+    removeSelected,
+    handleComplete,
+  });
+  kbdRef.current = {
+    cartLen: cart.length,
+    selectRelative,
+    changeSelectedQty,
+    removeSelected,
+    handleComplete,
+  };
+
+  // Global checkout shortcuts. Letters stay free for typing/scanning; the
+  // cart-control keys only fire in "command mode" — when nothing is being
+  // typed, or the (always-focused) search box is currently empty/idle.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const k = kbdRef.current;
+      const ae = document.activeElement as HTMLElement | null;
+      const tag = ae?.tagName;
+      const isField =
+        tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || ae?.isContentEditable;
+      const inSearch = ae === searchRef.current;
+      const searchEmpty = (searchRef.current?.value ?? "") === "";
+      const commandMode = !isField || (inSearch && searchEmpty);
+
+      // Pay with Ctrl/Cmd+Enter — works even mid-typing.
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        k.handleComplete();
+        return;
+      }
+
+      if (!commandMode || k.cartLen === 0) return;
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          k.selectRelative(1);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          k.selectRelative(-1);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          k.changeSelectedQty(1);
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          k.changeSelectedQty(-1);
+          break;
+        case "Delete":
+          e.preventDefault();
+          k.removeSelected();
+          break;
+        case "Backspace":
+          // Mac's main delete key sends Backspace — allow it for removal, but
+          // never while the search box is focused (it'd surprise mid-typing).
+          if (inSearch) break;
+          e.preventDefault();
+          k.removeSelected();
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const inputClass =
     "h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
@@ -579,7 +713,7 @@ export default function Checkout() {
       {/* ── Two columns: cart on the left, invoice/payment on the right ─────── */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Cart */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
           <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
             <div className="flex items-center gap-2.5">
               <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
@@ -606,7 +740,7 @@ export default function Checkout() {
           </div>
 
           {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+            <div className="flex flex-1 flex-col items-center justify-center px-6 py-20 text-center">
               <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h2l2.4 12.3a1 1 0 0 0 1 .8h8.7a1 1 0 0 0 1-.78L21 8H6" />
@@ -622,11 +756,17 @@ export default function Checkout() {
               </p>
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            <ul className="flex-1 divide-y divide-gray-100 dark:divide-gray-800">
               {cart.map((line) => (
                 <li
                   key={line.productId}
-                  className="flex items-center gap-3 px-4 py-3 sm:px-5"
+                  data-cart-row={line.productId}
+                  onClick={() => setSelectedId(line.productId)}
+                  className={`flex items-center gap-3 px-4 py-3 transition sm:px-5 ${
+                    line.productId === selectedId
+                      ? "bg-brand-50/70 ring-1 ring-inset ring-brand-300 dark:bg-brand-500/10 dark:ring-brand-500/40"
+                      : "hover:bg-gray-50 dark:hover:bg-white/[0.02]"
+                  }`}
                 >
                   <ProductThumb src={line.image} alt={line.name} size={48} />
 
@@ -685,6 +825,28 @@ export default function Checkout() {
               ))}
             </ul>
           )}
+
+          {/* Keyboard shortcuts legend — always shown (desktop; no keyboard on touch POS) */}
+          <div className="hidden border-t border-gray-200 px-4 py-4 sm:block dark:border-gray-800">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm text-gray-600 dark:text-gray-300">
+              <span className="flex items-center gap-2">
+                <Kbd>↑</Kbd>
+                <Kbd>↓</Kbd> {t("checkout.shortcuts.move") || "Move"}
+              </span>
+              <span className="flex items-center gap-2">
+                <Kbd>←</Kbd>
+                <Kbd>→</Kbd> {t("checkout.shortcuts.qty") || "Quantity"}
+              </span>
+              <span className="flex items-center gap-2">
+                <Kbd>Del</Kbd> {t("checkout.shortcuts.remove") || "Remove"}
+              </span>
+              <span className="flex items-center gap-2">
+                <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
+                <span className="text-base font-semibold text-gray-600 dark:text-gray-300">+</span>
+                <Kbd>↵</Kbd> {t("checkout.shortcuts.pay") || "Pay"}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Invoice + payment (sticky on desktop) */}
@@ -1087,16 +1249,32 @@ export default function Checkout() {
               disabled={cart.length === 0 || isSubmitting || !paymentValid}
               className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 text-base font-semibold text-white shadow-theme-md transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting
-                ? t("checkout.completing")
-                : paymentMethod === "debt"
-                  ? t("checkout.sellOnCredit") || "Sell on credit"
-                  : `${t("checkout.completeSale")}${total > 0 ? ` · ${formatMoney(total)}` : ""}`}
+              <span>
+                {isSubmitting
+                  ? t("checkout.completing")
+                  : paymentMethod === "debt"
+                    ? t("checkout.sellOnCredit") || "Sell on credit"
+                    : `${t("checkout.completeSale")}${total > 0 ? ` · ${formatMoney(total)}` : ""}`}
+              </span>
+              {!isSubmitting && (
+                <kbd className="hidden rounded-md bg-white/20 px-1.5 py-0.5 text-xs font-medium sm:inline-block">
+                  {isMac ? "⌘↵" : "Ctrl+↵"}
+                </kbd>
+              )}
             </button>
           </div>
         </aside>
       </div>
     </div>
+  );
+}
+
+/** Small keyboard-key chip used in the shortcuts legend. */
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-lg border border-gray-200 bg-gray-50 px-2 text-sm font-semibold text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+      {children}
+    </kbd>
   );
 }
 

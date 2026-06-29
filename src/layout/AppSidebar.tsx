@@ -52,7 +52,7 @@ const AppSidebar: React.FC = () => {
       '/subscription-management': 'subscriptionManagement',
       '/settings': 'settings',
       '/settings/receipts': 'settings.receipts',
-      '/checkout': 'checkout',
+      '/cart': 'checkout',
       '/inventory': 'inventory',
       '/suppliers': 'suppliers',
       '/receipts': 'receipts',
@@ -107,7 +107,7 @@ const AppSidebar: React.FC = () => {
         { name: t('sidebar.categories'), path: "/categories", pro: false },
         { name: t('sidebar.products'), path: "/products", pro: false },
         { name: t('sidebar.addProduct'), path: "/add-product", pro: false },
-        { name: t('sidebar.checkout'), path: "/checkout", pro: false },
+        { name: t('sidebar.checkout'), path: "/cart", pro: false },
       ],
     },
     {
