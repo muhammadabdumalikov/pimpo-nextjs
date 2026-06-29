@@ -13,6 +13,7 @@ import { useTranslations } from "@/hooks/useTranslations";
 import Badge from "../ui/badge/Badge";
 import SelectField from "../form/SelectField";
 import flatpickr from "flatpickr";
+import { getFlatpickrLocale } from "@/lib/flatpickrLocale";
 import { getProductPerformance, type ProductPerformanceRow } from "@/lib/api";
 
 type SortKey = "revenue" | "profit" | "sales";
@@ -27,7 +28,7 @@ const toISODate = (d: Date) =>
   ).padStart(2, "0")}`;
 
 export default function ProductPerformance() {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<SortKey>("revenue");
@@ -86,6 +87,7 @@ export default function ProductPerformance() {
       dateFormat: "d.m.y",
       defaultDate: [firstDay, lastDay],
       clickOpens: true,
+      locale: getFlatpickrLocale(locale),
       onChange: (selectedDates, dateStr, instance) => {
         if (selectedDates.length === 2) {
           setDateRange([selectedDates[0], selectedDates[1]]);
@@ -106,7 +108,7 @@ export default function ProductPerformance() {
         fp.destroy();
       }
     };
-  }, []);
+  }, [locale]);
 
   // Search + sort happen client-side over the fetched rows.
   const filteredProducts = useMemo(() => {
