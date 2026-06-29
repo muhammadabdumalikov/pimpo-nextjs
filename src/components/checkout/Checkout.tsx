@@ -265,6 +265,7 @@ export default function Checkout() {
         if (!product) {
           if (!opts?.silent) {
             setLastScanned("");
+            setScanValue("");
             showToast(
               "error",
               `${t("checkout.scanNotFound") || "No product for code"}: ${term}`,
