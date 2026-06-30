@@ -476,6 +476,7 @@
     "add": "Qo'shish",
     "inStock": "omborda",
     "outOfStock": "Omborda yo‘q",
+    "onlyInStock": "omborda faqat",
     "paymentMethod": "To'lov usuli",
     "cash": "Naqd",
     "card": "Karta",

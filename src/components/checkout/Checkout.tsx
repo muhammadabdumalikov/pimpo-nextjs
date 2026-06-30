@@ -205,6 +205,12 @@ export default function Checkout() {
     () => cart.reduce((sum, line) => sum + line.quantity, 0),
     [cart],
   );
+  // True if any line would sell more than the product has in stock. Blocks the
+  // sale (defense in depth — the quantity input already clamps to stock).
+  const hasOversell = useMemo(
+    () => cart.some((line) => line.stock > 0 && line.quantity > line.stock),
+    [cart],
+  );
 
   // Cash quick-amount chips: the exact total plus the next round UZS amounts up.
   const cashChips = useMemo(() => {
@@ -799,10 +805,25 @@ export default function Checkout() {
                       }
                       onChange={(e) => {
                         const v = e.target.value;
-                        setQtyDraft({ id: line.productId, value: v });
-                        // Only commit a real number; leave the field empty while
-                        // the cashier is mid-edit instead of forcing it to 1.
-                        if (v !== "") changeQty(line.productId, Number(v));
+                        // Leave the field empty while the cashier is mid-edit
+                        // instead of forcing it to 1.
+                        if (v === "") {
+                          setQtyDraft({ id: line.productId, value: "" });
+                          return;
+                        }
+                        let n = Number(v);
+                        if (Number.isNaN(n)) return;
+                        // Hard cap at the remaining stock — can't sell more than
+                        // is on hand. Warn when the entry is trimmed.
+                        if (line.stock > 0 && n > line.stock) {
+                          n = line.stock;
+                          showToast(
+                            "warning",
+                            `${line.name} — ${t("checkout.onlyInStock") || "в наличии"}: ${line.stock}`,
+                          );
+                        }
+                        setQtyDraft({ id: line.productId, value: String(n) });
+                        changeQty(line.productId, n);
                       }}
                       onBlur={() => {
                         if (qtyDraft?.id === line.productId) {
@@ -1264,7 +1285,9 @@ export default function Checkout() {
             <button
               type="button"
               onClick={handleComplete}
-              disabled={cart.length === 0 || isSubmitting || !paymentValid}
+              disabled={
+                cart.length === 0 || isSubmitting || !paymentValid || hasOversell
+              }
               className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 text-base font-semibold text-white shadow-theme-md transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span>

@@ -476,6 +476,7 @@
     "add": "Add",
     "inStock": "in stock",
     "outOfStock": "Out of stock",
+    "onlyInStock": "in stock only",
     "paymentMethod": "Payment method",
     "cash": "Cash",
     "card": "Card",

@@ -476,6 +476,7 @@
     "add": "Қўшиш",
     "inStock": "омборда",
     "outOfStock": "Омборда йўқ",
+    "onlyInStock": "омборда фақат",
     "paymentMethod": "Тўлов усули",
     "cash": "Нақд",
     "card": "Карта",
