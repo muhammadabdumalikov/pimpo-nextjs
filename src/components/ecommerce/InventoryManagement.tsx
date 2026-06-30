@@ -12,6 +12,7 @@ import { DownloadIcon } from "@/icons/index";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import Badge from "../ui/badge/Badge";
+import Pagination from "../ui/pagination/Pagination";
 import { getProducts, type Product } from "@/lib/api";
 
 const LOW_STOCK_THRESHOLD = 10;
@@ -28,18 +29,39 @@ function stockStatus(qty: number): StockStatus {
 export default function InventoryManagement() {
   const { t } = useTranslations();
   const { showToast } = useToast();
+  // The current page of rows from the server (search + pagination are backend).
   const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
 
+  // Debounce the search box, and reset to the first page when the query changes.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(id);
+  }, [searchQuery]);
+
+  // Fetch the current page from the backend (server filters by name/code/barcode).
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         setIsLoading(true);
-        const res = await getProducts(1, 1000);
-        if (active) setProducts(res.products);
+        const res = await getProducts(
+          currentPage,
+          ITEMS_PER_PAGE,
+          debouncedSearch || undefined,
+        );
+        if (active) {
+          setProducts(res.products);
+          setTotal(res.total);
+        }
       } catch (err: unknown) {
         showToast("error", (err as Error)?.message || "Failed to load inventory", "Error");
       } finally {
@@ -50,59 +72,53 @@ export default function InventoryManagement() {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentPage, debouncedSearch]);
 
-  const filtered = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return products;
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        (p.code ?? "").toLowerCase().includes(q) ||
-        (p.barcode ?? "").toLowerCase().includes(q),
-    );
-  }, [products, searchQuery]);
-
+  // Stock-status counts for the current page (Total reflects all matching rows).
   const stats = useMemo(() => {
     let inStock = 0;
     let low = 0;
     let out = 0;
-    for (const p of filtered) {
+    for (const p of products) {
       const s = stockStatus(p.quantity);
       if (s === "in") inStock++;
       else if (s === "low") low++;
       else out++;
     }
-    return { total: filtered.length, inStock, low, out };
-  }, [filtered]);
+    return { total, inStock, low, out };
+  }, [products, total]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
   const page = Math.min(currentPage, totalPages);
-  const startIndex = (page - 1) * ITEMS_PER_PAGE;
-  const paginated = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const paginated = products;
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
-
-  const handleExport = () => {
-    const header = ["Name", "Code", "Barcode", "Quantity"];
-    const rows = filtered.map((p) => [
-      p.name,
-      p.code ?? "",
-      p.barcode ?? "",
-      String(p.quantity),
-    ]);
-    const csv = [header, ...rows]
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "inventory.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExport = async () => {
+    // Export every matching row, not just the current page.
+    setIsExporting(true);
+    try {
+      const res = await getProducts(1, Math.max(total, 1), debouncedSearch || undefined);
+      const header = ["Name", "Code", "Barcode", "Quantity"];
+      const rows = res.products.map((p) => [
+        p.name,
+        p.code ?? "",
+        p.barcode ?? "",
+        String(p.quantity),
+      ]);
+      const csv = [header, ...rows]
+        .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "inventory.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      showToast("error", (err as Error)?.message || "Failed to export inventory", "Error");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const statusBadge = (qty: number) => {
@@ -127,7 +143,7 @@ export default function InventoryManagement() {
         <button
           type="button"
           onClick={handleExport}
-          disabled={filtered.length === 0}
+          disabled={total === 0 || isExporting}
           className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
         >
           <DownloadIcon />
@@ -171,13 +187,12 @@ export default function InventoryManagement() {
         <div className="flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-12 dark:border-gray-800">
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">{t("inventory.noItems")}</p>
         </div>
       ) : (
-        <>
-          <div className="custom-scrollbar overflow-x-auto">
+        <div className="custom-scrollbar overflow-x-auto">
             <Table>
               <TableHeader className="border-b border-gray-100 dark:border-gray-800">
                 <TableRow>
@@ -226,38 +241,16 @@ export default function InventoryManagement() {
               </TableBody>
             </Table>
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between py-4">
-              <p className="text-theme-sm text-gray-500 dark:text-gray-400">
-                {t("inventory.showing")} {startIndex + 1}–{Math.min(startIndex + ITEMS_PER_PAGE, filtered.length)} {t("inventory.of")} {filtered.length}
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-theme-sm text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
-                >
-                  ‹
-                </button>
-                <span className="text-theme-sm text-gray-600 dark:text-gray-400">
-                  {page} / {totalPages}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-theme-sm text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
-                >
-                  ›
-                </button>
-              </div>
-            </div>
-          )}
-        </>
       )}
+
+      {/* Pagination — always shown (controls disable on a single page) */}
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={total}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={(p) => setCurrentPage(Math.min(Math.max(1, p), totalPages))}
+      />
     </div>
   );
 }

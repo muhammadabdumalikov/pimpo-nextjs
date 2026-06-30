@@ -610,7 +610,11 @@
     "selectOption": "Select option",
     "loading": "Loading...",
     "searchCommand": "Search or type command...",
-    "home": "Home"
+    "home": "Home",
+    "showing": "Showing",
+    "to": "to",
+    "of": "of",
+    "results": "results"
   },
   "auth": {
     "backToDashboard": "Back to dashboard",
@@ -691,6 +695,12 @@
     "errors": {
       "noItems": "Add at least one product",
       "badQuantity": "Quantity must be at least 1"
+    },
+    "allSuppliers": "All suppliers",
+    "shortcuts": {
+      "nextField": "Next field",
+      "save": "Save",
+      "cancel": "Cancel"
     }
   }
 }

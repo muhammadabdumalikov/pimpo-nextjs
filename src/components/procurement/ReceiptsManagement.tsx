@@ -5,7 +5,14 @@ import Link from "next/link";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import { PlusIcon } from "@/icons/index";
-import { getReceipts, type GoodsReceipt } from "@/lib/api";
+import SelectField from "@/components/form/SelectField";
+import Pagination from "@/components/ui/pagination/Pagination";
+import {
+  getReceipts,
+  getSuppliers,
+  type GoodsReceipt,
+  type Supplier,
+} from "@/lib/api";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -26,16 +33,38 @@ export default function ReceiptsManagement() {
   const { t } = useTranslations();
   const { showToast } = useToast();
   const [receipts, setReceipts] = useState<GoodsReceipt[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierFilter, setSupplierFilter] = useState("");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Load suppliers once for the filter dropdown.
+  useEffect(() => {
+    let active = true;
+    getSuppliers(1, 1000)
+      .then((res) => {
+        if (active) setSuppliers(res.suppliers);
+      })
+      .catch(() => {
+        /* non-fatal: the list still works without the filter */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Reset to the first page whenever the supplier filter changes.
+  useEffect(() => {
+    setPage(1);
+  }, [supplierFilter]);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         setIsLoading(true);
-        const res = await getReceipts(page, ITEMS_PER_PAGE);
+        const res = await getReceipts(page, ITEMS_PER_PAGE, supplierFilter || undefined);
         if (active) {
           setReceipts(res.receipts);
           setTotal(res.total);
@@ -50,7 +79,7 @@ export default function ReceiptsManagement() {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, supplierFilter]);
 
   const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
 
@@ -65,13 +94,29 @@ export default function ReceiptsManagement() {
             {t("goodsReceipt.description")}
           </p>
         </div>
-        <Link
-          href="/receipts/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
-        >
-          <PlusIcon />
-          {t("goodsReceipt.create")}
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {suppliers.length > 0 && (
+            <SelectField
+              value={supplierFilter}
+              onChange={setSupplierFilter}
+              placeholder={t("goodsReceipt.allSuppliers")}
+              searchable
+              searchPlaceholder={t("goodsReceipt.searchSupplier") || "Search supplier..."}
+              className="min-w-[200px]"
+              options={[
+                { value: "", label: t("goodsReceipt.allSuppliers") },
+                ...suppliers.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
+          )}
+          <Link
+            href="/receipts/new"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
+          >
+            <PlusIcon />
+            {t("goodsReceipt.create")}
+          </Link>
+        </div>
       </div>
 
       {isLoading ? (
@@ -79,7 +124,6 @@ export default function ReceiptsManagement() {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
         </div>
       ) : receipts.length > 0 ? (
-        <>
           <div className="overflow-x-auto">
             <table className="min-w-[640px] w-full text-left text-sm">
               <thead>
@@ -118,31 +162,6 @@ export default function ReceiptsManagement() {
               </tbody>
             </table>
           </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-end gap-2 py-4">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-theme-sm text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
-              >
-                ‹
-              </button>
-              <span className="text-theme-sm text-gray-600 dark:text-gray-400">
-                {page} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-theme-sm text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-400"
-              >
-                ›
-              </button>
-            </div>
-          )}
-        </>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-12 dark:border-gray-800">
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
@@ -150,6 +169,15 @@ export default function ReceiptsManagement() {
           </p>
         </div>
       )}
+
+      {/* Pagination — always shown (controls disable on a single page) */}
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={total}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={(p) => setPage(Math.min(Math.max(1, p), totalPages))}
+      />
     </div>
   );
 }

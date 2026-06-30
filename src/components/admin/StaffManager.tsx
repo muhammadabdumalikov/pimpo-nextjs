@@ -9,6 +9,7 @@ import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import SelectField from "@/components/form/SelectField";
 import Button from "@/components/ui/button/Button";
+import Pagination from "@/components/ui/pagination/Pagination";
 import { PlusIcon, PencilIcon, TrashBinIcon } from "@/icons/index";
 import {
   getStaff,
@@ -19,6 +20,8 @@ import {
   type Staff,
   type Role,
 } from "@/lib/api";
+
+const ITEMS_PER_PAGE = 10;
 
 export default function StaffManager() {
   const { t } = useTranslations();
@@ -40,6 +43,11 @@ export default function StaffManager() {
   const [error, setError] = useState("");
   const [toDelete, setToDelete] = useState<Staff | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(staff.length / ITEMS_PER_PAGE));
+  const page = Math.min(currentPage, totalPages);
+  const paginated = staff.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const load = async () => {
     try {
@@ -185,7 +193,7 @@ export default function StaffManager() {
               </tr>
             </thead>
             <tbody>
-              {staff.map((member) => (
+              {paginated.map((member) => (
                 <tr key={member.id} className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="px-3 py-3 font-medium text-gray-800 dark:text-white/90">{member.name}</td>
                   <td className="px-3 py-3 text-gray-500 dark:text-gray-400">{member.login}</td>
@@ -239,6 +247,15 @@ export default function StaffManager() {
           </p>
         </div>
       )}
+
+      {/* Pagination — always shown (controls disable on a single page) */}
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={staff.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={(p) => setCurrentPage(Math.min(Math.max(1, p), totalPages))}
+      />
 
       {/* Add / Edit modal */}
       <Modal isOpen={isModalOpen} onClose={closeModal} className="max-w-lg w-full mx-4 p-6 sm:p-8">

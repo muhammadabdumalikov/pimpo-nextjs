@@ -15,6 +15,7 @@ import { useSubscription } from "@/context/SubscriptionContext";
 import { getProducts, getProductCount, deleteProduct, type Product } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useRouter } from "next/navigation";
+import Pagination from "@/components/ui/pagination/Pagination";
 
 // Helper function to format price
 const formatPrice = (price: string): string => {
@@ -524,79 +525,13 @@ export default function ProductsList() {
       </div>
 
       {/* Pagination */}
-      <div className="flex flex-col gap-4 pt-4 mt-4 -mx-4 sm:-mx-6 px-4 sm:px-6 border-t border-gray-100 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          {t('products.showing')} {products.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} {t('products.to')}{" "}
-          {Math.min(currentPage * itemsPerPage, totalProducts)} {t('products.of')} {totalProducts} {t('products.results')}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="flex items-center justify-center h-10 w-10 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-          <div className="flex items-center gap-2">
-            {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-              let page;
-              if (totalPages <= 3) {
-                page = i + 1;
-              } else if (currentPage === 1) {
-                page = i + 1;
-              } else if (currentPage === totalPages) {
-                page = totalPages - 2 + i;
-              } else {
-                page = currentPage - 1 + i;
-              }
-              return (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`flex w-10 h-10 items-center justify-center rounded-lg text-sm font-medium ${
-                    currentPage === page
-                      ? "bg-brand-500 text-white"
-                      : "text-gray-700 hover:bg-blue-500/[0.08] hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-500"
-                  }`}
-                >
-                  {page}
-                </button>
-              );
-            })}
-          </div>
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="flex items-center justify-center h-10 w-10 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalProducts}
+        itemsPerPage={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import Button from "@/components/ui/button/Button";
+import Pagination from "@/components/ui/pagination/Pagination";
 import { PlusIcon, PencilIcon, TrashBinIcon } from "@/icons/index";
 import {
   getSuppliers,
@@ -16,6 +17,8 @@ import {
   deleteSupplier,
   type Supplier,
 } from "@/lib/api";
+
+const ITEMS_PER_PAGE = 10;
 
 export default function SuppliersManagement() {
   const { t } = useTranslations();
@@ -30,6 +33,11 @@ export default function SuppliersManagement() {
   const [error, setError] = useState("");
   const [toDelete, setToDelete] = useState<Supplier | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(suppliers.length / ITEMS_PER_PAGE));
+  const page = Math.min(currentPage, totalPages);
+  const paginated = suppliers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const load = async () => {
     try {
@@ -152,7 +160,7 @@ export default function SuppliersManagement() {
               </tr>
             </thead>
             <tbody>
-              {suppliers.map((s) => (
+              {paginated.map((s) => (
                 <tr key={s.id} className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="px-3 py-3 font-medium text-gray-800 dark:text-white/90">{s.name}</td>
                   <td className="px-3 py-3 text-gray-500 dark:text-gray-400">{s.phone || "—"}</td>
@@ -195,6 +203,15 @@ export default function SuppliersManagement() {
           </p>
         </div>
       )}
+
+      {/* Pagination — always shown (controls disable on a single page) */}
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={suppliers.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={(p) => setCurrentPage(Math.min(Math.max(1, p), totalPages))}
+      />
 
       <Modal isOpen={isModalOpen} onClose={closeModal} className="max-w-lg w-full mx-4 p-6 sm:p-8">
         <form onSubmit={handleSubmit}>

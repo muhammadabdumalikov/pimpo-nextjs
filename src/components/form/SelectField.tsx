@@ -7,6 +7,8 @@ interface Option {
   value: string;
   label: string;
   disabled?: boolean;
+  /** Extra text matched by the search box but not shown (e.g. barcode/SKU). */
+  keywords?: string;
 }
 
 interface SelectFieldProps {
@@ -34,6 +36,10 @@ interface SelectFieldProps {
   className?: string;
   /** Override the trigger button (e.g. height "h-9" for inline use). */
   buttonClassName?: string;
+  /** Focus the trigger and open the menu on mount (e.g. a freshly added row). */
+  autoFocus?: boolean;
+  /** Called when the menu opens — use to lazy-load options on first open. */
+  onOpen?: () => void;
 }
 
 /**
@@ -57,13 +63,21 @@ export default function SelectField({
   loading = false,
   className = "",
   buttonClassName = "",
+  autoFocus = false,
+  onOpen,
 }: SelectFieldProps) {
   const { t } = useTranslations();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keep the latest onOpen without re-running the mount effect.
+  const onOpenRef = useRef(onOpen);
+  useEffect(() => {
+    onOpenRef.current = onOpen;
+  }, [onOpen]);
 
   // Backend mode: parent supplies already-filtered options, so don't filter here.
   const isAsync = !!onSearch;
@@ -73,6 +87,16 @@ export default function SelectField({
   useEffect(() => {
     onSearchRef.current = onSearch;
   }, [onSearch]);
+
+  // Open + focus on mount when requested (rapid keyboard-driven row entry).
+  useEffect(() => {
+    if (!autoFocus) return;
+    buttonRef.current?.focus();
+    setOpen(true);
+    onOpenRef.current?.();
+    if (isAsync) onSearchRef.current?.(""); // load the default list
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const runSearch = (val: string) => {
     setQuery(val);
@@ -114,12 +138,71 @@ export default function SelectField({
     // In backend mode the parent already filtered; only filter locally.
     if (isAsync || !searchable || !query.trim()) return options;
     const q = query.trim().toLowerCase();
-    return options.filter((o) => o.label.toLowerCase().includes(q));
+    return options.filter(
+      (o) =>
+        o.label.toLowerCase().includes(q) ||
+        (o.keywords ?? "").toLowerCase().includes(q),
+    );
   }, [options, query, searchable, isAsync]);
+
+  // Best option for a typed/scanned query: an exact label/keyword (code/barcode)
+  // match wins, otherwise the first available result.
+  const bestMatch = (raw: string): Option | undefined => {
+    const q = raw.trim().toLowerCase();
+    if (!q) return undefined;
+    const pool = isAsync ? options : filtered;
+    const exact = pool.find(
+      (o) =>
+        !o.disabled &&
+        (o.label.toLowerCase() === q ||
+          (o.keywords ?? "").toLowerCase().split(/\s+/).includes(q)),
+    );
+    return exact ?? pool.find((o) => !o.disabled);
+  };
+
+  // A scanned barcode pending resolution: in backend mode the matching results
+  // may not have arrived when Enter fires, so we remember the query and pick
+  // once fresh options land (see the effect below).
+  const pendingPickRef = useRef<string | null>(null);
+
+  // Enter in the search box picks a match — enables barcode scanners (which type
+  // the code then send Enter): pick immediately if we already have a match,
+  // otherwise (backend mode) flush a search now and pick when results return.
+  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const raw = e.currentTarget.value.trim();
+    if (!raw) return;
+    const pick = bestMatch(raw);
+    if (pick) {
+      onChange(pick.value);
+      setOpen(false);
+      return;
+    }
+    if (isAsync) {
+      pendingPickRef.current = raw;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      onSearchRef.current?.(raw);
+    }
+  };
+
+  // Resolve a pending scan once new options arrive (backend mode).
+  useEffect(() => {
+    const raw = pendingPickRef.current;
+    if (!raw) return;
+    pendingPickRef.current = null;
+    const pick = bestMatch(raw);
+    if (pick) {
+      onChange(pick.value);
+      setOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options]);
 
   return (
     <div ref={ref} className={`relative ${className}`}>
       <button
+        ref={buttonRef}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -128,6 +211,7 @@ export default function SelectField({
           if (!open) {
             setQuery(""); // clear the filter each time we reopen
             if (isAsync) onSearchRef.current?.(""); // reset to the default list
+            onOpenRef.current?.(); // lazy-load options on open
           }
           setOpen((v) => !v);
         }}
@@ -165,6 +249,7 @@ export default function SelectField({
                 type="text"
                 value={query}
                 onChange={(e) => runSearch(e.target.value)}
+                onKeyDown={onSearchKeyDown}
                 placeholder={searchPlaceholder || t("common.search")}
                 className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />

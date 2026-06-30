@@ -334,7 +334,7 @@ export default function Checkout() {
     setSearchLoading(true);
     searchDebounceRef.current = setTimeout(async () => {
       try {
-        const res = await getProducts(1, 8, term);
+        const res = await getProducts(1, 10, term);
         const lc = term.toLowerCase();
         const exact = res.products.find(
           (p) =>

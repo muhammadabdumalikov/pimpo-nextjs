@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
@@ -28,6 +28,15 @@ function formatMoney(n: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(n));
 }
 
+/** Small keyboard-key chip for the shortcuts legend. */
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-1.5 text-theme-xs font-semibold text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+      {children}
+    </kbd>
+  );
+}
+
 let lineSeq = 0;
 const newLine = (): Line => ({
   key: `line-${lineSeq++}`,
@@ -41,7 +50,11 @@ export default function CreateReceipt() {
   const { showToast } = useToast();
   const router = useRouter();
 
-  const [products, setProducts] = useState<Product[]>([]);
+  // Backend product search: results for the current query, plus a cache of every
+  // product we've seen so picked rows keep their label/cost as results change.
+  const [productResults, setProductResults] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const productCache = useRef<Map<string, Product>>(new Map());
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [supplierId, setSupplierId] = useState("");
@@ -49,20 +62,28 @@ export default function CreateReceipt() {
   const [lines, setLines] = useState<Line[]>([newLine()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // The line whose product picker should open on mount (just-added row).
+  const [autoFocusKey, setAutoFocusKey] = useState<string | null>(null);
+  const [isMac, setIsMac] = useState(false);
 
+  // Per-line input refs so shortcuts can move focus across fields.
+  const qtyRefs = useRef<Map<string, HTMLInputElement | null>>(new Map());
+  const priceRefs = useRef<Map<string, HTMLInputElement | null>>(new Map());
+
+  useEffect(() => {
+    const ua = `${navigator.platform || ""} ${navigator.userAgent || ""}`;
+    setIsMac(/Mac|iPhone|iPad|iPod/.test(ua));
+  }, []);
+
+  // Suppliers load on mount (small list, needed for the always-visible picker).
+  // Products are loaded lazily the first time a product dropdown is opened.
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         setIsLoading(true);
-        const [prodRes, supRes] = await Promise.all([
-          getProducts(1, 1000),
-          getSuppliers(1, 1000),
-        ]);
-        if (active) {
-          setProducts(prodRes.products);
-          setSuppliers(supRes.suppliers);
-        }
+        const supRes = await getSuppliers(1, 1000);
+        if (active) setSuppliers(supRes.suppliers);
       } catch (err: unknown) {
         showToast("error", (err as Error)?.message || "Failed to load data", "Error");
       } finally {
@@ -75,10 +96,41 @@ export default function CreateReceipt() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const productOptions = useMemo(
-    () => products.map((p) => ({ value: p.id, label: p.code ? `${p.name} (${p.code})` : p.name })),
-    [products],
-  );
+  // Backend search by name / code / barcode (server filters via `?search=`).
+  // Called by SelectField on open (empty query → default list) and as you type
+  // or scan. Results feed every line's picker; the cache keeps picked rows.
+  const searchProducts = useCallback(async (query: string) => {
+    setProductsLoading(true);
+    try {
+      const res = await getProducts(1, 10, query.trim() || undefined);
+      for (const p of res.products) productCache.current.set(p.id, p);
+      setProductResults(res.products);
+    } catch (err: unknown) {
+      showToast("error", (err as Error)?.message || "Failed to search products", "Error");
+    } finally {
+      setProductsLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toOption = (p: Product) => ({
+    value: p.id,
+    label: p.code ? `${p.name} (${p.code})` : p.name,
+    // Matched by the search box but not shown — lets the scanner hit on barcode.
+    keywords: [p.name, p.code, p.barcode].filter(Boolean).join(" "),
+  });
+
+  // Options for a given row: the current search results, plus the row's own
+  // selected product (from cache) if it isn't in the results — so the trigger
+  // always shows the picked product's name.
+  const optionsForLine = (selectedId: string) => {
+    const opts = productResults.map(toOption);
+    if (selectedId && !productResults.some((p) => p.id === selectedId)) {
+      const cached = productCache.current.get(selectedId);
+      if (cached) opts.unshift(toOption(cached));
+    }
+    return opts;
+  };
 
   const total = useMemo(
     () =>
@@ -95,17 +147,54 @@ export default function CreateReceipt() {
   };
 
   const onPickProduct = (key: string, productId: string) => {
-    const product = products.find((p) => p.id === productId);
+    const product = productCache.current.get(productId);
     // Prefill the unit cost from the product's current priceIn as a convenience.
     updateLine(key, {
       productId,
       priceIn: product ? String(Math.round(Number(product.priceIn))) : "",
     });
+    // Move straight to the quantity field so the row fills with the keyboard.
+    requestAnimationFrame(() => qtyRefs.current.get(key)?.focus());
   };
 
-  const addLine = () => setLines((prev) => [...prev, newLine()]);
-  const removeLine = (key: string) =>
+  const addLine = useCallback(() => {
+    const line = newLine();
+    setLines((prev) => [...prev, line]);
+    // Auto-open the new row's product picker for uninterrupted entry.
+    setAutoFocusKey(line.key);
+    return line.key;
+  }, []);
+
+  const removeLine = (key: string) => {
+    qtyRefs.current.delete(key);
+    priceRefs.current.delete(key);
     setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.key !== key) : prev));
+  };
+
+  // Enter in quantity → jump to price; Enter in price → add a new line (or jump
+  // to the next existing row). Plain Enter never submits — that's Ctrl/Cmd+Enter.
+  const onQtyKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, key: string) => {
+    if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      priceRefs.current.get(key)?.focus();
+    }
+  };
+
+  const onPriceKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    key: string,
+    index: number,
+  ) => {
+    if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      const next = lines[index + 1];
+      if (next) {
+        qtyRefs.current.get(next.key)?.focus();
+      } else {
+        addLine();
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,6 +230,26 @@ export default function CreateReceipt() {
     }
   };
 
+  // Esc cancels (back to the list). An open product picker swallows Esc first,
+  // so the first press closes the dropdown and the second leaves the page.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || isSubmitting) return;
+      if (document.querySelector('[role="listbox"]')) return;
+      router.push("/receipts");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isSubmitting, router]);
+
+  // Ctrl/Cmd+Enter submits from anywhere in the form.
+  const onFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      e.currentTarget.requestSubmit();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -152,6 +261,7 @@ export default function CreateReceipt() {
   return (
     <form
       onSubmit={handleSubmit}
+      onKeyDown={onFormKeyDown}
       className="rounded-2xl border border-gray-200 bg-white px-4 pb-5 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6"
     >
       <h3 className="mb-1 text-lg font-semibold text-gray-800 dark:text-white/90">
@@ -190,80 +300,120 @@ export default function CreateReceipt() {
         </div>
       </div>
 
-      {/* Line items */}
-      <div className="mb-3 overflow-x-auto">
-        <table className="min-w-[680px] w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 text-theme-xs uppercase tracking-wide text-gray-400 dark:border-gray-800">
-              <th className="px-2 py-3 font-medium">{t("goodsReceipt.product")}</th>
-              <th className="px-2 py-3 font-medium w-28">{t("goodsReceipt.quantity")}</th>
-              <th className="px-2 py-3 font-medium w-36">{t("goodsReceipt.priceIn")}</th>
-              <th className="px-2 py-3 font-medium w-36 text-right">{t("goodsReceipt.lineTotal")}</th>
-              <th className="px-2 py-3 w-10" />
-            </tr>
-          </thead>
-          <tbody>
-            {lines.map((l) => {
-              const lineTotal = (Number(l.quantity) || 0) * (Number(l.priceIn) || 0);
-              return (
-                <tr key={l.key} className="border-b border-gray-100 align-top dark:border-gray-800/60">
-                  <td className="px-2 py-2">
-                    <SelectField
-                      value={l.productId}
-                      onChange={(v) => onPickProduct(l.key, v)}
-                      placeholder={t("goodsReceipt.selectProduct")}
-                      searchable
-                      searchPlaceholder={t("goodsReceipt.searchProduct") || "Search product..."}
-                      options={productOptions}
-                    />
-                  </td>
-                  <td className="px-2 py-2">
-                    <Input
-                      type="number"
-                      min="1"
-                      step={1}
-                      value={l.quantity}
-                      onChange={(e) => updateLine(l.key, { quantity: e.target.value })}
-                    />
-                  </td>
-                  <td className="px-2 py-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      step={0.01}
-                      value={l.priceIn}
-                      onChange={(e) => updateLine(l.key, { priceIn: e.target.value })}
-                    />
-                  </td>
-                  <td className="px-2 py-2 text-right font-medium text-gray-800 dark:text-white/90">
-                    {formatMoney(lineTotal)}
-                  </td>
-                  <td className="px-2 py-2">
-                    <button
-                      type="button"
-                      onClick={() => removeLine(l.key)}
-                      disabled={lines.length <= 1}
-                      className="rounded-lg p-2 text-gray-500 hover:bg-error-50 hover:text-error-500 disabled:opacity-40 dark:text-gray-400 dark:hover:bg-error-500/10"
-                      aria-label={t("goodsReceipt.removeLine")}
-                    >
-                      <TrashBinIcon className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* Line items — plain divs (not a table in an overflow container) so the
+          product dropdown can overlay freely without being clipped. */}
+      <div className="mb-3">
+        {/* Column headers (desktop only) */}
+        <div className="hidden grid-cols-[minmax(0,1fr)_96px_150px_150px_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
+          <div>{t("goodsReceipt.product")}</div>
+          <div>{t("goodsReceipt.quantity")}</div>
+          <div>{t("goodsReceipt.priceIn")}</div>
+          <div className="text-right">{t("goodsReceipt.lineTotal")}</div>
+          <div />
+        </div>
+
+        <div className="divide-y divide-gray-100 dark:divide-gray-800/60">
+          {lines.map((l, index) => {
+            const lineTotal = (Number(l.quantity) || 0) * (Number(l.priceIn) || 0);
+            return (
+              <div
+                key={l.key}
+                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_96px_150px_150px_44px] sm:items-center"
+              >
+                <div className="min-w-0">
+                  <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
+                    {t("goodsReceipt.product")}
+                  </span>
+                  <SelectField
+                    value={l.productId}
+                    onChange={(v) => onPickProduct(l.key, v)}
+                    placeholder={t("goodsReceipt.selectProduct")}
+                    searchPlaceholder={t("goodsReceipt.searchProduct") || "Search product..."}
+                    options={optionsForLine(l.productId)}
+                    onSearch={searchProducts}
+                    loading={productsLoading}
+                    autoFocus={l.key === autoFocusKey}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
+                    {t("goodsReceipt.quantity")}
+                  </span>
+                  <Input
+                    ref={(el) => {
+                      qtyRefs.current.set(l.key, el);
+                    }}
+                    type="number"
+                    min="1"
+                    step={1}
+                    value={l.quantity}
+                    onChange={(e) => updateLine(l.key, { quantity: e.target.value })}
+                    onKeyDown={(e) => onQtyKeyDown(e, l.key)}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
+                    {t("goodsReceipt.priceIn")}
+                  </span>
+                  <Input
+                    ref={(el) => {
+                      priceRefs.current.set(l.key, el);
+                    }}
+                    type="number"
+                    min="0"
+                    step={0.01}
+                    value={l.priceIn}
+                    onChange={(e) => updateLine(l.key, { priceIn: e.target.value })}
+                    onKeyDown={(e) => onPriceKeyDown(e, l.key, index)}
+                  />
+                </div>
+                <div className="text-sm font-medium text-gray-800 dark:text-white/90 sm:text-right">
+                  <span className="mr-2 text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
+                    {t("goodsReceipt.lineTotal")}:
+                  </span>
+                  {formatMoney(lineTotal)}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => removeLine(l.key)}
+                    disabled={lines.length <= 1}
+                    className="rounded-lg p-2 text-gray-500 hover:bg-error-50 hover:text-error-500 disabled:opacity-40 dark:text-gray-400 dark:hover:bg-error-500/10"
+                    aria-label={t("goodsReceipt.removeLine")}
+                  >
+                    <TrashBinIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <button
-        type="button"
-        onClick={addLine}
-        className="mb-5 inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-      >
-        <PlusIcon />
-        {t("goodsReceipt.addLine")}
-      </button>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="button"
+          onClick={() => addLine()}
+          className="inline-flex items-center gap-2 self-start rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+        >
+          <PlusIcon />
+          {t("goodsReceipt.addLine")}
+        </button>
+
+        {/* Keyboard shortcuts legend (desktop) */}
+        <div className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-theme-xs text-gray-500 dark:text-gray-400 md:flex">
+          <span className="flex items-center gap-1.5">
+            <Kbd>↵</Kbd> {t("goodsReceipt.shortcuts.nextField")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
+            <Kbd>↵</Kbd> {t("goodsReceipt.shortcuts.save")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Kbd>Esc</Kbd> {t("goodsReceipt.shortcuts.cancel")}
+          </span>
+        </div>
+      </div>
 
       <div className="flex flex-col-reverse gap-4 border-t border-gray-200 pt-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-base font-semibold text-gray-800 dark:text-white/90">

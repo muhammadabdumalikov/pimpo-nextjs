@@ -610,7 +610,11 @@
     "selectOption": "Variantni tanlang",
     "loading": "Yuklanmoqda...",
     "searchCommand": "Qidirish yoki buyruq kiriting...",
-    "home": "Bosh sahifa"
+    "home": "Bosh sahifa",
+    "showing": "Ko‘rsatilmoqda",
+    "to": "–",
+    "of": "dan",
+    "results": "natija"
   },
   "auth": {
     "backToDashboard": "Boshqaruv paneliga qaytish",
@@ -691,6 +695,12 @@
     "errors": {
       "noItems": "Kamida bitta tovar qo'shing",
       "badQuantity": "Miqdori kamida 1 bo'lishi kerak"
+    },
+    "allSuppliers": "Barcha yetkazib beruvchilar",
+    "shortcuts": {
+      "nextField": "Keyingi maydon",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish"
     }
   }
 }
