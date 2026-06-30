@@ -281,6 +281,16 @@
     "receiptManagement": "Cheklarni boshqarish"
   },
   "inventory": {
+    "costingTitle": "Tannarx hisobi",
+    "costingDescription": "Sotilgan tovarlar tannarxi qanday hisoblanadi va kirim narxi yuqori bo'lganda qoldiqlarning sotuv narxi bilan nima qilish kerak.",
+    "costingMethod": "Tannarx usuli",
+    "methodAverage": "O'rtacha tortilgan",
+    "methodFifo": "Partiyalar bo'yicha (FIFO)",
+    "priceIncreaseMode": "Sotuv narxi oshganda",
+    "keepOld": "Qoldiqlarga eski narxni qoldirish",
+    "repriceExisting": "Qoldiqlarga narxni oshirish",
+    "costingSaved": "Saqlandi",
+    "costingConfig": "Sozlamalar",
     "title": "Inventarizatsiya boshqaruvi",
     "description": "Do'koningiz uchun tez va samarali inventarizatsiya",
     "whatIsInventory": "Inventarizatsiya nima?",
@@ -603,6 +613,10 @@
     }
   },
   "common": {
+    "cancel": "Bekor qilish",
+    "save": "Saqlash",
+    "saving": "Saqlanmoqda...",
+    "settings": "Sozlamalar",
     "search": "Qidirish...",
     "searching": "Qidirilmoqda…",
     "noResults": "Natija yo'q",
@@ -660,6 +674,31 @@
       "nameRequired": "Nomi majburiy"
     }
   },
+  "costingGuide": {
+    "title": "Tannarx hisobi — atamalar",
+    "subtitle": "Tovar qabul qilish va foydani hisoblashda ishlatiladigan tushunchalarning qisqacha izohi.",
+    "learnMore": "Bu nima? Batafsil →",
+    "cogsTerm": "Tannarx (COGS)",
+    "cogsDesc": "Sotilgan tovarning xarid narxidagi qiymati. Foyda = tushum − tannarx. Sotuv paytida qayd etiladi, shuning uchun narx keyin o'zgarsa ham hisobotlar o'zgarmaydi.",
+    "batchTerm": "Partiya (Batch)",
+    "batchDesc": "Aniq xarid va sotuv narxiga ega tovar kirimi. Har bir kirim partiya yaratadi. Sotuv partiyalarni navbatma-navbat (eskilarini birinchi) hisobdan chiqaradi.",
+    "fifoTerm": "Partiyalar bo'yicha (FIFO)",
+    "fifoDesc": "Tannarx avval eng eski partiyadan olinadi (birinchi kelgan — birinchi ketadi). Har bir birlikning haqiqiy xarid narxini aniq aks ettiradi. Narx oshganda qulay.",
+    "avgTerm": "O'rtacha tortilgan",
+    "avgDesc": "Tannarx — barcha qoldiqlarning o'rtacha xarid narxi. Narx tebranishlarini tekislaydi. Tizimning standart holati.",
+    "exampleTitle": "Misol",
+    "exampleIntro": "1-partiya: 3 dona $9 dan. 2-partiya: 5 dona $10 dan. 5 dona sotamiz:",
+    "colMethod": "Usul",
+    "colCogs": "5 dona tannarxi",
+    "colNote": "Qanday hisoblanadi",
+    "fifoShort": "Partiyalar bo'yicha",
+    "avgShort": "O'rtacha tortilgan",
+    "priceTerm": "Partiyaga ko'ra sotuv narxi",
+    "priceDesc": "Har bir partiyaning o'z sotuv narxi bor. FIFO bo'yicha eski qoldiq avval o'z (eski) narxida, yangi qoldiq yangi narxda sotiladi.",
+    "repriceTerm": "Kirim narxi yuqori bo'lganda",
+    "repriceDesc": "«Qoldiqlarga eski narxni qoldirish» — eski qoldiq eski narxda, yangisi yangi narxda sotiladi. «Qoldiqlarga narxni oshirish» — barcha qoldiq darhol yangi narxga o'tkaziladi.",
+    "note": "Tannarx usuli va narx xatti-harakati butun biznes uchun kirimlar bo'limida («Sozlamalar» tugmasi) sozlanadi."
+  },
   "goodsReceipt": {
     "title": "Mohsulot kirimi",
     "description": "Yetkazib beruvchilardan omborga mahsulot kirimi",
@@ -678,6 +717,7 @@
     "searchProduct": "Mahsulotni qidirish...",
     "quantity": "Miqdori",
     "priceIn": "Kirim narxi",
+    "priceOut": "Sotuv narxi",
     "lineTotal": "Summa",
     "total": "Jami",
     "addLine": "Qator qo'shish",

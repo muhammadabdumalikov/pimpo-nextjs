@@ -22,6 +22,8 @@ interface Line {
   productId: string;
   quantity: string;
   priceIn: string;
+  // Selling price for this batch. Blank → keep the product's current price.
+  priceOut: string;
 }
 
 function formatMoney(n: number): string {
@@ -43,6 +45,7 @@ const newLine = (): Line => ({
   productId: "",
   quantity: "1",
   priceIn: "",
+  priceOut: "",
 });
 
 export default function CreateReceipt() {
@@ -69,6 +72,7 @@ export default function CreateReceipt() {
   // Per-line input refs so shortcuts can move focus across fields.
   const qtyRefs = useRef<Map<string, HTMLInputElement | null>>(new Map());
   const priceRefs = useRef<Map<string, HTMLInputElement | null>>(new Map());
+  const priceOutRefs = useRef<Map<string, HTMLInputElement | null>>(new Map());
 
   useEffect(() => {
     const ua = `${navigator.platform || ""} ${navigator.userAgent || ""}`;
@@ -148,10 +152,11 @@ export default function CreateReceipt() {
 
   const onPickProduct = (key: string, productId: string) => {
     const product = productCache.current.get(productId);
-    // Prefill the unit cost from the product's current priceIn as a convenience.
+    // Prefill cost and selling price from the product's current values.
     updateLine(key, {
       productId,
       priceIn: product ? String(Math.round(Number(product.priceIn))) : "",
+      priceOut: product ? String(Math.round(Number(product.priceOut))) : "",
     });
     // Move straight to the quantity field so the row fills with the keyboard.
     requestAnimationFrame(() => qtyRefs.current.get(key)?.focus());
@@ -168,6 +173,7 @@ export default function CreateReceipt() {
   const removeLine = (key: string) => {
     qtyRefs.current.delete(key);
     priceRefs.current.delete(key);
+    priceOutRefs.current.delete(key);
     setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.key !== key) : prev));
   };
 
@@ -180,9 +186,17 @@ export default function CreateReceipt() {
     }
   };
 
-  const onPriceKeyDown = (
+  // Enter in cost → jump to selling price.
+  const onPriceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, key: string) => {
+    if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      priceOutRefs.current.get(key)?.focus();
+    }
+  };
+
+  // Enter in selling price → next existing row, or add a new line.
+  const onPriceOutKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
-    key: string,
     index: number,
   ) => {
     if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
@@ -204,6 +218,8 @@ export default function CreateReceipt() {
         productId: l.productId,
         quantity: Math.trunc(Number(l.quantity) || 0),
         priceIn: Number(l.priceIn) || 0,
+        // Omit when blank so the backend keeps the product's current price.
+        priceOut: l.priceOut.trim() ? Number(l.priceOut) : undefined,
       }));
 
     if (items.length === 0) {
@@ -304,10 +320,11 @@ export default function CreateReceipt() {
           product dropdown can overlay freely without being clipped. */}
       <div className="mb-3">
         {/* Column headers (desktop only) */}
-        <div className="hidden grid-cols-[minmax(0,1fr)_96px_150px_150px_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
+        <div className="hidden grid-cols-[minmax(0,420px)_88px_120px_120px_120px_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
           <div>{t("goodsReceipt.product")}</div>
           <div>{t("goodsReceipt.quantity")}</div>
           <div>{t("goodsReceipt.priceIn")}</div>
+          <div>{t("goodsReceipt.priceOut") || "Цена продажи"}</div>
           <div className="text-right">{t("goodsReceipt.lineTotal")}</div>
           <div />
         </div>
@@ -318,7 +335,7 @@ export default function CreateReceipt() {
             return (
               <div
                 key={l.key}
-                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_96px_150px_150px_44px] sm:items-center"
+                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,420px)_88px_120px_120px_120px_44px] sm:items-center"
               >
                 <div className="min-w-0">
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
@@ -364,7 +381,23 @@ export default function CreateReceipt() {
                     step={0.01}
                     value={l.priceIn}
                     onChange={(e) => updateLine(l.key, { priceIn: e.target.value })}
-                    onKeyDown={(e) => onPriceKeyDown(e, l.key, index)}
+                    onKeyDown={(e) => onPriceKeyDown(e, l.key)}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
+                    {t("goodsReceipt.priceOut") || "Цена продажи"}
+                  </span>
+                  <Input
+                    ref={(el) => {
+                      priceOutRefs.current.set(l.key, el);
+                    }}
+                    type="number"
+                    min="0"
+                    step={0.01}
+                    value={l.priceOut}
+                    onChange={(e) => updateLine(l.key, { priceOut: e.target.value })}
+                    onKeyDown={(e) => onPriceOutKeyDown(e, index)}
                   />
                 </div>
                 <div className="text-sm font-medium text-gray-800 dark:text-white/90 sm:text-right">

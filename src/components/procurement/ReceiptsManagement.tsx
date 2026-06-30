@@ -4,9 +4,10 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
-import { PlusIcon } from "@/icons/index";
+import { PlusIcon, AccountSettingsIcon } from "@/icons/index";
 import SelectField from "@/components/form/SelectField";
 import Pagination from "@/components/ui/pagination/Pagination";
+import CostingSettingsModal from "./CostingSettingsModal";
 import {
   getReceipts,
   getSuppliers,
@@ -38,6 +39,7 @@ export default function ReceiptsManagement() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [configOpen, setConfigOpen] = useState(false);
 
   // Load suppliers once for the filter dropdown.
   useEffect(() => {
@@ -109,6 +111,14 @@ export default function ReceiptsManagement() {
               ]}
             />
           )}
+          <button
+            type="button"
+            onClick={() => setConfigOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+          >
+            <AccountSettingsIcon className="h-5 w-5" />
+            {t("inventory.costingConfig") || t("common.settings") || "Настройки"}
+          </button>
           <Link
             href="/receipts/new"
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
@@ -118,6 +128,11 @@ export default function ReceiptsManagement() {
           </Link>
         </div>
       </div>
+
+      <CostingSettingsModal
+        isOpen={configOpen}
+        onClose={() => setConfigOpen(false)}
+      />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">

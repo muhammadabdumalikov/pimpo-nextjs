@@ -107,6 +107,11 @@ export default function Checkout() {
   // Keyboard-driven selection: the highlighted cart row that ↑/↓ moves and
   // ←/→ adjusts the quantity of. Tracked by productId so it survives reordering.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Raw text of the quantity input while it's being edited, so the field can be
+  // cleared (empty) before typing a new number instead of snapping back to 1.
+  const [qtyDraft, setQtyDraft] = useState<{ id: string; value: string } | null>(
+    null,
+  );
   // Cmd+Enter (Mac) vs Ctrl+Enter (others) — resolved after mount to avoid a
   // hydration mismatch.
   const [isMac, setIsMac] = useState(false);
@@ -763,6 +768,12 @@ export default function Checkout() {
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {formatMoney(line.price)}
+                      {line.stock > 0 && (
+                        <span className="text-gray-400 dark:text-gray-500">
+                          {" · "}
+                          {line.stock} {t("checkout.inStock")}
+                        </span>
+                      )}
                     </p>
                   </div>
 
@@ -781,8 +792,28 @@ export default function Checkout() {
                       type="number"
                       min={1}
                       max={line.stock || undefined}
-                      value={line.quantity}
-                      onChange={(e) => changeQty(line.productId, Number(e.target.value))}
+                      value={
+                        qtyDraft?.id === line.productId
+                          ? qtyDraft.value
+                          : line.quantity
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setQtyDraft({ id: line.productId, value: v });
+                        // Only commit a real number; leave the field empty while
+                        // the cashier is mid-edit instead of forcing it to 1.
+                        if (v !== "") changeQty(line.productId, Number(v));
+                      }}
+                      onBlur={() => {
+                        if (qtyDraft?.id === line.productId) {
+                          const n = Number(qtyDraft.value);
+                          changeQty(
+                            line.productId,
+                            qtyDraft.value === "" || Number.isNaN(n) ? 1 : n,
+                          );
+                        }
+                        setQtyDraft(null);
+                      }}
                       className="h-10 w-12 border-x border-gray-200 bg-white text-center text-sm font-medium text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
                     />
                     <button

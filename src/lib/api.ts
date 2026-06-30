@@ -1045,6 +1045,9 @@ export interface OrderItem {
   priceOut: string;
   quantity: number;
   lineTotal: string;
+  // COGS snapshot at sale time (0 for orders made before batch costing).
+  costIn?: string;
+  costTotal?: string;
 }
 
 export interface PaymentSplit {
@@ -1153,6 +1156,9 @@ export async function getOrderRevenue(): Promise<number> {
 }
 
 // Receipt settings API
+export type CostingMethod = 'AVERAGE' | 'FIFO';
+export type PriceIncreaseMode = 'KEEP_OLD' | 'REPRICE_EXISTING';
+
 export interface ReceiptSettings {
   businessId: string;
   receiptName: string;
@@ -1160,6 +1166,8 @@ export interface ReceiptSettings {
   logoUrl: string | null;
   vatEnabled: boolean;
   vatRate: string;
+  costingMethod: CostingMethod;
+  priceIncreaseMode: PriceIncreaseMode;
   updatedAt?: string;
 }
 
@@ -1169,6 +1177,8 @@ export interface UpdateReceiptSettingsDto {
   logoUrl?: string | null;
   vatEnabled?: boolean;
   vatRate?: number;
+  costingMethod?: CostingMethod;
+  priceIncreaseMode?: PriceIncreaseMode;
 }
 
 export async function getReceiptSettings(): Promise<ReceiptSettings> {
@@ -1339,7 +1349,15 @@ export interface GoodsReceipt {
 }
 
 export interface CreateReceiptDto {
-  items: { productId: string; quantity: number; priceIn: number }[];
+  items: {
+    productId: string;
+    quantity: number;
+    priceIn: number;
+    // Optional per-batch selling price (defaults to the product's current price).
+    priceOut?: number;
+    // When the new selling price is higher, reprice existing stock too.
+    repriceExisting?: boolean;
+  }[];
   supplierId?: string;
   note?: string;
 }
