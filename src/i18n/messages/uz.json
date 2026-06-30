@@ -523,7 +523,7 @@
       "move": "Ko‘chirish",
       "qty": "Miqdor",
       "remove": "O‘chirish",
-      "pay": "To‘lash"
+      "completeSale": "Xaridni yakunlash"
     }
   },
   "roles": {

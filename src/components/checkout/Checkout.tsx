@@ -8,12 +8,16 @@ import { formatPhone } from "@/lib/phone";
 import {
   getProducts,
   createOrder,
-  getReceiptSettings,
   searchCustomers,
   type Product,
   type Customer,
 } from "@/lib/api";
 import CameraScanner from "./CameraScanner";
+
+// Static VAT (QQS) config for now. Flip VAT_ENABLED to false to hide the line.
+// TODO: wire back to the business's receipt settings API.
+const VAT_ENABLED = true;
+const VAT_RATE = 12;
 
 type CartLine = {
   productId: string;
@@ -128,8 +132,8 @@ export default function Checkout() {
   const [showMore, setShowMore] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [vatEnabled, setVatEnabled] = useState(false);
-  const [vatRate, setVatRate] = useState(0);
+  const vatEnabled = VAT_ENABLED;
+  const vatRate = VAT_RATE;
   const searchRef = useRef<HTMLInputElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -138,23 +142,6 @@ export default function Checkout() {
   // Clear any pending search lookup on unmount.
   useEffect(() => () => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-  }, []);
-
-  // Load the business VAT (QQS) config so the summary can break out the tax.
-  useEffect(() => {
-    let active = true;
-    getReceiptSettings()
-      .then((s) => {
-        if (!active) return;
-        setVatEnabled(s.vatEnabled);
-        setVatRate(Number(s.vatRate) || 0);
-      })
-      .catch(() => {
-        /* non-fatal: just hide the VAT line */
-      });
-    return () => {
-      active = false;
-    };
   }, []);
 
   // Debounced client search (from clients history) for debt sales. The Client
@@ -843,7 +830,7 @@ export default function Checkout() {
               <span className="flex items-center gap-2">
                 <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
                 <span className="text-base font-semibold text-gray-600 dark:text-gray-300">+</span>
-                <Kbd>↵</Kbd> {t("checkout.shortcuts.pay") || "Pay"}
+                <Kbd>↵</Kbd> {t("checkout.shortcuts.completeSale") || "Complete sale"}
               </span>
             </div>
           </div>
@@ -1256,11 +1243,6 @@ export default function Checkout() {
                     ? t("checkout.sellOnCredit") || "Sell on credit"
                     : `${t("checkout.completeSale")}${total > 0 ? ` · ${formatMoney(total)}` : ""}`}
               </span>
-              {!isSubmitting && (
-                <kbd className="hidden rounded-md bg-white/20 px-1.5 py-0.5 text-xs font-medium sm:inline-block">
-                  {isMac ? "⌘↵" : "Ctrl+↵"}
-                </kbd>
-              )}
             </button>
           </div>
         </aside>

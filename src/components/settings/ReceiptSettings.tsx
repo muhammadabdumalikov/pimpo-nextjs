@@ -15,10 +15,6 @@ interface ReceiptSettingsProps {
   logo: string | null;
   onLogoUpload: (file: File) => void;
   onLogoRemove: () => void;
-  vatEnabled: boolean;
-  onVatEnabledChange: (enabled: boolean) => void;
-  vatRate: string;
-  onVatRateChange: (rate: string) => void;
 }
 
 export default function ReceiptSettings({
@@ -29,10 +25,6 @@ export default function ReceiptSettings({
   logo,
   onLogoUpload,
   onLogoRemove,
-  vatEnabled,
-  onVatEnabledChange,
-  vatRate,
-  onVatRateChange,
 }: ReceiptSettingsProps) {
   const { t } = useTranslations();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -207,38 +199,6 @@ export default function ReceiptSettings({
                 "Формат загружаемого фото: JPG или PNG. Максимальный размер: 5МБ."}
             </p>
           </>
-        )}
-      </div>
-
-      {/* VAT (QQS) */}
-      <div className="border-t border-gray-200 pt-6 dark:border-gray-700">
-        <div className="mb-3 flex items-center justify-between">
-          <Label className="mb-0">{t("receipt.vatLabel") || "VAT (QQS)"}</Label>
-          <Switch
-            key={vatEnabled ? "vat-on" : "vat-off"}
-            label=""
-            defaultChecked={vatEnabled}
-            onChange={onVatEnabledChange}
-          />
-        </div>
-        {vatEnabled && (
-          <div>
-            <Label>{t("receipt.vatRate") || "VAT rate, %"}</Label>
-            <Input
-              type="number"
-              min="0"
-              max="100"
-              step={0.1}
-              value={vatRate}
-              onChange={(e) => onVatRateChange(e.target.value)}
-              placeholder="12"
-              className="mt-2"
-            />
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {t("receipt.vatHint") ||
-                "Prices are VAT-inclusive; the tax portion is shown on the receipt."}
-            </p>
-          </div>
         )}
       </div>
     </div>

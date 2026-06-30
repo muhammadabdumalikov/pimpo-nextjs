@@ -12,6 +12,11 @@ import ReceiptSettings from "./ReceiptSettings";
 
 const DEFAULT_NAME = "Standart";
 
+// Static VAT (QQS) config for now. Shown on the receipt preview but not editable
+// or persisted. TODO: wire back to the business's receipt settings API.
+const VAT_ENABLED = true;
+const VAT_RATE = 12;
+
 export default function ReceiptManagement() {
   const { t } = useTranslations();
   const { showToast } = useToast();
@@ -24,8 +29,6 @@ export default function ReceiptManagement() {
   // The last value loaded from / saved to the backend, used to reset and to
   // tell whether the logo URL actually changed.
   const [savedLogoUrl, setSavedLogoUrl] = useState<string | null>(null);
-  const [vatEnabled, setVatEnabled] = useState(false);
-  const [vatRate, setVatRate] = useState("12");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -37,8 +40,6 @@ export default function ReceiptManagement() {
         setShowLogo(s.showLogo);
         setLogo(s.logoUrl);
         setSavedLogoUrl(s.logoUrl);
-        setVatEnabled(s.vatEnabled);
-        setVatRate(s.vatRate ?? "12");
       })
       .catch((e) => {
         if (!cancelled) showToast("error", e?.message || "Failed to load");
@@ -67,8 +68,6 @@ export default function ReceiptManagement() {
     setShowLogo(true);
     setLogo(savedLogoUrl);
     setLogoFile(null);
-    setVatEnabled(false);
-    setVatRate("12");
   };
 
   const handleSave = async () => {
@@ -88,8 +87,6 @@ export default function ReceiptManagement() {
         receiptName: receiptName.trim() || DEFAULT_NAME,
         showLogo,
         logoUrl,
-        vatEnabled,
-        vatRate: Number(vatRate) || 0,
       });
 
       setReceiptName(saved.receiptName || DEFAULT_NAME);
@@ -97,8 +94,6 @@ export default function ReceiptManagement() {
       setLogo(saved.logoUrl);
       setSavedLogoUrl(saved.logoUrl);
       setLogoFile(null);
-      setVatEnabled(saved.vatEnabled);
-      setVatRate(saved.vatRate ?? "12");
       showToast("success", t("receipt.saved") || "Saved");
     } catch (e) {
       showToast(
@@ -151,8 +146,8 @@ export default function ReceiptManagement() {
             receiptName={receiptName}
             showLogo={showLogo}
             logo={logo}
-            vatEnabled={vatEnabled}
-            vatRate={Number(vatRate) || 0}
+            vatEnabled={VAT_ENABLED}
+            vatRate={VAT_RATE}
           />
         </div>
 
@@ -166,10 +161,6 @@ export default function ReceiptManagement() {
             logo={logo}
             onLogoUpload={handleLogoUpload}
             onLogoRemove={handleLogoRemove}
-            vatEnabled={vatEnabled}
-            onVatEnabledChange={setVatEnabled}
-            vatRate={vatRate}
-            onVatRateChange={setVatRate}
           />
         </div>
       </div>

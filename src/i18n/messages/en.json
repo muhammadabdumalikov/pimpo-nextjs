@@ -523,7 +523,7 @@
       "move": "Move",
       "qty": "Quantity",
       "remove": "Remove",
-      "pay": "Pay"
+      "completeSale": "Complete sale"
     }
   },
   "roles": {
