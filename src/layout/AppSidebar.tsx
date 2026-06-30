@@ -24,6 +24,7 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
+  disabled?: boolean;
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean; comingSoon?: boolean }[];
 };
 
@@ -137,6 +138,7 @@ const AppSidebar: React.FC = () => {
       icon: <PlugInIcon />,
       name: t('sidebar.subscriptionManagement'),
       path: "/subscription-management",
+      disabled: true,
     },
     {
       icon: <UserCircleIcon />,
@@ -198,6 +200,16 @@ const AppSidebar: React.FC = () => {
                 />
               )}
             </button>
+          ) : nav.disabled ? (
+            <span
+              className="menu-item group menu-item-inactive cursor-not-allowed opacity-60"
+              aria-disabled="true"
+            >
+              <span className="menu-item-icon-inactive">{nav.icon}</span>
+              {(isExpanded || isHovered || isMobileOpen) && (
+                <span className={`menu-item-text`}>{nav.name}</span>
+              )}
+            </span>
           ) : (
             nav.path && (
               <Link
