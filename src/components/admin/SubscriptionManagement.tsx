@@ -253,7 +253,7 @@ export default function SubscriptionManagement() {
 
               {/* CTA row */}
               <TableRow>
-                <TableCell className="px-5 py-4" />
+                <TableCell className="px-5 py-4">{null}</TableCell>
                 {plans.map((plan) => (
                   <TableCell
                     key={plan.tier}
