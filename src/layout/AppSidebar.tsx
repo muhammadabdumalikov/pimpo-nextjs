@@ -138,7 +138,6 @@ const AppSidebar: React.FC = () => {
       icon: <PlugInIcon />,
       name: t('sidebar.subscriptionManagement'),
       path: "/subscription-management",
-      disabled: true,
     },
     {
       icon: <UserCircleIcon />,

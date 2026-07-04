@@ -12,7 +12,7 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'checkout', allowedTiers: ['free', 'basic', 'pro',] },
   
   // User Debt
-  { menuItem: 'userDebt', allowedTiers: ['free', 'pro', ] },
+  { menuItem: 'userDebt', allowedTiers: ['free', 'basic', 'pro', ] },
 
   // Inventory & analytics
   { menuItem: 'inventory', allowedTiers: ['free', 'basic', 'pro'] },

@@ -3,215 +3,274 @@
 import React, { useMemo, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { SubscriptionTier } from "@/types/subscription";
+import { CheckLineIcon } from "@/icons/index";
+import Button from "../ui/button/Button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 
 type Plan = {
   tier: SubscriptionTier;
   name: string;
-  description: string;
   monthlyPrice: number;
-  features: string[];
+  popular?: boolean;
+};
+
+// A row value: string => plain text, true => check icon, false => not included
+type CellValue = string | boolean;
+type CompareRow = {
+  label: string;
+  free: CellValue;
+  basic: CellValue;
+  pro: CellValue;
 };
 
 export default function SubscriptionManagement() {
   const { t } = useTranslations();
   const [monthly, setMonthly] = useState(true);
+
   const plans = useMemo<Plan[]>(
     () => [
-      {
-        tier: "free",
-        name: t("upgradePlan.free"),
-        description: t("upgradePlan.freeDescription"),
-        monthlyPrice: 0,
-        features: [
-          t("upgradePlan.features.free.userDebtList"),
-          t("upgradePlan.features.free.ecommerceDashboard"),
-          t("upgradePlan.features.free.productsList"),
-          t("upgradePlan.features.free.debtsLimit"),
-          t("upgradePlan.features.free.productsLimit"),
-        ],
-      },
+      { tier: "free", name: t("upgradePlan.free"), monthlyPrice: 0 },
       {
         tier: "basic",
         name: t("upgradePlan.basic"),
-        description: t("upgradePlan.basicDescription"),
-        monthlyPrice: 29,
-        features: [
-          t("upgradePlan.features.basic.everythingInFree"),
-          t("upgradePlan.features.basic.addProducts"),
-          t("upgradePlan.features.basic.formElements"),
-          t("upgradePlan.features.basic.imagesVideos"),
-          t("upgradePlan.features.basic.emailSupport"),
-        ],
+        monthlyPrice: 99000,
+        popular: true,
+      },
+      { tier: "pro", name: t("upgradePlan.pro"), monthlyPrice: 249000 },
+    ],
+    [t],
+  );
+
+  const rows = useMemo<CompareRow[]>(
+    () => [
+      {
+        label: t("upgradePlan.compare.branches"),
+        free: "1",
+        basic: "1",
+        pro: t("upgradePlan.compare.unlimited"),
       },
       {
-        tier: "pro",
-        name: t("upgradePlan.pro"),
-        description: t("upgradePlan.proDescription"),
-        monthlyPrice: 99,
-        features: [
-          t("upgradePlan.features.pro.everythingInBasic"),
-          t("upgradePlan.features.pro.ecommerceDashboard"),
-          t("upgradePlan.features.pro.productsList"),
-          t("upgradePlan.features.pro.addProduct"),
-          t("upgradePlan.features.pro.userDebtManagement"),
-          t("upgradePlan.features.pro.chartsAnalytics"),
-          t("upgradePlan.features.pro.subscriptionManagement"),
-          t("upgradePlan.features.pro.prioritySupport"),
-        ],
+        label: t("upgradePlan.compare.products"),
+        free: (150).toLocaleString("ru-RU"),
+        basic: (3000).toLocaleString("ru-RU"),
+        pro: t("upgradePlan.compare.unlimited"),
+      },
+      {
+        label: t("upgradePlan.compare.users"),
+        free: "1",
+        basic: "4",
+        pro: t("upgradePlan.compare.unlimited"),
+      },
+      {
+        label: t("upgradePlan.compare.debt"),
+        free: t("upgradePlan.compare.debtCustomers"),
+        basic: true,
+        pro: true,
+      },
+      {
+        label: t("upgradePlan.compare.inventory"),
+        free: t("upgradePlan.compare.basicValue"),
+        basic: true,
+        pro: true,
+      },
+      {
+        label: t("upgradePlan.compare.procurement"),
+        free: false,
+        basic: true,
+        pro: true,
+      },
+      {
+        label: t("upgradePlan.compare.reports"),
+        free: t("upgradePlan.compare.limited"),
+        basic: true,
+        pro: t("upgradePlan.compare.extended"),
+      },
+      {
+        label: t("upgradePlan.compare.bulkImport"),
+        free: false,
+        basic: false,
+        pro: true,
+      },
+      {
+        label: t("upgradePlan.compare.team"),
+        free: false,
+        basic: t("upgradePlan.compare.basicValue"),
+        pro: true,
+      },
+      {
+        label: t("upgradePlan.compare.support"),
+        free: t("upgradePlan.compare.chat"),
+        basic: t("upgradePlan.compare.standard"),
+        pro: t("upgradePlan.compare.priority"),
       },
     ],
     [t],
   );
 
-  return (
-    <div className="border-t border-gray-100 p-4 sm:p-6 dark:border-gray-800">
-      <div className="mx-auto w-full max-w-[385px]">
-        <h2 className="mb-7 text-center text-title-sm font-bold text-gray-800 dark:text-white/90">
-          {t("upgradePlan.headline")}
-        </h2>
-      </div>
+  const priceFor = (plan: Plan) =>
+    monthly ? plan.monthlyPrice : Math.round(plan.monthlyPrice * 12 * 0.8);
+  const periodLabel = monthly ? t("upgradePlan.month") : t("upgradePlan.year");
 
-      <div>
-        <div className="mb-10 text-center">
-          <div className="relative z-1 mx-auto inline-flex rounded-full bg-gray-200 p-1 dark:bg-gray-800">
-            <span
-              className={`absolute top-1/2 -z-1 flex h-11 w-[120px] -translate-y-1/2 rounded-full bg-white shadow-theme-xs duration-200 ease-linear dark:bg-white/10 ${
-                monthly ? "translate-x-0" : "translate-x-full"
-              }`}
-            ></span>
+  // Tint applied to the highlighted (popular) column cells.
+  const colTint = (plan: Plan) =>
+    plan.popular ? "bg-brand-500/[0.04] dark:bg-brand-500/[0.08]" : "";
+
+  const renderValue = (value: CellValue) => {
+    if (value === true)
+      return (
+        <CheckLineIcon className="mx-auto h-5 w-5 text-success-500" />
+      );
+    if (value === false)
+      return <span className="text-gray-300 dark:text-gray-600">—</span>;
+    return (
+      <span className="text-sm text-gray-700 dark:text-gray-300">{value}</span>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header + billing toggle */}
+      <div className="rounded-2xl border border-gray-200 bg-white px-4 pb-5 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
+        <div className="text-center">
+          <h2 className="mb-2 text-2xl font-bold text-gray-800 dark:text-white/90">
+            {t("upgradePlan.headline")}
+          </h2>
+          <p className="text-theme-sm text-gray-500 dark:text-gray-400">
+            {t("upgradePlan.description")}
+          </p>
+
+          <div className="mt-6 inline-flex rounded-full bg-gray-100 p-1 dark:bg-gray-800">
             <button
               type="button"
-              className={`flex h-11 w-[120px] items-center justify-center text-base font-medium ${
+              onClick={() => setMonthly(true)}
+              className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
                 monthly
-                  ? "text-gray-800 dark:text-white/90"
+                  ? "bg-brand-500 text-white shadow-theme-xs"
                   : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white/70"
               }`}
-              onClick={() => setMonthly(true)}
             >
               {t("upgradePlan.monthly")}
             </button>
             <button
               type="button"
-              className={`flex h-11 w-[120px] items-center justify-center text-base font-medium ${
-                monthly
-                  ? "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white/80"
-                  : "text-gray-800 dark:text-white/90"
-              }`}
               onClick={() => setMonthly(false)}
+              className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+                !monthly
+                  ? "bg-brand-500 text-white shadow-theme-xs"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white/70"
+              }`}
             >
               {t("upgradePlan.annually")}
+              <span
+                className={`rounded-full px-2 py-0.5 text-theme-xs font-medium ${
+                  !monthly
+                    ? "bg-white/20 text-white"
+                    : "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500"
+                }`}
+              >
+                -20%
+              </span>
             </button>
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 xl:gap-6">
-          {plans.map((plan) => {
-            const isHighlighted = plan.tier === "basic";
-            const price = monthly ? plan.monthlyPrice : plan.monthlyPrice * 12;
-            const periodLabel = monthly ? t("upgradePlan.month") : t("upgradePlan.year");
-
-            return (
-              <div
-                key={plan.tier}
-                className={`flex h-full flex-col rounded-2xl border p-6 ${
-                  isHighlighted
-                    ? "border-gray-800 bg-gray-800 dark:border-white/10 dark:bg-white/10"
-                    : "border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
-                }`}
-              >
-                <span
-                  className={`mb-3 block text-theme-xl font-semibold ${
-                    isHighlighted
-                      ? "text-white"
-                      : "text-gray-800 dark:text-white/90"
-                  }`}
+      {/* Comparison table */}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div className="max-w-full overflow-x-auto">
+          <Table className="min-w-[640px]">
+            <TableHeader>
+              <TableRow className="border-b border-gray-200 dark:border-gray-800">
+                <TableCell
+                  isHeader
+                  className="px-5 py-4 text-left align-bottom text-sm font-medium text-gray-500 dark:text-gray-400"
                 >
-                  {plan.name}
-                </span>
-
-                <div className="mb-1 flex items-center justify-between">
-                  <div className="flex items-end">
-                    <h2
-                      className={`text-title-md font-bold ${
-                        isHighlighted
-                          ? "text-white"
-                          : "text-gray-800 dark:text-white/90"
-                      }`}
+                  {t("upgradePlan.compare.feature")}
+                </TableCell>
+                {plans.map((plan) => {
+                  const price = priceFor(plan);
+                  return (
+                    <TableCell
+                      key={plan.tier}
+                      isHeader
+                      className={`px-5 py-4 text-center ${colTint(plan)}`}
                     >
-                      ${price.toFixed(2)}
-                    </h2>
+                      {plan.popular && (
+                        <span className="mb-2 inline-block rounded-full bg-brand-500 px-3 py-0.5 text-theme-xs font-medium text-white">
+                          {t("upgradePlan.mostPopular")}
+                        </span>
+                      )}
+                      <div className="text-base font-semibold text-gray-800 dark:text-white/90">
+                        {plan.name}
+                      </div>
+                      <div className="mt-1 flex items-baseline justify-center gap-1">
+                        <span className="text-xl font-bold text-gray-800 dark:text-white/90">
+                          {price === 0
+                            ? t("upgradePlan.free")
+                            : price.toLocaleString("ru-RU")}
+                        </span>
+                        {price > 0 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {t("upgradePlan.som")}
+                            {periodLabel}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            </TableHeader>
 
-                    <span
-                      className={`mb-1 inline-block text-sm ${
-                        isHighlighted
-                          ? "text-white/70"
-                          : "text-gray-500 dark:text-gray-400"
-                      }`}
-                    >
-                      {periodLabel}
-                    </span>
-                  </div>
-                </div>
-
-                <p
-                  className={`text-sm ${
-                    isHighlighted
-                      ? "text-white/70"
-                      : "text-gray-500 dark:text-gray-400"
-                  }`}
+            <TableBody>
+              {rows.map((row, index) => (
+                <TableRow
+                  key={index}
+                  className="border-b border-gray-100 dark:border-gray-800"
                 >
-                  {plan.description}
-                </p>
+                  <TableCell className="px-5 py-3.5 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {row.label}
+                  </TableCell>
+                  <TableCell className="px-5 py-3.5 text-center">
+                    {renderValue(row.free)}
+                  </TableCell>
+                  <TableCell
+                    className={`px-5 py-3.5 text-center ${colTint(plans[1])}`}
+                  >
+                    {renderValue(row.basic)}
+                  </TableCell>
+                  <TableCell className="px-5 py-3.5 text-center">
+                    {renderValue(row.pro)}
+                  </TableCell>
+                </TableRow>
+              ))}
 
-                <div
-                  className={`my-6 h-px w-full ${
-                    isHighlighted ? "bg-white/20" : "bg-gray-200 dark:bg-gray-800"
-                  }`}
-                ></div>
-
-                <div className="mb-8 flex-1 space-y-3">
-                  {plan.features.map((feature) => (
-                    <p
-                      key={feature}
-                      className={`flex items-center gap-3 text-sm ${
-                        isHighlighted
-                          ? "text-white/80"
-                          : "text-gray-500 dark:text-gray-400"
-                      }`}
+              {/* CTA row */}
+              <TableRow>
+                <TableCell className="px-5 py-4" />
+                {plans.map((plan) => (
+                  <TableCell
+                    key={plan.tier}
+                    className={`px-5 py-4 text-center ${colTint(plan)}`}
+                  >
+                    <Button
+                      variant={plan.popular ? "primary" : "outline"}
+                      size="sm"
+                      className="w-full"
                     >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M13.4017 4.35986L6.12166 11.6399L2.59833 8.11657"
-                          stroke="#12B76A"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></path>
-                      </svg>
-                      {feature}
-                    </p>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  className={`mt-auto flex w-full items-center justify-center rounded-lg p-3.5 text-sm font-medium shadow-theme-xs transition-colors ${
-                    isHighlighted
-                      ? "bg-brand-500 text-white hover:bg-brand-600"
-                      : "bg-gray-800 text-white hover:bg-brand-500 dark:bg-white/10"
-                  }`}
-                >
-                  {t("upgradePlan.choosePlan")} {plan.name}
-                </button>
-              </div>
-            );
-          })}
+                      {t("upgradePlan.choosePlan")}
+                    </Button>
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>

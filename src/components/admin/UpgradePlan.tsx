@@ -119,7 +119,7 @@ export default function UpgradePlan() {
     {
       tier: 'basic' as SubscriptionTier,
       name: t('upgradePlan.basic'),
-      price: 29,
+      price: 99000,
       description: t('upgradePlan.basicDescription'),
       features: getFeaturesForTier('basic', t),
       popular: true,
@@ -127,7 +127,7 @@ export default function UpgradePlan() {
     {
       tier: 'pro' as SubscriptionTier,
       name: t('upgradePlan.pro'),
-      price: 99,
+      price: 249000,
       description: t('upgradePlan.proDescription'),
       features: getFeaturesForTier('pro', t),
       popular: false,
@@ -218,10 +218,10 @@ export default function UpgradePlan() {
                 </p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-bold text-gray-800 dark:text-white/90">
-                    ${plan.price}
+                    {plan.price === 0 ? t('upgradePlan.free') : plan.price.toLocaleString('ru-RU')}
                   </span>
                   {plan.price > 0 && (
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('upgradePlan.month')}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('upgradePlan.som')}{t('upgradePlan.month')}</span>
                   )}
                 </div>
               </div>

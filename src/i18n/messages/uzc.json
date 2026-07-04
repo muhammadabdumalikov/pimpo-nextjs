@@ -196,37 +196,59 @@
     "comingSoon": "Тез орада",
     "month": "/ой",
     "year": "/йил",
+    "som": "сўм",
     "choosePlan": "Танлаш",
     "needHelp": "Танловда ёрдам керакми?",
     "contactSales": "Сотув бўлими билан боғланиш",
     "contactSalesDescription": "Бизнес эҳтиёжларингизга мос режани топиш учун сотув жамоамиз билан боғланинг.",
     "features": {
       "free": {
-        "userDebtList": "Фойдаланувчи қарзлари рўйхати",
-        "ecommerceDashboard": "Ecommerce бошқарув панели",
-        "productsList": "Маҳсулотлар рўйхати",
-        "debtsLimit": "20 тагача қарз",
-        "productsLimit": "20 тагача маҳсулот"
+        "userDebtList": "Насия (қарз) дафтари",
+        "ecommerceDashboard": "Бошқарув панели ва сотув",
+        "productsList": "1 филиал, 1 фойдаланувчи",
+        "debtsLimit": "20 тагача насия мижози",
+        "productsLimit": "150 тагача маҳсулот"
       },
       "basic": {
         "everythingInFree": "Бепул режадаги ҳамма нарса",
-        "addProducts": "Маҳсулот қўшиш",
-        "formElements": "Форма элементлари",
-        "imagesVideos": "Расмлар ва видеолар",
-        "emailSupport": "Email орқали қўллаб-қувватлаш"
+        "addProducts": "3 000 тагача маҳсулот",
+        "formElements": "4 фойдаланувчигача",
+        "imagesVideos": "Таъминот (таъминотчи ва қабул)",
+        "emailSupport": "Тўлиқ насия + Email ёрдам"
       },
       "pro": {
         "everythingInBasic": "Асосий режадаги ҳамма нарса",
-        "ecommerceDashboard": "Ecommerce бошқарув панели",
-        "productsList": "Маҳсулотлар рўйхати",
-        "addProduct": "Маҳсулот қўшиш",
-        "userDebtManagement": "Фойдаланувчи қарзларини бошқариш",
-        "chartsAnalytics": "Графиклар ва таҳлил",
-        "subscriptionManagement": "Обуна бошқаруви",
+        "ecommerceDashboard": "Чексиз филиал",
+        "productsList": "Чексиз маҳсулот",
+        "addProduct": "Оммавий маҳсулот қўшиш",
+        "userDebtManagement": "Тўлиқ насия бошқаруви",
+        "chartsAnalytics": "Кенгайтирилган таҳлил ва ҳисобот",
+        "subscriptionManagement": "Жамоа: роллар ва ходимлар",
         "prioritySupport": "Устувор қўллаб-қувватлаш"
       }
     },
-    "loadingPlans": "Режалар юкланмоқда..."
+    "loadingPlans": "Режалар юкланмоқда...",
+    "compare": {
+      "feature": "Имконият",
+      "branches": "Филиаллар",
+      "products": "Маҳсулотлар",
+      "users": "Фойдаланувчилар",
+      "debt": "Насия (қарз)",
+      "inventory": "Инвентар",
+      "procurement": "Таъминот",
+      "reports": "Ҳисобот ва таҳлил",
+      "bulkImport": "Оммавий импорт",
+      "team": "Жамоа (роллар)",
+      "support": "Қўллаб-қувватлаш",
+      "unlimited": "Чексиз",
+      "basicValue": "Асосий",
+      "limited": "Чекланган",
+      "extended": "Кенгайтирилган",
+      "chat": "Чат",
+      "standard": "Стандарт",
+      "priority": "Устувор",
+      "debtCustomers": "20 мижоз"
+    }
   },
   "sidebar": {
     "dashboard": "Бошқарув панели",

@@ -196,37 +196,59 @@
     "comingSoon": "Coming Soon",
     "month": "/month",
     "year": "/year",
+    "som": "UZS",
     "choosePlan": "Choose",
     "needHelp": "Need Help Choosing?",
     "contactSales": "Contact Sales",
     "contactSalesDescription": "Contact our sales team to find the perfect plan for your business needs.",
     "features": {
       "free": {
-        "userDebtList": "User Debt List",
-        "ecommerceDashboard": "Ecommerce Dashboard",
-        "productsList": "Products List",
-        "debtsLimit": "Up to 20 Debts",
-        "productsLimit": "Up to 20 Products"
+        "userDebtList": "Debt (credit) ledger",
+        "ecommerceDashboard": "Dashboard & checkout",
+        "productsList": "1 branch, 1 user",
+        "debtsLimit": "Up to 20 debt customers",
+        "productsLimit": "Up to 150 products"
       },
       "basic": {
         "everythingInFree": "Everything in Free",
-        "addProducts": "Add Products",
-        "formElements": "Form Elements",
-        "imagesVideos": "Images & Videos",
-        "emailSupport": "Email Support"
+        "addProducts": "Up to 3,000 products",
+        "formElements": "Up to 4 users",
+        "imagesVideos": "Procurement (suppliers & receipts)",
+        "emailSupport": "Full debt management + Email support"
       },
       "pro": {
         "everythingInBasic": "Everything in Basic",
-        "ecommerceDashboard": "Ecommerce Dashboard",
-        "productsList": "Products List",
-        "addProduct": "Add Product",
-        "userDebtManagement": "User Debt Management",
-        "chartsAnalytics": "Charts & Analytics",
-        "subscriptionManagement": "Subscription Management",
-        "prioritySupport": "Priority Support"
+        "ecommerceDashboard": "Unlimited branches",
+        "productsList": "Unlimited products",
+        "addProduct": "Bulk product import",
+        "userDebtManagement": "Full debt management",
+        "chartsAnalytics": "Advanced analytics & reports",
+        "subscriptionManagement": "Team: roles & staff",
+        "prioritySupport": "Priority support"
       }
     },
-    "loadingPlans": "Loading plans..."
+    "loadingPlans": "Loading plans...",
+    "compare": {
+      "feature": "Feature",
+      "branches": "Branches",
+      "products": "Products",
+      "users": "Users",
+      "debt": "Debt (credit)",
+      "inventory": "Inventory",
+      "procurement": "Procurement",
+      "reports": "Reports & analytics",
+      "bulkImport": "Bulk import",
+      "team": "Team (roles)",
+      "support": "Support",
+      "unlimited": "Unlimited",
+      "basicValue": "Basic",
+      "limited": "Limited",
+      "extended": "Extended",
+      "chat": "Chat",
+      "standard": "Standard",
+      "priority": "Priority",
+      "debtCustomers": "20 customers"
+    }
   },
   "sidebar": {
     "dashboard": "Dashboard",

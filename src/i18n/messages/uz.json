@@ -196,37 +196,59 @@
     "comingSoon": "Tez orada",
     "month": "/oy",
     "year": "/yil",
+    "som": "so'm",
     "choosePlan": "Tanlash",
     "needHelp": "Tanlovda yordam kerakmi?",
     "contactSales": "Sotuv bo'limi bilan bog'lanish",
     "contactSalesDescription": "Biznes ehtiyojlaringizga mos rejani topish uchun sotuv jamoamiz bilan bog'laning.",
     "features": {
       "free": {
-        "userDebtList": "Foydalanuvchi qarzlari ro'yxati",
-        "ecommerceDashboard": "Ecommerce boshqaruv paneli",
-        "productsList": "Mahsulotlar ro'yxati",
-        "debtsLimit": "20 tagacha qarz",
-        "productsLimit": "20 tagacha mahsulot"
+        "userDebtList": "Nasiya (qarz) daftari",
+        "ecommerceDashboard": "Boshqaruv paneli va sotuv",
+        "productsList": "1 filial, 1 foydalanuvchi",
+        "debtsLimit": "20 tagacha nasiya mijozi",
+        "productsLimit": "150 tagacha mahsulot"
       },
       "basic": {
         "everythingInFree": "Bepul rejadagi hamma narsa",
-        "addProducts": "Mahsulot qo'shish",
-        "formElements": "Forma elementlari",
-        "imagesVideos": "Rasmlar va videolar",
-        "emailSupport": "Email orqali qo'llab-quvvatlash"
+        "addProducts": "3 000 tagacha mahsulot",
+        "formElements": "4 foydalanuvchigacha",
+        "imagesVideos": "Ta'minot (ta'minotchi va qabul)",
+        "emailSupport": "To'liq nasiya + Email yordam"
       },
       "pro": {
         "everythingInBasic": "Asosiy rejadagi hamma narsa",
-        "ecommerceDashboard": "Ecommerce boshqaruv paneli",
-        "productsList": "Mahsulotlar ro'yxati",
-        "addProduct": "Mahsulot qo'shish",
-        "userDebtManagement": "Foydalanuvchi qarzlarini boshqarish",
-        "chartsAnalytics": "Grafiklar va tahlil",
-        "subscriptionManagement": "Obuna boshqaruvi",
+        "ecommerceDashboard": "Cheksiz filial",
+        "productsList": "Cheksiz mahsulot",
+        "addProduct": "Ommaviy mahsulot qo'shish",
+        "userDebtManagement": "To'liq nasiya boshqaruvi",
+        "chartsAnalytics": "Kengaytirilgan tahlil va hisobot",
+        "subscriptionManagement": "Jamoa: rollar va xodimlar",
         "prioritySupport": "Ustuvor qo'llab-quvvatlash"
       }
     },
-    "loadingPlans": "Rejalar yuklanmoqda..."
+    "loadingPlans": "Rejalar yuklanmoqda...",
+    "compare": {
+      "feature": "Imkoniyat",
+      "branches": "Filiallar",
+      "products": "Mahsulotlar",
+      "users": "Foydalanuvchilar",
+      "debt": "Nasiya (qarz)",
+      "inventory": "Inventar",
+      "procurement": "Ta'minot",
+      "reports": "Hisobot va tahlil",
+      "bulkImport": "Ommaviy import",
+      "team": "Jamoa (rollar)",
+      "support": "Qo'llab-quvvatlash",
+      "unlimited": "Cheksiz",
+      "basicValue": "Asosiy",
+      "limited": "Cheklangan",
+      "extended": "Kengaytirilgan",
+      "chat": "Chat",
+      "standard": "Standart",
+      "priority": "Ustuvor",
+      "debtCustomers": "20 mijoz"
+    }
   },
   "sidebar": {
     "dashboard": "Boshqaruv paneli",

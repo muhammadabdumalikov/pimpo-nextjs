@@ -196,37 +196,59 @@
     "comingSoon": "Скоро",
     "month": "/месяц",
     "year": "/год",
+    "som": "сум",
     "choosePlan": "Выбрать",
     "needHelp": "Нужна помощь в выборе?",
     "contactSales": "Связаться с отделом продаж",
     "contactSalesDescription": "Свяжитесь с нашей командой продаж, чтобы найти идеальный план для вашего бизнеса.",
     "features": {
       "free": {
-        "userDebtList": "Список долгов пользователей",
-        "ecommerceDashboard": "Панель управления Ecommerce",
-        "productsList": "Список товаров",
-        "debtsLimit": "До 20 долгов",
-        "productsLimit": "До 20 товаров"
+        "userDebtList": "Долговая книга (насия)",
+        "ecommerceDashboard": "Панель и продажи",
+        "productsList": "1 филиал, 1 пользователь",
+        "debtsLimit": "До 20 должников",
+        "productsLimit": "До 150 товаров"
       },
       "basic": {
-        "everythingInFree": "Все из бесплатного",
-        "addProducts": "Добавление товаров",
-        "formElements": "Элементы формы",
-        "imagesVideos": "Изображения и видео",
-        "emailSupport": "Поддержка по email"
+        "everythingInFree": "Всё из тарифа Бесплатный",
+        "addProducts": "До 3 000 товаров",
+        "formElements": "До 4 пользователей",
+        "imagesVideos": "Закупки (поставщики и приёмка)",
+        "emailSupport": "Полное управление долгами + Email-поддержка"
       },
       "pro": {
-        "everythingInBasic": "Все из базового",
-        "ecommerceDashboard": "Панель управления Ecommerce",
-        "productsList": "Список товаров",
-        "addProduct": "Добавить товар",
-        "userDebtManagement": "Управление долгами пользователей",
-        "chartsAnalytics": "Графики и аналитика",
-        "subscriptionManagement": "Управление подписками",
+        "everythingInBasic": "Всё из тарифа Базовый",
+        "ecommerceDashboard": "Неограниченно филиалов",
+        "productsList": "Неограниченно товаров",
+        "addProduct": "Массовый импорт товаров",
+        "userDebtManagement": "Полное управление долгами",
+        "chartsAnalytics": "Расширенная аналитика и отчёты",
+        "subscriptionManagement": "Команда: роли и сотрудники",
         "prioritySupport": "Приоритетная поддержка"
       }
     },
-    "loadingPlans": "Загрузка тарифов..."
+    "loadingPlans": "Загрузка тарифов...",
+    "compare": {
+      "feature": "Возможность",
+      "branches": "Филиалы",
+      "products": "Товары",
+      "users": "Пользователи",
+      "debt": "Долги (насия)",
+      "inventory": "Склад",
+      "procurement": "Закупки",
+      "reports": "Отчёты и аналитика",
+      "bulkImport": "Массовый импорт",
+      "team": "Команда (роли)",
+      "support": "Поддержка",
+      "unlimited": "Безлимит",
+      "basicValue": "Базово",
+      "limited": "Ограничено",
+      "extended": "Расширенно",
+      "chat": "Чат",
+      "standard": "Стандарт",
+      "priority": "Приоритет",
+      "debtCustomers": "20 клиентов"
+    }
   },
   "sidebar": {
     "dashboard": "Панель управления",
