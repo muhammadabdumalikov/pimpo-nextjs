@@ -49,6 +49,38 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
   return response.json();
 }
 
+export interface RegisterRequest {
+  /** Business (shop) name — also the owner/admin account name. */
+  name: string;
+  email: string;
+  /** Login username used to sign in. */
+  login: string;
+  password: string;
+}
+
+// Self-service signup: creates a business, which *is* the owner/admin account.
+// New businesses start on the free plan by default (no subscription row needed).
+export async function register(data: RegisterRequest): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/businesses/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ message: 'Registration failed' }));
+    // class-validator returns `message` as an array of strings.
+    const message = Array.isArray(error.message)
+      ? error.message.join(', ')
+      : error.message;
+    throw new Error(message || 'Registration failed');
+  }
+}
+
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('accessToken');

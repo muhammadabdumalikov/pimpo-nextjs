@@ -830,7 +830,32 @@
     "loginLabel": "Login",
     "passwordLabel": "Parol",
     "forgotPassword": "Parolni unutdingizmi?",
-    "signOut": "Chiqish"
+    "signOut": "Chiqish",
+    "backHome": "Bosh sahifaga",
+    "registerTitle": "Biznes akkaunt yarating",
+    "registerSubtitle": "Bir necha daqiqada ro'yxatdan o'ting va sotuvni boshlang.",
+    "selectedPlan": "Tanlangan tarif",
+    "plan": {
+      "free": "Bepul",
+      "basic": "Standart",
+      "pro": "Biznes"
+    },
+    "businessNameLabel": "Biznes nomi",
+    "businessNamePlaceholder": "Masalan: Diyor Market",
+    "usernameLabel": "Login (foydalanuvchi nomi)",
+    "usernamePlaceholder": "Kirish uchun login",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Emailingizni kiriting",
+    "passwordHint": "Kamida 6 ta belgi",
+    "agreeTerms": "Ro'yxatdan o'tish orqali Foydalanish shartlari va Maxfiylik siyosatiga rozilik bildiraman",
+    "registering": "Yaratilmoqda...",
+    "createAccount": "Akkaunt yaratish",
+    "haveAccount": "Akkauntingiz bormi?",
+    "mustAgree": "Davom etish uchun shartlarga rozilik bering",
+    "loginTooShort": "Login kamida 3 ta belgidan iborat bo'lishi kerak",
+    "passwordTooShort": "Parol kamida 6 ta belgidan iborat bo'lishi kerak",
+    "registerError": "Ro'yxatdan o'tishda xatolik yuz berdi",
+    "perMonth": "so'm/oy"
   },
   "suppliers": {
     "title": "Yetkazib beruvchilar",

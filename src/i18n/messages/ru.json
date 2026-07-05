@@ -830,7 +830,32 @@
     "loginLabel": "Логин",
     "passwordLabel": "Пароль",
     "forgotPassword": "Забыли пароль?",
-    "signOut": "Выйти"
+    "signOut": "Выйти",
+    "backHome": "На главную",
+    "registerTitle": "Создайте бизнес-аккаунт",
+    "registerSubtitle": "Зарегистрируйтесь за пару минут и начните продавать.",
+    "selectedPlan": "Выбранный тариф",
+    "plan": {
+      "free": "Бесплатный",
+      "basic": "Стандарт",
+      "pro": "Бизнес"
+    },
+    "businessNameLabel": "Название бизнеса",
+    "businessNamePlaceholder": "Например: Diyor Market",
+    "usernameLabel": "Логин (имя пользователя)",
+    "usernamePlaceholder": "Логин для входа",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Введите ваш email",
+    "passwordHint": "Минимум 6 символов",
+    "agreeTerms": "Регистрируясь, я соглашаюсь с Условиями использования и Политикой конфиденциальности",
+    "registering": "Создание...",
+    "createAccount": "Создать аккаунт",
+    "haveAccount": "Уже есть аккаунт?",
+    "mustAgree": "Примите условия, чтобы продолжить",
+    "loginTooShort": "Логин должен содержать минимум 3 символа",
+    "passwordTooShort": "Пароль должен содержать минимум 6 символов",
+    "registerError": "Ошибка при регистрации",
+    "perMonth": "сум/мес"
   },
   "suppliers": {
     "title": "Поставщики",

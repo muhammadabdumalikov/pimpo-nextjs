@@ -829,7 +829,32 @@
     "loginLabel": "Login",
     "passwordLabel": "Password",
     "forgotPassword": "Forgot password?",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "backHome": "Back to home",
+    "registerTitle": "Create a business account",
+    "registerSubtitle": "Sign up in a few minutes and start selling.",
+    "selectedPlan": "Selected plan",
+    "plan": {
+      "free": "Free",
+      "basic": "Standard",
+      "pro": "Business"
+    },
+    "businessNameLabel": "Business name",
+    "businessNamePlaceholder": "e.g. Diyor Market",
+    "usernameLabel": "Username (login)",
+    "usernamePlaceholder": "Login to sign in",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Enter your email",
+    "passwordHint": "At least 6 characters",
+    "agreeTerms": "By signing up I agree to the Terms of Service and Privacy Policy",
+    "registering": "Creating...",
+    "createAccount": "Create account",
+    "haveAccount": "Already have an account?",
+    "mustAgree": "Please accept the terms to continue",
+    "loginTooShort": "Login must be at least 3 characters",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "registerError": "Registration failed",
+    "perMonth": "UZS/mo"
   },
   "suppliers": {
     "title": "Suppliers",

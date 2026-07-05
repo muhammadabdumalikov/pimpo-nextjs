@@ -1,12 +1,11 @@
-import SignUpForm from "@/components/auth/SignUpForm";
+import BusinessRegisterForm from "@/components/auth/BusinessRegisterForm";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Next.js SignUp Page | Pimpo - Next.js Dashboard Template",
-  description: "This is Next.js SignUp Page Pimpo Dashboard Template",
-  // other metadata
+  title: "Ro'yxatdan o'tish | KPOS",
+  description: "Bepul biznes akkaunt yarating va sotuvni boshlang.",
 };
 
 export default function SignUp() {
-  return <SignUpForm />;
+  return <BusinessRegisterForm />;
 }
