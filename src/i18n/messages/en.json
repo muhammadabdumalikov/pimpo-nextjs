@@ -249,7 +249,8 @@
     "previous": "Previous",
     "next": "Next",
     "limitReached": "Limit reached ({limit} products max)",
-    "limitInfo": "{current}/{limit} products"
+    "limitInfo": "{current}/{limit} products",
+    "upgradeCta": "Upgrade plan"
   },
   "categories": {
     "title": "Categories",

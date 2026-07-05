@@ -87,7 +87,8 @@
     "previous": "Олдинги",
     "next": "Кейинги",
     "limitReached": "Лимитга етилди (макс. {limit} маҳсулот)",
-    "limitInfo": "{current}/{limit} маҳсулот"
+    "limitInfo": "{current}/{limit} маҳсулот",
+    "upgradeCta": "Тарифни янгилаш"
   },
   "categories": {
     "title": "Категориялар",

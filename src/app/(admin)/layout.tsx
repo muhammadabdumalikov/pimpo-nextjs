@@ -5,6 +5,7 @@ import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import MenuAccessGuard from "@/components/auth/MenuAccessGuard";
 import React from "react";
 
 export default function AdminLayout({
@@ -34,7 +35,9 @@ export default function AdminLayout({
         {/* Header */}
         <AppHeader />
         {/* Page Content */}
-        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">{children}</div>
+        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+          <MenuAccessGuard>{children}</MenuAccessGuard>
+        </div>
       </div>
     </div>
     </ProtectedRoute>

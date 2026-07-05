@@ -250,7 +250,8 @@
     "previous": "Предыдущая",
     "next": "Следующая",
     "limitReached": "Достигнут лимит ({limit} товаров макс.)",
-    "limitInfo": "{current}/{limit} товаров"
+    "limitInfo": "{current}/{limit} товаров",
+    "upgradeCta": "Повысить тариф"
   },
   "categories": {
     "title": "Категории",

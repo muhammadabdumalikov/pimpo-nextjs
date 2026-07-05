@@ -250,7 +250,8 @@
     "previous": "Oldingi",
     "next": "Keyingi",
     "limitReached": "Limitga yetildi (maks. {limit} mahsulot)",
-    "limitInfo": "{current}/{limit} mahsulot"
+    "limitInfo": "{current}/{limit} mahsulot",
+    "upgradeCta": "Tarifni yangilash"
   },
   "categories": {
     "title": "Kategoriyalar",

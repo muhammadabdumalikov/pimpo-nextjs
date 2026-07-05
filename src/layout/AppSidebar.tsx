@@ -17,7 +17,7 @@ import {
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useAuth } from "@/context/AuthContext";
-import { getMenuPermissions, isMenuAllowed } from "@/data/menuPermissions";
+import { getMenuPermissions, isMenuAllowed, getMenuIdFromPath } from "@/data/menuPermissions";
 
 type NavItem = {
   name: string;
@@ -39,29 +39,6 @@ const AppSidebar: React.FC = () => {
   const { hasMenuAccess } = useAuth();
   const pathname = usePathname();
   const menuPermissions = getMenuPermissions();
-
-  // Helper function to map path to menu identifier
-  const getMenuIdFromPath = (path: string): string | null => {
-    const pathMap: Record<string, string> = {
-      '/': 'dashboard.ecommerce',
-      '/categories': 'ecommerce.categories',
-      '/products': 'ecommerce.products',
-      '/product': 'ecommerce.productsList',
-      '/add-product': 'ecommerce.addProduct',
-      '/user-debt': 'userDebt',
-      '/subscription-management': 'subscriptionManagement',
-      '/settings': 'settings',
-      '/settings/receipts': 'settings.receipts',
-      '/cart': 'checkout',
-      '/inventory': 'inventory',
-      '/suppliers': 'suppliers',
-      '/receipts': 'receipts',
-      '/product-performance': 'productPerformance',
-      '/roles': 'team.roles',
-      '/staff': 'team.staff',
-    };
-    return pathMap[path] || null;
-  };
 
   // A menu is shown only when allowed by BOTH the subscription tier and the
   // acting account's role. The business owner has menuKeys ["*"] so the role

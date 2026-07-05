@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Select from "../form/Select";
@@ -10,7 +11,7 @@ import Button from "../ui/button/Button";
 // only. Keep the import so it can be re-enabled later.
 // import CameraScanner from "../checkout/CameraScanner";
 import { useTranslations } from "@/hooks/useTranslations";
-import { createProduct, updateProduct, generateProductCode, getProduct, getCategories, type Product } from "@/lib/api";
+import { createProduct, updateProduct, generateProductCode, getProduct, getCategories, getProductCount, type Product } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 
@@ -41,12 +42,29 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   // const [scannerOpen, setScannerOpen] = useState(false); // camera scan (parked)
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [productCount, setProductCount] = useState<number | null>(null);
+
+  // Plan product limit — reached only when creating (edits never add a product).
+  const productLimit = getLimit('products');
+  const limitReached =
+    !isEditMode &&
+    productLimit !== null &&
+    productCount !== null &&
+    isLimitReached('products', productCount);
 
   useEffect(() => {
     getCategories()
       .then((list) => setCategories(list.map((c) => ({ id: c.id, name: c.name }))))
       .catch(() => setCategories([]));
   }, []);
+
+  // Fetch the current product count so we can block before submit (create only).
+  useEffect(() => {
+    if (isEditMode) return;
+    getProductCount()
+      .then(setProductCount)
+      .catch(() => setProductCount(null));
+  }, [isEditMode]);
 
   // Load product data if in edit mode
   useEffect(() => {
@@ -160,11 +178,14 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
       return;
     }
 
-    // Check product limit
-    const productLimit = getLimit('products');
-    if (productLimit !== null) {
-      // Note: We'd need to get current count, but for now we'll let the backend handle it
-      // The backend will enforce limits
+    // Block when the plan's product limit is already reached (backend also enforces).
+    if (limitReached) {
+      showToast(
+        'error',
+        t('products.limitReached').replace('{limit}', String(productLimit)),
+        'Error',
+      );
+      return;
     }
 
     try {
@@ -226,6 +247,19 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
 
   return (
     <div className="space-y-6">
+      {limitReached && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-500 sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            {t('products.limitReached').replace('{limit}', String(productLimit))}
+          </span>
+          <Link
+            href="/upgrade-plan"
+            className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+          >
+            {t('products.upgradeCta')}
+          </Link>
+        </div>
+      )}
       {/* Product Information Section */}
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
@@ -487,7 +521,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
           variant="primary"
           size="md"
           onClick={() => handleSubmit("publish")}
-          disabled={isSubmitting}
+          disabled={isSubmitting || limitReached}
         >
           {isSubmitting ? (
             <span className="flex items-center justify-center gap-2">
