@@ -207,12 +207,12 @@
         "userDebtList": "Насия (қарз) дафтари",
         "ecommerceDashboard": "Бошқарув панели ва сотув",
         "productsList": "1 филиал, 1 фойдаланувчи",
-        "debtsLimit": "20 тагача насия мижози",
-        "productsLimit": "150 тагача маҳсулот"
+        "debtsLimit": "20 тагача насия",
+        "productsLimit": "100 тагача маҳсулот"
       },
       "basic": {
         "everythingInFree": "Бепул режадаги ҳамма нарса",
-        "addProducts": "3 000 тагача маҳсулот",
+        "addProducts": "1 500 тагача маҳсулот",
         "formElements": "4 фойдаланувчигача",
         "imagesVideos": "Таъминот (таъминотчи ва қабул)",
         "emailSupport": "Тўлиқ насия + Email ёрдам"
@@ -248,7 +248,7 @@
       "chat": "Чат",
       "standard": "Стандарт",
       "priority": "Устувор",
-      "debtCustomers": "20 мижоз"
+      "debtCustomers": "20 насия"
     }
   },
   "sidebar": {

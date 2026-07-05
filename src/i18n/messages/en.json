@@ -83,12 +83,11 @@
         "cta": "Start free",
         "features": [
           "1 branch",
-          "Up to 150 products",
+          "Up to 100 products",
           "1 user",
           "Sales and checkout",
-          "Credit (up to 20 customers)",
-          "Basic inventory",
-          "Chat support"
+          "Credit (up to 20 records)",
+          "Basic inventory"
         ]
       },
       "basic": {
@@ -99,7 +98,7 @@
         "cta": "Choose Standard",
         "features": [
           "1 branch",
-          "Up to 3,000 products",
+          "Up to 1,500 products",
           "4 users",
           "Full credit management",
           "Full inventory",
@@ -369,12 +368,12 @@
         "userDebtList": "Debt (credit) ledger",
         "ecommerceDashboard": "Dashboard & checkout",
         "productsList": "1 branch, 1 user",
-        "debtsLimit": "Up to 20 debt customers",
-        "productsLimit": "Up to 150 products"
+        "debtsLimit": "Up to 20 debts",
+        "productsLimit": "Up to 100 products"
       },
       "basic": {
         "everythingInFree": "Everything in Free",
-        "addProducts": "Up to 3,000 products",
+        "addProducts": "Up to 1,500 products",
         "formElements": "Up to 4 users",
         "imagesVideos": "Procurement (suppliers & receipts)",
         "emailSupport": "Full debt management + Email support"
@@ -410,7 +409,7 @@
       "chat": "Chat",
       "standard": "Standard",
       "priority": "Priority",
-      "debtCustomers": "20 customers"
+      "debtCustomers": "20 debts"
     }
   },
   "sidebar": {

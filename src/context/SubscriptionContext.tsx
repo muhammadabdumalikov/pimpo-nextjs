@@ -50,7 +50,7 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
       console.error('Failed to load subscription:', error);
       // Default to free tier on error
       setCurrentTierState('free');
-      setLimits({ debtsLimit: 20, productsLimit: 20 });
+      setLimits({ debtsLimit: 20, productsLimit: 100 });
     } finally {
       setIsLoading(false);
     }

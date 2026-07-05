@@ -57,8 +57,8 @@ export default function SubscriptionManagement() {
       },
       {
         label: t("upgradePlan.compare.products"),
-        free: (150).toLocaleString("ru-RU"),
-        basic: (3000).toLocaleString("ru-RU"),
+        free: (100).toLocaleString("ru-RU"),
+        basic: (1500).toLocaleString("ru-RU"),
         pro: t("upgradePlan.compare.unlimited"),
       },
       {
@@ -105,7 +105,7 @@ export default function SubscriptionManagement() {
       },
       {
         label: t("upgradePlan.compare.support"),
-        free: t("upgradePlan.compare.chat"),
+        free: false,
         basic: t("upgradePlan.compare.standard"),
         pro: t("upgradePlan.compare.priority"),
       },

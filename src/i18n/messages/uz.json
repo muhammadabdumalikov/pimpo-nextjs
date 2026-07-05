@@ -84,12 +84,11 @@
         "cta": "Bepul boshlash",
         "features": [
           "1 filial",
-          "150 tagacha mahsulot",
+          "100 tagacha mahsulot",
           "1 foydalanuvchi",
           "Sotuv va kassa",
-          "Nasiya (20 mijozgacha)",
-          "Asosiy inventar",
-          "Chat orqali yordam"
+          "Nasiya (20 tagacha)",
+          "Asosiy inventar"
         ]
       },
       "basic": {
@@ -100,7 +99,7 @@
         "cta": "Standartni tanlash",
         "features": [
           "1 filial",
-          "3 000 tagacha mahsulot",
+          "1 500 tagacha mahsulot",
           "4 foydalanuvchi",
           "To'liq nasiya boshqaruvi",
           "To'liq inventar",
@@ -370,12 +369,12 @@
         "userDebtList": "Nasiya (qarz) daftari",
         "ecommerceDashboard": "Boshqaruv paneli va sotuv",
         "productsList": "1 filial, 1 foydalanuvchi",
-        "debtsLimit": "20 tagacha nasiya mijozi",
-        "productsLimit": "150 tagacha mahsulot"
+        "debtsLimit": "20 tagacha nasiya",
+        "productsLimit": "100 tagacha mahsulot"
       },
       "basic": {
         "everythingInFree": "Bepul rejadagi hamma narsa",
-        "addProducts": "3 000 tagacha mahsulot",
+        "addProducts": "1 500 tagacha mahsulot",
         "formElements": "4 foydalanuvchigacha",
         "imagesVideos": "Ta'minot (ta'minotchi va qabul)",
         "emailSupport": "To'liq nasiya + Email yordam"
@@ -411,7 +410,7 @@
       "chat": "Chat",
       "standard": "Standart",
       "priority": "Ustuvor",
-      "debtCustomers": "20 mijoz"
+      "debtCustomers": "20 nasiya"
     }
   },
   "sidebar": {
