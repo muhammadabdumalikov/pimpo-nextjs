@@ -85,11 +85,8 @@ const AppHeader: React.FC = () => {
             {/* Cross Icon */}
           </button>
 
-          <Link href="/dashboard" className="flex items-center gap-2 lg:hidden" aria-label="KPOS">
-            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-brand-500 text-lg font-bold text-white">
-              K
-            </span>
-            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+          <Link href="/dashboard" className="flex items-center lg:hidden" aria-label="KPOS">
+            <span className="rounded-lg bg-brand-500 px-2.5 py-1 text-lg font-bold tracking-tight text-white">
               KPOS
             </span>
           </Link>

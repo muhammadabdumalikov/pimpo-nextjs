@@ -286,7 +286,7 @@
     "monthlySales": "Oylik sotuvlar",
     "monthlyTarget": "Oylik maqsad",
     "targetDescription": "Har bir oy uchun belgilangan maqsad",
-    "earnMessage": "Siz bu oyda ${amount} topdingiz, bu o'tgan oydan yuqori. Yaxshi ishingizni davom eting!",
+    "earnMessage": "Siz bu oyda {amount} sotuv qildingiz. Ajoyib ish!",
     "recentProducts": "So'nggi mahsulotlar",
     "recentProductsDescription": "Omborga qo'shilgan so'nggi mahsulotlar",
     "viewMore": "Ko'proq ko'rish",

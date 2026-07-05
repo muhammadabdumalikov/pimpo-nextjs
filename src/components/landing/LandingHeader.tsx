@@ -43,11 +43,8 @@ export default function LandingHeader() {
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2" aria-label="KPOS">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-lg font-bold text-white">
-            K
-          </span>
-          <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <Link href="/" className="flex items-center" aria-label="KPOS">
+          <span className="rounded-lg bg-brand-500 px-2.5 py-1 text-lg font-bold tracking-tight text-white">
             KPOS
           </span>
         </Link>

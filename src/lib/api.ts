@@ -160,6 +160,7 @@ export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to fetch subscription plans' }));
     throw new Error(error.message || 'Failed to fetch subscription plans');
   }
@@ -182,6 +183,7 @@ export async function getCurrentSubscription(): Promise<CurrentSubscription> {
   });
   console.log(response);
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     throw new Error('Failed to fetch current subscription');
   }
 
@@ -203,6 +205,7 @@ export async function getSubscriptionLimits(): Promise<SubscriptionLimits> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     throw new Error('Failed to fetch subscription limits');
   }
 
@@ -225,6 +228,7 @@ export async function subscribeToPlan(tier: string): Promise<CurrentSubscription
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to subscribe' }));
     throw new Error(error.message || 'Failed to subscribe');
   }
@@ -249,6 +253,7 @@ export async function changeSubscription(tier: string): Promise<CurrentSubscript
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to change subscription' }));
     throw new Error(error.message || 'Failed to change subscription');
   }
@@ -272,6 +277,7 @@ export async function cancelSubscription(): Promise<void> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to cancel subscription' }));
     throw new Error(error.message || 'Failed to cancel subscription');
   }
@@ -346,6 +352,7 @@ export async function getProducts(page?: number, limit?: number, search?: string
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     throw new Error('Failed to fetch products');
   }
 
@@ -367,6 +374,7 @@ export async function getProduct(productId: string): Promise<Product> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     throw new Error('Failed to fetch product');
   }
 
@@ -389,6 +397,7 @@ export async function createProduct(data: CreateProductRequest): Promise<Product
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to create product' }));
     throw new Error(error.message || 'Failed to create product');
   }
@@ -413,6 +422,7 @@ export async function updateProduct(productId: string, data: UpdateProductReques
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to update product' }));
     throw new Error(error.message || 'Failed to update product');
   }
@@ -436,6 +446,7 @@ export async function deleteProduct(productId: string): Promise<void> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to delete product' }));
     throw new Error(error.message || 'Failed to delete product');
   }
@@ -456,6 +467,7 @@ export async function getProductCount(): Promise<number> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     throw new Error('Failed to fetch product count');
   }
 
@@ -478,6 +490,7 @@ export async function generateProductCode(): Promise<string> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to generate product code' }));
     throw new Error(error.message || 'Failed to generate product code');
   }
@@ -520,6 +533,7 @@ export async function getCategories(): Promise<Category[]> {
     },
   });
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     throw new Error('Failed to fetch categories');
   }
   return response.json();
@@ -539,6 +553,7 @@ export async function createCategory(data: CreateCategoryDto): Promise<Category>
     body: JSON.stringify(data),
   });
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to create category' }));
     throw new Error(error.message || 'Failed to create category');
   }
@@ -559,6 +574,7 @@ export async function updateCategory(id: string, data: UpdateCategoryDto): Promi
     body: JSON.stringify(data),
   });
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to update category' }));
     throw new Error(error.message || 'Failed to update category');
   }
@@ -578,6 +594,7 @@ export async function deleteCategory(id: string): Promise<void> {
     },
   });
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to delete category' }));
     throw new Error(error.message || 'Failed to delete category');
   }
@@ -610,6 +627,7 @@ export async function uploadStorageFile(
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to upload file' }));
     throw new Error(error.message || 'Failed to upload file');
   }
@@ -727,6 +745,7 @@ export async function getDebts(
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to fetch debts' }));
     throw new Error(error.message || 'Failed to fetch debts');
   }
@@ -795,6 +814,7 @@ export async function getDebt(id: string): Promise<UserDebt> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to fetch debt' }));
     throw new Error(error.message || 'Failed to fetch debt');
   }
@@ -817,6 +837,7 @@ export async function getDebtsByUser(userId: string): Promise<UserDebt[]> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to fetch user debts' }));
     throw new Error(error.message || 'Failed to fetch user debts');
   }
@@ -841,6 +862,7 @@ export async function createDebt(data: CreateDebtDto): Promise<UserDebt> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to create debt' }));
     throw new Error(error.message || 'Failed to create debt');
   }
@@ -865,6 +887,7 @@ export async function updateDebt(id: string, data: UpdateDebtDto): Promise<UserD
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to update debt' }));
     throw new Error(error.message || 'Failed to update debt');
   }
@@ -888,6 +911,7 @@ export async function deleteDebt(id: string): Promise<void> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to delete debt' }));
     throw new Error(error.message || 'Failed to delete debt');
   }
@@ -908,6 +932,7 @@ export async function getDebtCount(): Promise<number> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     throw new Error('Failed to fetch debt count');
   }
 
@@ -930,7 +955,27 @@ function authHeaders(): HeadersInit {
   };
 }
 
+// Called on any 401 from the API (e.g. an expired token): drop the stale
+// session and bounce to the login page. Runs as a side effect so it fires even
+// when the caller swallows the thrown error (dashboard widgets use .catch()).
+export function handleUnauthorized(): void {
+  if (typeof window === 'undefined') return;
+  removeAuthToken();
+  clearAccount();
+  const path = window.location.pathname;
+  const onAuthPage =
+    path.startsWith('/signin') ||
+    path.startsWith('/signup') ||
+    path.startsWith('/reset-password');
+  if (!onAuthPage) {
+    window.location.href = '/signin';
+  }
+}
+
 async function parseError(response: Response, fallback: string): Promise<never> {
+  if (response.status === 401) {
+    handleUnauthorized();
+  }
   const error = await response.json().catch(() => ({ message: fallback }));
   throw new Error(error.message || fallback);
 }
@@ -1185,6 +1230,18 @@ export async function getOrderRevenue(): Promise<number> {
   if (!response.ok) await parseError(response, 'Failed to fetch revenue');
   const result = await response.json();
   return result.revenue;
+}
+
+// Completed-order revenue per calendar month (12 values, Jan..Dec) for a year.
+export async function getMonthlySales(year?: number): Promise<number[]> {
+  const query = year ? `?year=${year}` : '';
+  const response = await fetch(`${API_BASE_URL}/orders/monthly-sales${query}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch monthly sales');
+  const result = await response.json();
+  return (result.monthly as number[]) ?? [];
 }
 
 // Receipt settings API

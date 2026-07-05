@@ -20,11 +20,8 @@ export default function AuthLayout({
               {/* <!-- ===== Common Grid Shape Start ===== --> */}
               <GridShape />
               <div className="flex flex-col items-center max-w-lg">
-                <Link href="/" className="flex items-center gap-5" aria-label="KPOS">
-                  <span className="flex h-28 w-28 items-center justify-center rounded-3xl bg-brand-500 text-7xl font-bold text-white">
-                    K
-                  </span>
-                  <span className="text-8xl font-bold tracking-tight text-white">
+                <Link href="/" aria-label="KPOS">
+                  <span className="flex items-center justify-center rounded-3xl bg-brand-500 px-12 py-8 text-7xl font-bold tracking-tight text-white">
                     KPOS
                   </span>
                 </Link>

@@ -3,9 +3,10 @@ import { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
 import { MoreDotIcon } from "@/icons";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { useTranslations } from "@/hooks/useTranslations";
+import { getMonthlySales } from "@/lib/api";
 
 // Dynamically import the ReactApexChart component
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -89,14 +90,32 @@ export default function MonthlySalesChart() {
         show: false,
       },
       y: {
-        formatter: (val: number) => `${val}`,
+        formatter: (val: number) =>
+          `${new Intl.NumberFormat("uz-UZ").format(Math.round(val))} so'm`,
       },
     },
   };
+
+  const [monthly, setMonthly] = useState<number[]>(new Array(12).fill(0));
+
+  useEffect(() => {
+    let active = true;
+    getMonthlySales()
+      .then((data) => {
+        if (active && data.length === 12) setMonthly(data);
+      })
+      .catch(() => {
+        /* leave the chart at zeros on failure */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const series = [
     {
-      name: "Sales",
-      data: [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112],
+      name: t("dashboard.monthlySales"),
+      data: monthly,
     },
   ];
   const [isOpen, setIsOpen] = useState(false);

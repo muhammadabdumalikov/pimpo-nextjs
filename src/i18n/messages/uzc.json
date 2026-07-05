@@ -123,7 +123,7 @@
     "monthlySales": "Ойлик сотувлар",
     "monthlyTarget": "Ойлик мақсад",
     "targetDescription": "Ҳар бир ой учун белгиланган мақсад",
-    "earnMessage": "Сиз бу ойда ${amount} топдингиз, бу ўтган ойдан юқори. Яхши ишингизни давом этинг!",
+    "earnMessage": "Сиз бу ойда {amount} сотув қилдингиз. Ажойиб иш!",
     "recentProducts": "Сўнгги маҳсулотлар",
     "recentProductsDescription": "Омборга қўшилган сўнгги маҳсулотлар",
     "viewMore": "Кўпроқ кўриш",

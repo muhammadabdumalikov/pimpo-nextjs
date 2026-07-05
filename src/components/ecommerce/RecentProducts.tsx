@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -8,81 +9,43 @@ import {
 } from "../ui/table";
 import Image from "next/image";
 import { useTranslations } from "@/hooks/useTranslations";
+import { getProducts, type Product } from "@/lib/api";
 
-// Define the TypeScript interface for the table rows
-interface ProductV2 {
-  id: number;
-  name: string;
-  priceIn: string;
-  priceOut: string;
-  profit: string;
-  quantity: number;
-  image: string;
-}
-
-// Define the table data using the interface
-const tableData: ProductV2[] = [
-  {
-    id: 1,
-    name: "ASUS ROG Gaming Laptop",
-    priceIn: "$1,800",
-    priceOut: "$2,199",
-    profit: "$399",
-    quantity: 0,
-    image: "/images/product/product-01.jpg",
-  },
-  {
-    id: 2,
-    name: "Airpods Pro 2nd Gen",
-    priceIn: "$650",
-    priceOut: "$839",
-    profit: "$189",
-    quantity: 45,
-    image: "/images/product/product-02.jpg",
-  },
-  {
-    id: 3,
-    name: "Apple Watch Ultra",
-    priceIn: "$1,200",
-    priceOut: "$1,579",
-    profit: "$379",
-    quantity: 0,
-    image: "/images/product/product-03.jpg",
-  },
-  {
-    id: 4,
-    name: "Bose QuietComfort Earbuds",
-    priceIn: "$200",
-    priceOut: "$279",
-    profit: "$79",
-    quantity: 120,
-    image: "/images/product/product-04.jpg",
-  },
-  {
-    id: 5,
-    name: "Canon EOS R5 Camera",
-    priceIn: "$3,200",
-    priceOut: "$3,899",
-    profit: "$699",
-    quantity: 8,
-    image: "/images/product/product-05.jpg",
-  },
-];
+const formatSum = (value: number) =>
+  `${new Intl.NumberFormat("uz-UZ").format(Math.round(value))} so'm`;
 
 export default function RecentProducts() {
   const { t } = useTranslations();
-  // Sort products by quantity in descending order
-  const sortedProducts = [...tableData].sort((a, b) => a.quantity - b.quantity);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        // Most recently added products (API returns newest first).
+        const res = await getProducts(1, 5);
+        if (active) setProducts(res.products);
+      } catch {
+        if (active) setProducts([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
       <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            {t('dashboard.recentProducts')}
+            {t("dashboard.recentProducts")}
           </h3>
           <p className="mt-1 text-gray-500 text-theme-sm dark:text-gray-400">
-            {t('dashboard.recentProductsDescription')}
+            {t("dashboard.recentProductsDescription")}
           </p>
         </div>
       </div>
@@ -95,75 +58,101 @@ export default function RecentProducts() {
                 isHeader
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                {t('products.products')}
+                {t("products.products")}
               </TableCell>
               <TableCell
                 isHeader
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                {t('products.priceIn')}
+                {t("products.priceIn")}
               </TableCell>
               <TableCell
                 isHeader
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                {t('products.priceOut')}
+                {t("products.priceOut")}
               </TableCell>
               <TableCell
                 isHeader
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                {t('products.profit')}
+                {t("products.profit")}
               </TableCell>
               <TableCell
                 isHeader
                 className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                {t('products.quantity')}
+                {t("products.quantity")}
               </TableCell>
             </TableRow>
           </TableHeader>
 
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {sortedProducts.map((product) => (
-              <TableRow
-                key={product.id}
-                className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02]"
-              >
-                <TableCell className="py-3 px-4 sm:px-6">
-                  <div className="flex items-center gap-3">
-                    <div className="h-[40px] w-[40px] overflow-hidden rounded-md">
-                      <Image
-                        width={40}
-                        height={40}
-                        src={product.image}
-                        className="h-[40px] w-[40px] object-cover"
-                        alt={product.name}
-                      />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                        {product.name}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="py-3 px-4 sm:px-6 text-gray-500 text-theme-sm dark:text-gray-400">
-                  {product.priceIn}
-                </TableCell>
-                <TableCell className="py-3 px-4 sm:px-6 text-gray-500 text-theme-sm dark:text-gray-400">
-                  {product.priceOut}
-                </TableCell>
-                <TableCell className="py-3 px-4 sm:px-6">
-                  <span className="text-success-600 text-theme-sm font-medium dark:text-success-500">
-                    {product.profit}
-                  </span>
-                </TableCell>
-                <TableCell className="py-3 px-4 sm:px-6 text-gray-500 text-theme-sm dark:text-gray-400">
-                  {product.quantity}
+            {loading ? (
+              <TableRow>
+                <TableCell className="py-6 px-4 sm:px-6 text-center text-gray-400 text-theme-sm">
+                  {t("common.loading")}
                 </TableCell>
               </TableRow>
-            ))}
+            ) : products.length === 0 ? (
+              <TableRow>
+                <TableCell className="py-6 px-4 sm:px-6 text-center text-gray-400 text-theme-sm">
+                  {t("products.noProducts")}
+                </TableCell>
+              </TableRow>
+            ) : (
+              products.map((product) => {
+                const priceIn = Number(product.priceIn) || 0;
+                const priceOut = Number(product.priceOut) || 0;
+                // Total profit held in stock: unit margin × quantity on hand.
+                const profit = (priceOut - priceIn) * product.quantity;
+                return (
+                  <TableRow
+                    key={product.id}
+                    className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02]"
+                  >
+                    <TableCell className="py-3 px-4 sm:px-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-[40px] w-[40px] flex-none items-center justify-center overflow-hidden rounded-md bg-gray-100 dark:bg-gray-800">
+                          {product.image ? (
+                            <Image
+                              width={40}
+                              height={40}
+                              src={product.image}
+                              className="h-[40px] w-[40px] object-cover"
+                              alt={product.name}
+                            />
+                          ) : (
+                            <span className="text-sm font-semibold text-gray-400">
+                              {product.name.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                            {product.name}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3 px-4 sm:px-6 text-gray-500 text-theme-sm dark:text-gray-400">
+                      {formatSum(priceIn)}
+                    </TableCell>
+                    <TableCell className="py-3 px-4 sm:px-6 text-gray-500 text-theme-sm dark:text-gray-400">
+                      {formatSum(priceOut)}
+                    </TableCell>
+                    <TableCell className="py-3 px-4 sm:px-6">
+                      <span className="text-success-600 text-theme-sm font-medium dark:text-success-500">
+                        {formatSum(profit)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-3 px-4 sm:px-6 text-gray-500 text-theme-sm dark:text-gray-400">
+                      {product.quantity}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </div>

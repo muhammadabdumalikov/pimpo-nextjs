@@ -285,7 +285,7 @@
     "monthlySales": "Monthly Sales",
     "monthlyTarget": "Monthly Target",
     "targetDescription": "Target you've set for each month",
-    "earnMessage": "You earn ${amount} this month, it's higher than last month. Keep up your good work!",
+    "earnMessage": "You've made {amount} in sales this month. Keep it up!",
     "recentProducts": "Recent Products",
     "recentProductsDescription": "Latest products added to inventory",
     "viewMore": "View More",

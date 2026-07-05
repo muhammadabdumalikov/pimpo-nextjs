@@ -386,12 +386,13 @@ const AppSidebar: React.FC = () => {
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link href="/dashboard" className="flex items-center gap-2" aria-label="KPOS">
-          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-brand-500 text-lg font-bold text-white">
-            K
-          </span>
-          {(isExpanded || isHovered || isMobileOpen) && (
-            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <Link href="/dashboard" className="flex items-center" aria-label="KPOS">
+          {isExpanded || isHovered || isMobileOpen ? (
+            <span className="rounded-lg bg-brand-500 px-3 py-1.5 text-xl font-bold tracking-tight text-white">
+              KPOS
+            </span>
+          ) : (
+            <span className="rounded-lg bg-brand-500 px-2 py-1 text-xs font-bold tracking-tight text-white">
               KPOS
             </span>
           )}

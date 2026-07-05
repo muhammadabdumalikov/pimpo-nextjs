@@ -5,9 +5,10 @@ import { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { MoreDotIcon } from "@/icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { useTranslations } from "@/hooks/useTranslations";
+import { getMonthlySales } from "@/lib/api";
 // Dynamically import the ReactApexChart component
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
@@ -15,7 +16,37 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 
 export default function MonthlyTarget() {
   const { t } = useTranslations();
-  const series = [75.55];
+
+  // Real data: this month's revenue vs last month's, from completed orders.
+  const [thisMonth, setThisMonth] = useState(0);
+  const [growth, setGrowth] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    getMonthlySales()
+      .then((data) => {
+        if (!active || data.length !== 12) return;
+        const idx = new Date().getMonth();
+        const current = data[idx] ?? 0;
+        const previous = idx > 0 ? data[idx - 1] ?? 0 : 0;
+        setThisMonth(current);
+        if (previous > 0) {
+          setGrowth(Math.round(((current - previous) / previous) * 100));
+        } else {
+          setGrowth(current > 0 ? 100 : 0);
+        }
+      })
+      .catch(() => {
+        /* leave at zero on failure */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Gauge shows growth vs last month, clamped to a readable 0–100 range.
+  const progress = Math.max(0, Math.min(100, growth));
+  const series = [progress];
   const options: ApexOptions = {
     colors: ["#465FFF"],
     chart: {
@@ -122,12 +153,22 @@ export default function MonthlyTarget() {
             />
           </div>
 
-          <span className="absolute left-1/2 top-full -translate-x-1/2 -translate-y-[90%] rounded-full bg-success-50 px-3 py-1 text-xs font-medium text-success-600 dark:bg-success-500/15 dark:text-success-500">
-            +10%
+          <span
+            className={`absolute left-1/2 top-full -translate-x-1/2 -translate-y-[90%] rounded-full px-3 py-1 text-xs font-medium ${
+              growth >= 0
+                ? "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500"
+                : "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500"
+            }`}
+          >
+            {growth >= 0 ? "+" : ""}
+            {growth}%
           </span>
         </div>
         <p className="mx-auto mt-4 w-full max-w-[380px] text-center text-sm text-gray-500">
-          {t('dashboard.earnMessage').replace('{amount}', '3287')}
+          {t('dashboard.earnMessage').replace(
+            '{amount}',
+            new Intl.NumberFormat('uz-UZ').format(Math.round(thisMonth)) + " so'm"
+          )}
         </p>
       </div>
 
