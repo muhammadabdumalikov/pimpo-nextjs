@@ -16,8 +16,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Public routes that don't require authentication
+// Public routes that don't require authentication. "/" is the marketing landing
+// and must match exactly (startsWith("/") would swallow every route).
 const publicRoutes = ["/signin", "/signup", "/reset-password"];
+const isPublicPath = (pathname: string | null) =>
+  pathname === "/" || publicRoutes.some((route) => pathname?.startsWith(route));
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -29,7 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkAuth = () => {
       const token = getAuthToken();
-      const isPublicRoute = publicRoutes.some((route) => pathname?.startsWith(route));
+      const isPublicRoute = isPublicPath(pathname);
 
       if (!token && !isPublicRoute) {
         // No token and not on a public route - redirect to login

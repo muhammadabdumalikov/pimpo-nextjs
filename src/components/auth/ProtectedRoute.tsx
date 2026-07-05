@@ -8,8 +8,11 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-// Public routes that don't require authentication
+// Public routes that don't require authentication. "/" is the marketing landing
+// and must match exactly (startsWith("/") would swallow every route).
 const publicRoutes = ["/signin", "/signup", "/reset-password"];
+const isPublicPath = (pathname: string | null) =>
+  pathname === "/" || publicRoutes.some((route) => pathname?.startsWith(route));
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { t } = useTranslations();
@@ -20,7 +23,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   useEffect(() => {
     const checkAuth = () => {
       const token = getAuthToken();
-      const isPublicRoute = publicRoutes.some((route) => pathname?.startsWith(route));
+      const isPublicRoute = isPublicPath(pathname);
 
       if (!token && !isPublicRoute) {
         // No token and not on a public route - redirect to login
