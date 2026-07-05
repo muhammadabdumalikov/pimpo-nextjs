@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState,useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
@@ -99,7 +98,7 @@ const AppSidebar: React.FC = () => {
     {
       icon: <GridIcon />,
       name: t('sidebar.dashboard'),
-      path: "/",
+      path: "/dashboard",
     },
     {
       icon: <BoxIcon />,
@@ -387,31 +386,14 @@ const AppSidebar: React.FC = () => {
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link href="/">
-          {isExpanded || isHovered || isMobileOpen ? (
-            <>
-              <Image
-                className="h-8 w-auto dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={154}
-                height={32}
-              />
-              <Image
-                className="hidden h-8 w-auto dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={154}
-                height={32}
-              />
-            </>
-          ) : (
-            <Image
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
-              width={32}
-              height={32}
-            />
+        <Link href="/dashboard" className="flex items-center gap-2" aria-label="KPOS">
+          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-brand-500 text-lg font-bold text-white">
+            K
+          </span>
+          {(isExpanded || isHovered || isMobileOpen) && (
+            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+              KPOS
+            </span>
           )}
         </Link>
       </div>

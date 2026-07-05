@@ -1,4 +1,166 @@
 {
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "pricing": "Pricing",
+      "faq": "FAQ",
+      "login": "Log in",
+      "start": "Start free"
+    },
+    "hero": {
+      "title": "Run your store —",
+      "titleHighlight": "credit sales included",
+      "subtitle": "Pimpo brings sales, credit (debt), inventory, supply and your team together in one simple system. Built for market and shop retail.",
+      "ctaPrimary": "Start free",
+      "ctaSecondary": "See pricing",
+      "note": "No credit card required · Starter plan free forever"
+    },
+    "stats": {
+      "install": {
+        "value": "0 UZS",
+        "label": "Free install and setup"
+      },
+      "credit": {
+        "value": "Credit",
+        "label": "Pimpo's core advantage"
+      },
+      "trial": {
+        "value": "14 days",
+        "label": "Free Business plan trial"
+      }
+    },
+    "features": {
+      "title": "Everything you need to run sales",
+      "subtitle": "From checkout to reports — your daily work in one place.",
+      "badge": "Core",
+      "credit": {
+        "title": "Credit (debt) management",
+        "desc": "Sell on credit; debts, due dates and balances are tracked automatically. The single most important feature for a market seller."
+      },
+      "pos": {
+        "title": "Fast checkout (POS)",
+        "desc": "Check out in seconds with a barcode scanner. Cash, card and credit payments supported."
+      },
+      "inventory": {
+        "title": "Inventory control",
+        "desc": "Stock decreases automatically on every sale. Spot low-stock items in time."
+      },
+      "reports": {
+        "title": "Reports and analytics",
+        "desc": "Track sales, revenue and product performance in real time. See which products earn the most."
+      },
+      "suppliers": {
+        "title": "Supply and receiving",
+        "desc": "Manage suppliers, record goods receipts and restock your warehouse."
+      },
+      "team": {
+        "title": "Team and roles",
+        "desc": "Create separate accounts for staff and grant each the permissions they need."
+      }
+    },
+    "diff": {
+      "badge": "Why Pimpo?",
+      "title": "Credit — the problem we solved best",
+      "desc": "In big POS systems credit is an afterthought. In Pimpo it's central — because credit is what market and shop retail runs on.",
+      "cta": "Try it now",
+      "points": [
+        "Every customer's debt and payment history in one place",
+        "Overdue debts are highlighted automatically",
+        "Turn a sale into a credit record directly",
+        "Remaining debt and total credit always in view"
+      ]
+    },
+    "pricing": {
+      "title": "A plan that fits your business",
+      "subtitle": "From a small shop to a multi-branch network — growing with you.",
+      "popular": "Popular",
+      "annualNote": "−20% on annual billing · Free install and setup · Cancel anytime",
+      "free": {
+        "name": "Starter",
+        "desc": "For shops just getting going",
+        "price": "0 UZS",
+        "period": "/mo",
+        "cta": "Start free",
+        "features": [
+          "1 branch",
+          "Up to 150 products",
+          "1 user",
+          "Sales and checkout",
+          "Credit (up to 20 customers)",
+          "Basic inventory",
+          "Chat support"
+        ]
+      },
+      "basic": {
+        "name": "Standard",
+        "desc": "For growing shops",
+        "price": "99,000",
+        "period": "UZS/mo",
+        "cta": "Choose Standard",
+        "features": [
+          "1 branch",
+          "Up to 3,000 products",
+          "4 users",
+          "Full credit management",
+          "Full inventory",
+          "Suppliers and receiving",
+          "Reports and analytics",
+          "Team and roles (basic)",
+          "Standard support"
+        ]
+      },
+      "pro": {
+        "name": "Business",
+        "desc": "For multi-branch networks",
+        "price": "249,000",
+        "period": "UZS/mo",
+        "cta": "Choose Business",
+        "features": [
+          "Unlimited branches",
+          "Unlimited products",
+          "Unlimited users",
+          "Full credit management",
+          "Bulk product import",
+          "Advanced reports",
+          "Team and roles (full)",
+          "Priority support"
+        ]
+      }
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "free": {
+        "q": "Is there really a free plan?",
+        "a": "Yes. The Starter plan is free forever — no card required. You can upgrade to Standard or Business anytime."
+      },
+      "install": {
+        "q": "How much does setup cost?",
+        "a": "Install and initial setup are free. We help you get the system running."
+      },
+      "credit": {
+        "q": "How does credit work?",
+        "a": "You record a sale on credit — the customer's debt is calculated automatically. Due dates, balances and payment history all live on one screen."
+      },
+      "branches": {
+        "q": "Can I manage several branches?",
+        "a": "Yes. The Business plan has unlimited branches, users and products."
+      },
+      "data": {
+        "q": "Is my data safe?",
+        "a": "Your data is stored securely and visible only to you and the staff you grant access to."
+      }
+    },
+    "cta": {
+      "title": "Bring order to your sales today",
+      "subtitle": "Sign up in a few minutes and make your first sale.",
+      "primary": "Start free",
+      "secondary": "Log in"
+    },
+    "footer": {
+      "tagline": "POS for shop and market",
+      "rights": "© 2026 Pimpo. All rights reserved."
+    }
+  },
   "userDebt": {
     "title": "User Debt List",
     "description": "Track and manage user debts efficiently.",

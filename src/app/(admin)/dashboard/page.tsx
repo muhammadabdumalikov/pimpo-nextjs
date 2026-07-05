@@ -5,12 +5,11 @@ import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
 import RecentProducts from "@/components/ecommerce/RecentProducts";
 
 export const metadata: Metadata = {
-  title:
-    "Next.js Product Dashboard | Pimpo - Next.js Dashboard Template",
-  description: "This is Next.js Product Dashboard for Pimpo Dashboard Template",
+  title: "Boshqaruv paneli | Pimpo",
+  description: "Pimpo POS boshqaruv paneli — sotuv, nasiya va inventar bir joyda.",
 };
 
-export default function Ecommerce() {
+export default function Dashboard() {
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
       <div className="col-span-12">

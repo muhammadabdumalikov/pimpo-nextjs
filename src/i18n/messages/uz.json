@@ -1,4 +1,167 @@
 {
+  "landing": {
+    "nav": {
+      "features": "Imkoniyatlar",
+      "pricing": "Tariflar",
+      "faq": "Savol-javob",
+      "login": "Kirish",
+      "start": "Bepul boshlash"
+    },
+    "hero": {
+      "badge": "O'zbekiston bizneslari uchun",
+      "title": "Do'koningizni boshqaring —",
+      "titleHighlight": "nasiya bilan birga",
+      "subtitle": "KPOS — sotuv, nasiya (qarz), inventar, ta'minot va jamoani bitta oddiy tizimda birlashtiradi. Bozor va do'kon savdosi uchun maxsus yaratilgan.",
+      "ctaPrimary": "Bepul boshlash",
+      "ctaSecondary": "Tariflarni ko'rish",
+      "note": "Kredit karta shart emas · Boshlang'ich tarif abadiy bepul"
+    },
+    "stats": {
+      "install": {
+        "value": "0 so'm",
+        "label": "Bepul o'rnatish va sozlash"
+      },
+      "credit": {
+        "value": "Nasiya",
+        "label": "KPOS'ning asosiy ustunligi"
+      },
+      "trial": {
+        "value": "14 kun",
+        "label": "Biznes tarifni bepul sinash"
+      }
+    },
+    "features": {
+      "title": "Savdoni yuritish uchun barcha vositalar",
+      "subtitle": "Kassadan hisobotgacha — kundalik ishlaringiz bitta joyda.",
+      "badge": "Asosiy",
+      "credit": {
+        "title": "Nasiya (qarz) boshqaruvi",
+        "desc": "Mijozlarga nasiyaga soting; qarzlar, to'lov muddatlari va qoldiqlar avtomatik kuzatiladi. Bozor sotuvchisi uchun eng muhim funksiya."
+      },
+      "pos": {
+        "title": "Tezkor sotuv (kassa)",
+        "desc": "Shtrix-kod skaneri bilan bir necha soniyada checkout. Naqd, karta va nasiya to'lovlari qo'llab-quvvatlanadi."
+      },
+      "inventory": {
+        "title": "Inventar nazorati",
+        "desc": "Har bir sotuvda qoldiq avtomatik kamayadi. Tugab qolayotgan mahsulotlarni o'z vaqtida ko'ring."
+      },
+      "reports": {
+        "title": "Hisobot va tahlil",
+        "desc": "Sotuv, daromad va mahsulot samaradorligini real vaqtda kuzating. Qaysi mahsulot ko'p daromad keltirayotganini biling."
+      },
+      "suppliers": {
+        "title": "Ta'minot va qabul",
+        "desc": "Ta'minotchilarni yuriting, tovar qabulini ro'yxatga oling va omborni to'ldiring."
+      },
+      "team": {
+        "title": "Jamoa va rollar",
+        "desc": "Xodimlar uchun alohida hisoblar oching, har biriga kerakli ruxsatlarni bering."
+      }
+    },
+    "diff": {
+      "badge": "Nega aynan KPOS?",
+      "title": "Nasiya — biz eng yaxshi hal qilgan muammo",
+      "desc": "Yirik POS tizimlarida nasiya ikkinchi darajali funksiya. KPOS'da esa u markazda — chunki bozor va do'kon savdosining asosini nasiya tashkil qiladi.",
+      "cta": "Hoziroq sinab ko'ring",
+      "points": [
+        "Har bir mijozning qarzi va to'lov tarixini bir joyda ko'ring",
+        "To'lov muddati o'tgan qarzlarni avtomatik ajratib ko'rsatadi",
+        "Sotuvni to'g'ridan-to'g'ri nasiyaga rasmiylashtiring",
+        "Qarz qoldig'i va umumiy nasiya summasi doim ko'z oldingizda"
+      ]
+    },
+    "pricing": {
+      "title": "Biznesingizga mos tarif",
+      "subtitle": "Kichik do'kondan ko'p filialli tarmoqqacha — o'sishingiz bilan birga.",
+      "popular": "Ommabop",
+      "annualNote": "Yillik to'lovda −20% chegirma · Bepul o'rnatish va sozlash · Istalgan vaqtda bekor qilish",
+      "free": {
+        "name": "Boshlang'ich",
+        "desc": "Yangi boshlayotgan do'konlar uchun",
+        "price": "0 so'm",
+        "period": "/oy",
+        "cta": "Bepul boshlash",
+        "features": [
+          "1 filial",
+          "150 tagacha mahsulot",
+          "1 foydalanuvchi",
+          "Sotuv va kassa",
+          "Nasiya (20 mijozgacha)",
+          "Asosiy inventar",
+          "Chat orqali yordam"
+        ]
+      },
+      "basic": {
+        "name": "Standart",
+        "desc": "O'sib borayotgan do'konlar uchun",
+        "price": "99 000",
+        "period": "so'm/oy",
+        "cta": "Standartni tanlash",
+        "features": [
+          "1 filial",
+          "3 000 tagacha mahsulot",
+          "4 foydalanuvchi",
+          "To'liq nasiya boshqaruvi",
+          "To'liq inventar",
+          "Ta'minotchilar va qabul",
+          "Hisobot va tahlil",
+          "Jamoa va rollar (asosiy)",
+          "Standart yordam"
+        ]
+      },
+      "pro": {
+        "name": "Biznes",
+        "desc": "Ko'p filialli tarmoqlar uchun",
+        "price": "249 000",
+        "period": "so'm/oy",
+        "cta": "Biznesni tanlash",
+        "features": [
+          "Cheksiz filial",
+          "Cheksiz mahsulot",
+          "Cheksiz foydalanuvchi",
+          "To'liq nasiya boshqaruvi",
+          "Ommaviy mahsulot qo'shish",
+          "Kengaytirilgan hisobotlar",
+          "Jamoa va rollar (to'liq)",
+          "Prioritet yordam"
+        ]
+      }
+    },
+    "faq": {
+      "title": "Ko'p beriladigan savollar",
+      "free": {
+        "q": "Rostdan ham bepul tarif bormi?",
+        "a": "Ha. Boshlang'ich tarif abadiy bepul — kredit karta talab qilinmaydi. Xohlagan vaqtda Standart yoki Biznesga o'tishingiz mumkin."
+      },
+      "install": {
+        "q": "O'rnatish qancha turadi?",
+        "a": "O'rnatish va boshlang'ich sozlash bepul. Biz tizimni ishga tushirishda yordam beramiz."
+      },
+      "credit": {
+        "q": "Nasiya qanday ishlaydi?",
+        "a": "Sotuvni nasiyaga rasmiylashtirasiz — mijoz qarzi avtomatik hisoblanadi. To'lov muddatlari, qoldiqlar va to'lov tarixi bitta ekranda ko'rinadi."
+      },
+      "branches": {
+        "q": "Bir nechta filialni boshqara olamanmi?",
+        "a": "Ha. Biznes tarifida filiallar, foydalanuvchilar va mahsulotlar soni cheksiz."
+      },
+      "data": {
+        "q": "Ma'lumotlarim xavfsizmi?",
+        "a": "Ma'lumotlaringiz xavfsiz saqlanadi va faqat sizga hamda siz ruxsat bergan xodimlarga ko'rinadi."
+      }
+    },
+    "cta": {
+      "title": "Bugundan boshlab savdoni tartibga soling",
+      "subtitle": "Bir necha daqiqada ro'yxatdan o'ting va birinchi sotuvingizni amalga oshiring.",
+      "primary": "Bepul boshlash",
+      "secondary": "Kirish"
+    },
+    "footer": {
+      "tagline": "Do'kon va bozor uchun POS",
+      "rights": "© 2026 KPOS. Barcha huquqlar himoyalangan."
+    }
+  },
   "userDebt": {
     "title": "Qarzdor foydalanuvchilar ro'yxati",
     "description": "Foydalanuvchi qarzlarini samarali kuzatish va boshqarish.",

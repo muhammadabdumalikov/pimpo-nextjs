@@ -5,7 +5,6 @@ import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useSidebar } from "@/context/SidebarContext";
 import { useTranslations } from "@/hooks/useTranslations";
-import Image from "next/image";
 import Link from "next/link";
 import React, { useState ,useEffect,useRef} from "react";
 
@@ -86,21 +85,13 @@ const AppHeader: React.FC = () => {
             {/* Cross Icon */}
           </button>
 
-          <Link href="/" className="lg:hidden">
-            <Image
-              width={154}
-              height={32}
-              className="h-8 w-auto dark:hidden"
-              src="/images/logo/logo.svg"
-              alt="Logo"
-            />
-            <Image
-              width={154}
-              height={32}
-              className="hidden h-8 w-auto dark:block"
-              src="/images/logo/logo-dark.svg"
-              alt="Logo"
-            />
+          <Link href="/dashboard" className="flex items-center gap-2 lg:hidden" aria-label="KPOS">
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-brand-500 text-lg font-bold text-white">
+              K
+            </span>
+            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+              KPOS
+            </span>
           </Link>
 
           <button

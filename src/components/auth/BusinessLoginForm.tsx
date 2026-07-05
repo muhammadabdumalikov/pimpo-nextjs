@@ -26,7 +26,7 @@ export default function BusinessLoginForm() {
   useEffect(() => {
     const token = getAuthToken();
     if (token) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [router]);
 
@@ -56,7 +56,7 @@ export default function BusinessLoginForm() {
       setAccount(response.account);
 
       // Redirect to dashboard
-      router.push("/");
+      router.push("/dashboard");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Login failed. Please try again."
