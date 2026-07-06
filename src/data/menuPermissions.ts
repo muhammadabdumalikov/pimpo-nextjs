@@ -28,6 +28,7 @@ export const defaultMenuPermissions: MenuPermission[] = [
   // permissions) — not on the free plan.
   { menuItem: 'team.roles', allowedTiers: ['basic', 'pro'] },
   { menuItem: 'team.staff', allowedTiers: ['basic', 'pro'] },
+  { menuItem: 'team.sales', allowedTiers: ['basic', 'pro'] },
 
   // Subscription Management (typically admin only, but configurable)
   // Made accessible to all tiers for easier management
@@ -93,6 +94,7 @@ const routeMenuMap: Record<string, string> = {
   '/product-performance': 'productPerformance',
   '/roles': 'team.roles',
   '/staff': 'team.staff',
+  '/staff-sales': 'team.sales',
 };
 
 // Resolve a pathname to a menu id. Exact match wins; otherwise the longest

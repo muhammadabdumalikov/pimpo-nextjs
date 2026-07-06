@@ -463,7 +463,8 @@
     "goodsReceipts": "Приход товаров",
     "comingSoon": "Скоро",
     "editProduct": "Редактировать товар",
-    "receiptManagement": "Управление чеками"
+    "receiptManagement": "Управление чеками",
+    "staffSales": "Продажи сотрудников"
   },
   "inventory": {
     "costingTitle": "Учёт себестоимости",
@@ -953,5 +954,16 @@
       "save": "Сохранить",
       "cancel": "Отмена"
     }
+  },
+  "staffSales": {
+    "title": "Продажи по сотрудникам",
+    "description": "Сколько продал каждый кассир (сотрудник).",
+    "selectDateRange": "Выберите период",
+    "employee": "Сотрудник",
+    "orders": "Заказы",
+    "revenue": "Выручка",
+    "total": "Итого",
+    "unassigned": "Магазин / гость",
+    "noData": "Данных нет"
   }
 }

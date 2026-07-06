@@ -301,7 +301,8 @@
     "goodsReceipts": "Товар кирими",
     "comingSoon": "Тез кунда",
     "editProduct": "Маҳсулотни таҳрирлаш",
-    "receiptManagement": "Чекларни бошқариш"
+    "receiptManagement": "Чекларни бошқариш",
+    "staffSales": "Ходимлар сотуви"
   },
   "inventory": {
     "costingTitle": "Таннарх ҳисоби",
@@ -766,5 +767,16 @@
       "save": "Сақлаш",
       "cancel": "Бекор қилиш"
     }
+  },
+  "staffSales": {
+    "title": "Ходимлар бўйича сотув",
+    "description": "Ҳар бир кассир (ходим) қанча сотгани.",
+    "selectDateRange": "Сана оралиғини танланг",
+    "employee": "Ходим",
+    "orders": "Буюртмалар",
+    "revenue": "Даромад",
+    "total": "Жами",
+    "unassigned": "Дўкон / меҳмон",
+    "noData": "Маълумот топилмади"
   }
 }

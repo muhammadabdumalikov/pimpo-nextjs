@@ -121,6 +121,7 @@ const AppSidebar: React.FC = () => {
       subItems: [
         { name: t('sidebar.roles'), path: "/roles", pro: false },
         { name: t('sidebar.staff'), path: "/staff", pro: false },
+        { name: t('sidebar.staffSales'), path: "/staff-sales", pro: false },
       ],
     },
     {

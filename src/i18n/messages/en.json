@@ -462,7 +462,8 @@
     "goodsReceipts": "Goods Receipts",
     "comingSoon": "Coming soon",
     "editProduct": "Edit Product",
-    "receiptManagement": "Receipt Management"
+    "receiptManagement": "Receipt Management",
+    "staffSales": "Staff sales"
   },
   "inventory": {
     "costingTitle": "Cost accounting",
@@ -952,5 +953,16 @@
       "save": "Save",
       "cancel": "Cancel"
     }
+  },
+  "staffSales": {
+    "title": "Sales by employee",
+    "description": "How much each cashier (employee) sold.",
+    "selectDateRange": "Select date range",
+    "employee": "Employee",
+    "orders": "Orders",
+    "revenue": "Revenue",
+    "total": "Total",
+    "unassigned": "Store / guest",
+    "noData": "No data found"
   }
 }

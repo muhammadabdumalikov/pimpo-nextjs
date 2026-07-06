@@ -463,7 +463,8 @@
     "goodsReceipts": "Mahsulot kirimi",
     "comingSoon": "Tez kunda",
     "editProduct": "Mahsulotni tahrirlash",
-    "receiptManagement": "Cheklarni boshqarish"
+    "receiptManagement": "Cheklarni boshqarish",
+    "staffSales": "Xodimlar sotuvi"
   },
   "inventory": {
     "costingTitle": "Tannarx hisobi",
@@ -953,5 +954,16 @@
       "save": "Saqlash",
       "cancel": "Bekor qilish"
     }
+  },
+  "staffSales": {
+    "title": "Xodimlar bo'yicha sotuv",
+    "description": "Har bir kassir (xodim) qancha sotgani.",
+    "selectDateRange": "Sana oralig'ini tanlang",
+    "employee": "Xodim",
+    "orders": "Buyurtmalar",
+    "revenue": "Daromad",
+    "total": "Jami",
+    "unassigned": "Do'kon / mehmon",
+    "noData": "Ma'lumot topilmadi"
   }
 }

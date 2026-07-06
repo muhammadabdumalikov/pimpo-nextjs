@@ -1322,6 +1322,31 @@ export async function getProductPerformance(
   return response.json();
 }
 
+export interface SalesByEmployeeRow {
+  cashierId: string | null;
+  cashierName: string | null;
+  orderCount: number;
+  revenue: number;
+}
+
+// Completed-order sales grouped by the cashier who rang them up.
+export async function getSalesByEmployee(
+  from?: string,
+  to?: string,
+): Promise<SalesByEmployeeRow[]> {
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  const qs = params.toString();
+  const response = await fetch(
+    `${API_BASE_URL}/orders/sales-by-employee${qs ? `?${qs}` : ''}`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch sales by employee');
+  return response.json();
+}
+
 // ---------------------------------------------------------------------------
 // Suppliers API
 // ---------------------------------------------------------------------------
