@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Label from "../form/Label";
@@ -11,7 +11,7 @@ import Button from "../ui/button/Button";
 // only. Keep the import so it can be re-enabled later.
 // import CameraScanner from "../checkout/CameraScanner";
 import { useTranslations } from "@/hooks/useTranslations";
-import { createProduct, updateProduct, generateProductCode, getProduct, getCategories, getProductCount, type Product } from "@/lib/api";
+import { createProduct, updateProduct, generateProductCode, getProduct, getCategories, getProductCount, lookupBarcode, type Product } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 
@@ -41,6 +41,10 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   // const [scannerOpen, setScannerOpen] = useState(false); // camera scan (parked)
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+  const [isLookingUpBarcode, setIsLookingUpBarcode] = useState(false);
+  // Remember the last barcode we looked up so re-blurring the field (e.g. after a
+  // scanner's Enter) doesn't fire the same request again.
+  const lastLookedUpBarcode = useRef<string>("");
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [productCount, setProductCount] = useState<number | null>(null);
 
@@ -137,6 +141,49 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     if (e.key === "Enter") {
       e.preventDefault();
       e.currentTarget.blur();
+    }
+  };
+
+  // When a barcode is entered/scanned on a new product, look it up against our own
+  // catalog and the shared community catalog to auto-fill name/image. Convenience
+  // only: it never overwrites values the user already typed, and failures are silent.
+  const handleBarcodeLookup = async () => {
+    const barcode = formData.barcode.trim();
+    if (isEditMode || !barcode || barcode === lastLookedUpBarcode.current) return;
+    lastLookedUpBarcode.current = barcode;
+
+    try {
+      setIsLookingUpBarcode(true);
+      const result = await lookupBarcode(barcode);
+      if (!result.found) return;
+
+      if (result.existsInBusiness) {
+        showToast(
+          'warning',
+          t('addProduct.barcodeAlreadyExists') ||
+            'You already have a product with this barcode',
+        );
+        return;
+      }
+
+      // Community match — fill only the fields the user has left empty.
+      if (result.name) {
+        setFormData((prev) => ({
+          ...prev,
+          productName: prev.productName || result.name || "",
+        }));
+      }
+      if (result.image) {
+        setImage((prev) => prev ?? result.image);
+      }
+      showToast(
+        'success',
+        t('addProduct.barcodeAutoFilled') || 'Product info auto-filled from catalog',
+      );
+    } catch {
+      // Lookup is best-effort; ignore errors so the user can keep typing.
+    } finally {
+      setIsLookingUpBarcode(false);
     }
   };
 
@@ -350,8 +397,14 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   value={formData.barcode}
                   onChange={handleInputChange}
                   onKeyDown={handleBarcodeKeyDown}
+                  onBlur={handleBarcodeLookup}
                   maxLength={14}
                 />
+                {isLookingUpBarcode && (
+                  <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {t('addProduct.barcodeLookingUp') || 'Looking up barcode…'}
+                  </p>
+                )}
                 {/* Camera barcode scan — parked, physical scanners only for now.
                 <div className="mt-2 flex gap-2">
                   <button

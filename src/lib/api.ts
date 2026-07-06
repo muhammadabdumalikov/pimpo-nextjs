@@ -381,6 +381,43 @@ export async function getProduct(productId: string): Promise<Product> {
   return response.json();
 }
 
+export interface BarcodeLookupResult {
+  found: boolean;
+  source: 'own' | 'community' | null;
+  name: string | null;
+  image: string | null;
+  categoryName: string | null;
+  existsInBusiness: boolean;
+  productId: string | null;
+}
+
+// Look up a scanned barcode against the business's own catalog and the shared
+// community catalog, to pre-fill a new product form.
+export async function lookupBarcode(barcode: string): Promise<BarcodeLookupResult> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/products/lookup?barcode=${encodeURIComponent(barcode)}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    throw new Error('Failed to look up barcode');
+  }
+
+  return response.json();
+}
+
 export async function createProduct(data: CreateProductRequest): Promise<Product> {
   const token = getAuthToken();
   if (!token) {
