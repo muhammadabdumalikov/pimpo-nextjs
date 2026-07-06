@@ -14,6 +14,7 @@ import { useTranslations } from "@/hooks/useTranslations";
 import { createProduct, updateProduct, generateProductCode, getProduct, getCategories, getProductCount, lookupBarcode, type Product } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useSubscription } from "@/context/SubscriptionContext";
+import { formatNumberInput, digitsOnly } from "@/lib/number";
 
 interface AddProductFormProps {
   productId?: string;
@@ -115,6 +116,18 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
       ...prev,
       quantity: Math.max(0, prev.quantity + delta),
     }));
+  };
+
+  // Price fields: digits only, stored raw and shown grouped ("65 000").
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: digitsOnly(value) }));
+  };
+
+  // Quantity typed directly (still clamped at 0; +/- buttons keep working).
+  const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = digitsOnly(e.target.value);
+    setFormData((prev) => ({ ...prev, quantity: digits === "" ? 0 : Number(digits) }));
   };
 
   const handleSelectChange = (name: string) => (value: string) => {
@@ -442,9 +455,10 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   id="priceIn"
                   name="priceIn"
                   type="text"
-                  placeholder={t('addProduct.pricePlaceholder')}
-                  value={formData.priceIn}
-                  onChange={handleInputChange}
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={formatNumberInput(formData.priceIn)}
+                  onChange={handlePriceChange}
                   required
                 />
               </div>
@@ -455,9 +469,10 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   id="priceOut"
                   name="priceOut"
                   type="text"
-                  placeholder={t('addProduct.pricePlaceholder')}
-                  value={formData.priceOut}
-                  onChange={handleInputChange}
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={formatNumberInput(formData.priceOut)}
+                  onChange={handlePriceChange}
                   required
                 />
               </div>
@@ -501,8 +516,9 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                     <input
                       className="h-full w-full border-0 bg-white text-center text-sm text-gray-700 outline-none focus:ring-0 dark:bg-gray-900 dark:text-gray-400"
                       type="text"
+                      inputMode="numeric"
                       value={formData.quantity}
-                      readOnly
+                      onChange={handleQuantityInput}
                     />
                   </div>
                   <button

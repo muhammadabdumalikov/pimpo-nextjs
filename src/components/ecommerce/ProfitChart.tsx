@@ -117,7 +117,7 @@ export default function ProfitChart() {
           {isOpen && (
             <Dropdown onClose={() => setIsOpen(false)} isOpen={isOpen}>
               <DropdownItem>View Report</DropdownItem>
-              <DropdownItem>Export Data</DropdownItem>
+              <DropdownItem className="pointer-events-none opacity-50 cursor-not-allowed">Export Data</DropdownItem>
             </Dropdown>
           )}
         </div>

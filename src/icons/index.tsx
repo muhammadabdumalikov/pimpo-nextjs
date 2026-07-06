@@ -19,6 +19,7 @@ import GroupIcon from "./group.svg";
 import BoxIconLine from "./box-line.svg";
 import ShootingStarIcon from "./shooting-star.svg";
 import DollarLineIcon from "./dollar-line.svg";
+import MoneyDollarIcon from "./money-dollar-svgrepo-com.svg";
 import TrashBinIcon from "./trash.svg";
 import AngleUpIcon from "./angle-up.svg";
 import AngleDownIcon from "./angle-down.svg";
@@ -78,6 +79,7 @@ export {
   BoxIconLine,
   ShootingStarIcon,
   DollarLineIcon,
+  MoneyDollarIcon,
   TrashBinIcon,
   AngleUpIcon,
   AngleDownIcon,

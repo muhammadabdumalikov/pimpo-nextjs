@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "../ui/table";
 import Badge from "../ui/badge/Badge";
-import { PlusIcon, DownloadIcon, ChevronLeftIcon, PencilIcon, ChevronDownIcon, ChevronUpIcon, TrashBinIcon, CalenderIcon } from "@/icons/index";
+import { PlusIcon, DownloadIcon, ChevronLeftIcon, PencilIcon, ChevronDownIcon, ChevronUpIcon, TrashBinIcon, CalenderIcon, EyeIcon, MoneyDollarIcon } from "@/icons/index";
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { getFlatpickrLocale } from "@/lib/flatpickrLocale";
@@ -18,33 +18,19 @@ import Input from "../form/input/InputField";
 import Select from "../form/Select";
 import SelectField from "../form/SelectField";
 import { Modal } from "../ui/modal";
+import ConfirmModal from "../ui/confirm-modal/ConfirmModal";
 import { useModal } from "@/hooks/useModal";
 import { useTranslations } from "@/hooks/useTranslations";
 import { formatPhone } from "@/lib/phone";
 import { useSubscription } from "@/context/SubscriptionContext";
-import { getDebtGroups, createDebt, updateDebt, deleteDebt, getDebtCount, getOrder, type Order, type DebtGroup } from "@/lib/api";
+import { getDebtGroups, createDebt, updateDebt, deleteDebt, getDebtCount, getOrder, recordDebtPayment, getDebtPayments, deleteDebtPayment, type Order, type DebtGroup, type DebtPayment, type UserDebt } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
-
-// Define the TypeScript interface for the debt (matching backend)
-interface UserDebt {
-  id: string;
-  businessId: string;
-  userId: string;
-  orderId?: string | null;
-  amount: string;
-  status: "Paid" | "Pending" | "Overdue";
-  dueDate: string | Date | null;
-  createdAt: string | Date;
-  description?: string | null;
-  user?: {
-    name: string;
-    phone: string;
-  };
-}
 
 export default function UserDebtList() {
   const { t, locale } = useTranslations();
-  const { getLimit, isLimitReached } = useSubscription();
+  const { getLimit, isLimitReached, currentTier } = useSubscription();
+  // Installment payments + payment history are a Pro-plan feature.
+  const isPro = currentTier === 'pro';
   const { showToast } = useToast();
   // Customer groups come pre-grouped, sorted, paginated from the backend.
   const [groups, setGroups] = useState<DebtGroup[]>([]);
@@ -69,22 +55,44 @@ export default function UserDebtList() {
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const addDebtModal = useModal();
+  // Edit happens in a modal (not inline) so the row layout stays intact.
+  const editDebtModal = useModal();
+  // Delete confirmation (reuses the shared ConfirmModal).
+  const deleteConfirm = useModal();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   // Order/receipt drill-in for a debt that came from a POS sale.
-  const orderModal = useModal();
+  // Combined "details" modal: bought items (order) + installment payment history.
+  const detailsModal = useModal();
+  const [detailsDebt, setDetailsDebt] = useState<UserDebt | null>(null);
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
+  // Installment payment ("bo'lib to'lash") has its own modal, opened from the row.
+  const payDebtModal = useModal();
+  const [payingDebt, setPayingDebt] = useState<UserDebt | null>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState<"cash" | "card">("cash");
+  const [payNote, setPayNote] = useState("");
+  // Lazy-loaded installment payments per debt id (shown in the details modal).
+  const [paymentsByDebt, setPaymentsByDebt] = useState<Record<string, DebtPayment[]>>({});
+  const [loadingPayments, setLoadingPayments] = useState<Set<string>>(new Set());
 
-  const handleViewOrder = async (orderId: string) => {
-    orderModal.openModal();
+  // Open the unified details modal: bought items (order), payment history and the
+  // pay form (Pro), all in one place.
+  const handleOpenDetails = async (debt: UserDebt) => {
+    setDetailsDebt(debt);
     setViewingOrder(null);
-    setOrderLoading(true);
-    try {
-      const order = await getOrder(orderId);
-      setViewingOrder(order);
-    } catch (e) {
-      showToast("error", (e as Error)?.message || "Failed to load order");
-    } finally {
-      setOrderLoading(false);
+    detailsModal.openModal();
+
+    if (debt.orderId) {
+      setOrderLoading(true);
+      getOrder(debt.orderId)
+        .then((order) => setViewingOrder(order))
+        .catch((e) => showToast("error", (e as Error)?.message || "Failed to load order"))
+        .finally(() => setOrderLoading(false));
+    }
+    if (isPro) {
+      loadPayments(debt.id);
     }
   };
   const [addFormData, setAddFormData] = useState({
@@ -102,9 +110,18 @@ export default function UserDebtList() {
   const debtLimit = getLimit('debts');
   const debtLimitReached = debtLimit !== null && isLimitReached('debts', totalDebts);
 
-  // Helper function to parse amount string to number
+  // Helper function to parse amount string to number (ignores any grouping
+  // separators like spaces or commas the user/formatter may have added).
   const parseAmount = (amount: string): number => {
-    return parseFloat(amount.replace(/[$,]/g, "")) || 0;
+    return parseFloat(amount.replace(/[^\d.]/g, "")) || 0;
+  };
+
+  // Group a raw amount for display inside a text input, e.g. "65000" -> "65 000".
+  // Handles stored decimals ("65000.00") and keeps the field empty while empty.
+  const formatAmountInput = (value: string | number | undefined): string => {
+    const raw = String(value ?? "").replace(/[^\d.]/g, "");
+    if (raw === "") return "";
+    return new Intl.NumberFormat("uz-UZ").format(Math.round(parseFloat(raw) || 0));
   };
 
   // Helper function to format number to a UZS currency string (so'm).
@@ -273,6 +290,8 @@ export default function UserDebtList() {
     switch (status) {
       case "Paid":
         return "success";
+      case "Partial":
+        return "info";
       case "Pending":
         return "warning";
       case "Overdue":
@@ -306,6 +325,7 @@ export default function UserDebtList() {
         : "",
       description: debt.description || "",
     });
+    editDebtModal.openModal();
   };
 
   const handleSave = async (id: string) => {
@@ -313,11 +333,13 @@ export default function UserDebtList() {
       setIsSubmitting(true);
       await updateDebt(id, {
         amount: editFormData.amount,
-        status: editFormData.status,
+        // 'Partial' is system-derived; the edit form only exposes these three.
+        status: editFormData.status as 'Paid' | 'Pending' | 'Overdue' | undefined,
         dueDate: editFormData.dueDate as string,
         description: editFormData.description,
       });
       showToast('success', t('userDebt.updateSuccess') || 'Debt updated successfully', 'Success');
+      editDebtModal.closeModal();
       setEditingId(null);
       setEditFormData({});
       // Reload groups (nested debts refresh with it).
@@ -378,16 +400,22 @@ export default function UserDebtList() {
   };
 
   const handleCancel = () => {
+    editDebtModal.closeModal();
     setEditingId(null);
     setEditFormData({});
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm(t('userDebt.deleteConfirm') || 'Are you sure you want to delete this debt?')) {
-      return;
-    }
+  // Open the shared confirmation modal for a debt.
+  const handleDelete = (id: string) => {
+    setDeletingId(id);
+    deleteConfirm.openModal();
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deletingId) return;
+    const id = deletingId;
     try {
+      setIsDeleting(true);
       await deleteDebt(id);
       showToast('success', t('userDebt.deleteSuccess') || 'Debt deleted successfully', 'Success');
       setSelectedDebts(selectedDebts.filter(debtId => debtId !== id));
@@ -396,11 +424,15 @@ export default function UserDebtList() {
         setEditingId(null);
         setEditFormData({});
       }
+      deleteConfirm.closeModal();
+      setDeletingId(null);
       // Reload groups (nested debts refresh with it).
       await loadGroups();
     } catch (error: any) {
       console.error('Failed to delete debt:', error);
       showToast('error', error.message || t('userDebt.deleteError') || 'Failed to delete debt', 'Error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -418,6 +450,86 @@ export default function UserDebtList() {
     fpRef.current?.clear();
     setDateFrom("");
     setDateTo("");
+  };
+
+  // Outstanding balance of a debt (falls back to full amount when no payments).
+  const remainingOf = (debt: UserDebt): number =>
+    debt.remaining ?? parseAmount(debt.amount);
+  const paidOf = (debt: UserDebt): number => debt.paid ?? 0;
+
+  const handleOpenPay = (debt: UserDebt) => {
+    setPayingDebt(debt);
+    setPayAmount(String(Math.round(remainingOf(debt)))); // default: pay off the rest
+    setPayMethod("cash");
+    setPayNote("");
+    payDebtModal.openModal();
+  };
+
+  const handlePaySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payingDebt) return;
+
+    const amount = parseAmount(payAmount);
+    const remaining = remainingOf(payingDebt);
+    if (!(amount > 0)) {
+      showToast('error', t('userDebt.payAmountInvalid') || 'Enter a valid amount', 'Error');
+      return;
+    }
+    if (amount > remaining) {
+      showToast('error', (t('userDebt.payExceeds') || 'Payment exceeds remaining balance ({remaining})').replace('{remaining}', formatAmount(remaining)), 'Error');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await recordDebtPayment(payingDebt.id, {
+        amount: String(amount),
+        method: payMethod,
+        note: payNote || undefined,
+      });
+      showToast('success', t('userDebt.paySuccess') || 'Payment recorded', 'Success');
+      payDebtModal.closeModal();
+      // If the details modal is open for this debt, refresh its payment list.
+      if (detailsDebt?.id === payingDebt.id) {
+        await loadPayments(payingDebt.id);
+      }
+      setPayingDebt(null);
+      await loadGroups();
+    } catch (error: any) {
+      showToast('error', error.message || t('userDebt.payError') || 'Failed to record payment', 'Error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const loadPayments = async (debtId: string) => {
+    setLoadingPayments((prev) => new Set(prev).add(debtId));
+    try {
+      const payments = await getDebtPayments(debtId);
+      setPaymentsByDebt((prev) => ({ ...prev, [debtId]: payments }));
+    } catch (error: any) {
+      showToast('error', error.message || 'Failed to load payments', 'Error');
+    } finally {
+      setLoadingPayments((prev) => {
+        const next = new Set(prev);
+        next.delete(debtId);
+        return next;
+      });
+    }
+  };
+
+  const handleDeletePayment = async (debtId: string, paymentId: string) => {
+    if (!window.confirm(t('userDebt.deletePaymentConfirm') || 'Delete this payment?')) {
+      return;
+    }
+    try {
+      await deleteDebtPayment(debtId, paymentId);
+      showToast('success', t('userDebt.deletePaymentSuccess') || 'Payment deleted', 'Success');
+      await loadPayments(debtId);
+      await loadGroups();
+    } catch (error: any) {
+      showToast('error', error.message || 'Failed to delete payment', 'Error');
+    }
   };
 
   const statusOptions = [
@@ -441,7 +553,7 @@ export default function UserDebtList() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+          <button disabled className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
             <DownloadIcon />
             {t('userDebt.export')}
           </button>
@@ -498,7 +610,7 @@ export default function UserDebtList() {
         <div className="flex items-center gap-3">
           {/* Sort groups */}
           <SelectField
-            className="min-w-[170px]"
+            className="min-w-[10.625rem]"
             value={sortBy}
             onChange={(value) => setSortBy(value as "date" | "amount" | "count")}
             options={[
@@ -553,6 +665,7 @@ export default function UserDebtList() {
               options={[
                 { value: "", label: t('userDebt.allStatuses') || 'All statuses' },
                 { value: "Pending", label: t('userDebt.pending') || 'Pending' },
+                { value: "Partial", label: t('userDebt.partial') || 'Partial' },
                 { value: "Overdue", label: t('userDebt.overdue') || 'Overdue' },
                 { value: "Paid", label: t('userDebt.paid') || 'Paid' },
               ]}
@@ -589,8 +702,11 @@ export default function UserDebtList() {
       )}
 
       {/* Debts Table */}
-      <div className="w-full overflow-x-auto -mx-4 sm:-mx-6" style={{ scrollbarGutter: 'stable' }}>
-        <Table className="w-full min-w-[760px]! [table-layout:fixed]">
+      {/* No `w-full` here: with the negative margins it would pin the box flush-left
+          but leave a gap on the right (clipping the last column). Auto width lets the
+          negative margins bleed the scroll area to both card edges evenly. */}
+      <div className="overflow-x-auto -mx-4 sm:-mx-6" style={{ scrollbarGutter: 'stable' }}>
+        <Table className="w-full min-w-[47.5rem]! [table-layout:fixed]">
           {/* Table Header */}
           <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
             <TableRow>
@@ -602,37 +718,37 @@ export default function UserDebtList() {
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 pr-4 sm:pl-2 sm:pr-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[28%]"
+                className="py-3 pr-4 sm:pl-2 sm:pr-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[25%]"
               >
                 {t('userDebt.descriptionLabel')}
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[20%]"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[16%]"
               >
                 {t('userDebt.phone')}
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[15%]"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[16%]"
               >
                 {t('userDebt.amount')}
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[15%]"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[16%]"
               >
                 {t('userDebt.status')}
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[12%]"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[11%]"
               >
                 {t('userDebt.dueDate')}
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[13%]"
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-sm dark:text-gray-400 w-[16%]"
               >
                 {t('userDebt.actions')}
               </TableCell>
@@ -663,12 +779,14 @@ export default function UserDebtList() {
               const isExpanded = expandedUsers.has(group.userName);
               return (
                 <React.Fragment key={group.userName}>
-                  {/* User Group Row */}
-                  <TableRow className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02] bg-gray-50/50 dark:bg-white/[0.02]">
+                  {/* User Group Row — whole row toggles expansion */}
+                  <TableRow
+                    onClick={() => toggleUserExpansion(group.userName)}
+                    className="cursor-pointer transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02] bg-gray-50/50 dark:bg-white/[0.02]"
+                  >
                     <TableCell className="py-3 px-4 sm:px-6 w-12">
-                      <button
-                        onClick={() => toggleUserExpansion(group.userName)}
-                        className="p-1 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400 transition-transform"
+                      <span
+                        className="inline-flex p-1 text-gray-400 transition-transform"
                         title={isExpanded ? t('userDebt.collapse') : t('userDebt.expand')}
                       >
                         {isExpanded ? (
@@ -676,7 +794,7 @@ export default function UserDebtList() {
                         ) : (
                           <ChevronDownIcon className="w-4 h-4" />
                         )}
-                      </button>
+                      </span>
                     </TableCell>
                     <TableCell className="py-3 pr-4 sm:pl-2 sm:pr-6 w-[25%]">
                       <p className="font-semibold text-gray-800 text-base dark:text-white/90">
@@ -684,14 +802,19 @@ export default function UserDebtList() {
                       </p>
                     </TableCell>
                     <TableCell className="py-3 px-4 sm:px-6 w-[20%]">
-                      <span className="text-gray-500 text-base dark:text-gray-400">
+                      <span className="text-gray-500 text-base dark:text-gray-400 whitespace-nowrap">
                         {formatPhone(group.phone)}
                       </span>
                     </TableCell>
                     <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
                       <p className="font-semibold text-gray-800 text-base dark:text-white/90">
-                        {formatAmount(group.totalDebt)}
+                        {formatAmount(group.totalRemaining ?? group.totalDebt)}
                       </p>
+                      {group.totalRemaining < group.totalDebt && (
+                        <p className="text-xs text-gray-400 line-through">
+                          {formatAmount(group.totalDebt)}
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
                       <span className="text-gray-500 text-base dark:text-gray-400">
@@ -713,130 +836,85 @@ export default function UserDebtList() {
                   {/* Individual Debt Rows - Shown when expanded */}
                   {isExpanded && (
                       group.debts.map((debt) => {
-                        const isEditing = editingId === debt.id;
+                        const remaining = remainingOf(debt);
+                        const paid = paidOf(debt);
+                        const canPay = isPro && debt.status !== 'Paid' && remaining > 0;
+                        // Eye opens the details modal: bought items + payment history.
+                        const hasDetails = !!debt.orderId || (isPro && paid > 0);
                         return (
-                          <TableRow key={debt.id} className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02] bg-white dark:bg-gray-900/50">
+                          <TableRow
+                            key={debt.id}
+                            onClick={hasDetails ? () => handleOpenDetails(debt) : undefined}
+                            className={`transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02] bg-white dark:bg-gray-900/50 ${hasDetails ? 'cursor-pointer' : ''}`}
+                          >
                         <TableCell className="py-3 px-4 sm:px-6 w-12">
                           <span></span>
                         </TableCell>
                         <TableCell className="py-3 pl-8 sm:pl-10 pr-4 sm:pr-6 w-[28%]">
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editFormData.description || ""}
-                              onChange={(e) => handleEditChange("description", e.target.value)}
-                              placeholder={t('userDebt.descriptionPlaceholder')}
-                              className="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                            />
-                          ) : (
-                            <div>
-                              <p className={`font-normal text-base ${debt.description ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 italic'}`}>
-                                {debt.description || t('userDebt.noDescription')}
-                              </p>
-                              <p className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
-                                <span>{formatDate(debt.createdAt)}</span>
-                                {debt.orderId && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleViewOrder(debt.orderId!)}
-                                    className="inline-flex items-center gap-1 rounded bg-brand-50 px-1.5 py-0.5 font-medium text-brand-600 transition hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20"
-                                  >
-                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                                      <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v9a.5.5 0 0 1-.74.44L11.5 12l-1.5.94L8.5 12 7 12.94 5.5 12l-1.76.94A.5.5 0 0 1 3 12.5v-9Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                                      <path d="M5.5 5.5h5M5.5 8h5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                                    </svg>
-                                    {t('userDebt.viewItems') || 'View items'}
-                                  </button>
-                                )}
-                              </p>
-                            </div>
-                          )}
+                          <div>
+                            <p className={`font-normal text-base ${debt.description ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 italic'}`}>
+                              {debt.description || t('userDebt.noDescription')}
+                            </p>
+                            <p className="mt-0.5 text-xs text-gray-400">
+                              {formatDate(debt.createdAt)}
+                            </p>
+                          </div>
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[20%]">
-                            <span className="text-gray-500 text-base dark:text-gray-400">
+                            <span className="text-gray-500 text-base dark:text-gray-400 whitespace-nowrap">
                             {formatPhone(debt.user?.phone || '')}
                             </span>
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editFormData.amount || ""}
-                              onChange={(e) => handleEditChange("amount", e.target.value)}
-                              className="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-base text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                            />
-                          ) : (
-                            <span className="text-gray-500 text-base dark:text-gray-400">
-                              {formatAmount(debt.amount)}
-                            </span>
-                          )}
+                          <p className="font-medium text-gray-800 text-base dark:text-white/90">
+                            {formatAmount(remaining)}
+                          </p>
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
-                          {isEditing ? (
-                            <SelectField
-                              buttonClassName="h-9"
-                              value={editFormData.status || ""}
-                              onChange={(value) => handleEditChange("status", value as UserDebt["status"])}
-                              options={statusOptions}
-                            />
-                          ) : (
-                            <Badge color={getStatusBadgeColor(debt.status)}>
-                              {t(`userDebt.${debt.status.toLowerCase()}`)}
-                            </Badge>
-                          )}
+                          <Badge color={getStatusBadgeColor(debt.status)}>
+                            {t(`userDebt.${debt.status.toLowerCase()}`)}
+                          </Badge>
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[12%]">
-                          {isEditing ? (
-                            <div className="[&>div]:mb-0 [&_input]:h-9 [&_input]:text-sm [&_input]:py-2">
-                              <DatePicker
-                                id={`due-date-${debt.id}`}
-                                dateFormat="d.m.y" // should be in dd-mm-yy format
-                                placeholder={t('userDebt.selectDueDate')}
-                                mode="single"
-                                defaultDate={editFormData.dueDate ? (typeof editFormData.dueDate === 'string' ? new Date(editFormData.dueDate) : editFormData.dueDate) : undefined}
-                                onChange={handleDateChange}
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-gray-500 text-base dark:text-gray-400">
-                              {formatDate(debt.dueDate)}
-                            </span>
-                          )}
+                          <span className="text-gray-500 text-base dark:text-gray-400">
+                            {formatDate(debt.dueDate)}
+                          </span>
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[13%]">
-                          {isEditing ? (
-                            <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            {canPay && (
                               <button
-                                onClick={() => handleSave(debt.id)}
-                                className="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-brand-500 text-white text-xs font-medium hover:bg-brand-600 dark:bg-brand-500 dark:hover:bg-brand-600"
+                                onClick={() => handleOpenPay(debt)}
+                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs font-medium hover:bg-brand-50 hover:border-brand-300 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-brand-500/10 dark:hover:border-brand-700 dark:hover:text-brand-400"
+                                title={t('userDebt.pay') || 'Record payment'}
                               >
-                                {t('userDebt.save')}
+                                <MoneyDollarIcon className="w-4 h-4" />
                               </button>
+                            )}
+                            {hasDetails && (
                               <button
-                                onClick={handleCancel}
-                                className="inline-flex items-center justify-center h-8 px-3 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs font-medium hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+                                onClick={() => handleOpenDetails(debt)}
+                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs font-medium hover:bg-brand-50 hover:border-brand-300 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-brand-500/10 dark:hover:border-brand-700 dark:hover:text-brand-400"
+                                title={t('userDebt.details') || 'Details'}
                               >
-                                {t('userDebt.cancel')}
+                                <EyeIcon className="w-4 h-4" />
                               </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleEdit(debt)}
-                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs font-medium hover:bg-yellow-50 hover:border-yellow-300 hover:text-yellow-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-yellow-900/20 dark:hover:border-yellow-700 dark:hover:text-yellow-400"
-                                title={t('userDebt.edit')}
-                              >
-                                <PencilIcon/>
-                              </button>
-                              <button
-                                onClick={() => handleDelete(debt.id)}
-                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs font-medium hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:border-red-700 dark:hover:text-red-400"
-                                title={t('userDebt.delete')}
-                              >
-                                <TrashBinIcon/>
-                              </button>
-                            </div>
-                          )}
+                            )}
+                            <button
+                              onClick={() => handleEdit(debt)}
+                              className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs font-medium hover:bg-yellow-50 hover:border-yellow-300 hover:text-yellow-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-yellow-900/20 dark:hover:border-yellow-700 dark:hover:text-yellow-400"
+                              title={t('userDebt.edit')}
+                            >
+                              <PencilIcon/>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(debt.id)}
+                              className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs font-medium hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:border-red-700 dark:hover:text-red-400"
+                              title={t('userDebt.delete')}
+                            >
+                              <TrashBinIcon/>
+                            </button>
+                          </div>
                         </TableCell>
                       </TableRow>
                         );
@@ -962,8 +1040,8 @@ export default function UserDebtList() {
               <Input
                 type="text"
                 name="amount"
-                value={addFormData.amount}
-                onChange={(e) => handleAddFormChange("amount", e.target.value)}
+                value={formatAmountInput(addFormData.amount)}
+                onChange={(e) => handleAddFormChange("amount", e.target.value.replace(/\D/g, ""))}
                 placeholder="0"
                 required
               />
@@ -1018,87 +1096,314 @@ export default function UserDebtList() {
         </form>
       </Modal>
 
-      {/* Order / receipt detail for a debt that came from a POS sale */}
+      {/* Edit Debt Modal */}
       <Modal
-        isOpen={orderModal.isOpen}
-        onClose={orderModal.closeModal}
-        className="max-w-[520px] p-5 lg:p-8"
+        isOpen={editDebtModal.isOpen}
+        onClose={handleCancel}
+        className="max-w-[600px] p-5 lg:p-10"
+      >
+        <h4 className="font-semibold text-gray-800 mb-6 text-title-sm dark:text-white/90">
+          {t('userDebt.edit')}
+        </h4>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (editingId) handleSave(editingId);
+          }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label>{t('userDebt.amount')} *</Label>
+              <Input
+                type="text"
+                name="amount"
+                value={formatAmountInput(editFormData.amount)}
+                onChange={(e) => handleEditChange("amount", e.target.value.replace(/\D/g, ""))}
+                placeholder="0"
+                required
+              />
+            </div>
+            <div>
+              <Label>{t('userDebt.status')}</Label>
+              <SelectField
+                value={editFormData.status || ""}
+                onChange={(value) => handleEditChange("status", value as UserDebt["status"])}
+                options={statusOptions}
+              />
+            </div>
+            <div>
+              <Label>{t('userDebt.dueDate')}</Label>
+              <DatePicker
+                id="edit-debt-due-date"
+                dateFormat="d.m.y"
+                placeholder={t('userDebt.selectDueDate')}
+                mode="single"
+                defaultDate={editFormData.dueDate ? (typeof editFormData.dueDate === 'string' ? new Date(editFormData.dueDate) : editFormData.dueDate) : undefined}
+                onChange={handleDateChange}
+              />
+            </div>
+            <div>
+              <Label>{t('userDebt.descriptionLabel')}</Label>
+              <Input
+                type="text"
+                name="description"
+                value={editFormData.description || ""}
+                onChange={(e) => handleEditChange("description", e.target.value)}
+                placeholder={t('userDebt.descriptionPlaceholder') || "Description (optional)"}
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-800">
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+            >
+              {t('userDebt.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-500 dark:hover:bg-brand-600"
+            >
+              {isSubmitting ? (t('userDebt.saving') || t('userDebt.creating') || 'Saving...') : t('userDebt.save')}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Combined details: bought items (POS order) + installment payment history */}
+      <Modal
+        isOpen={detailsModal.isOpen}
+        onClose={() => { detailsModal.closeModal(); setDetailsDebt(null); }}
+        className="max-w-[760px] p-5 lg:p-8"
       >
         <h4 className="mb-1 text-title-sm font-semibold text-gray-800 dark:text-white/90">
-          {t('userDebt.orderItems') || 'Items bought'}
+          {t('userDebt.details') || 'Details'}
         </h4>
-        {orderLoading ? (
-          <div className="flex items-center justify-center gap-3 py-12">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
-            <span className="text-sm text-gray-500 dark:text-gray-400">{t('userDebt.loadingDebts')}</span>
-          </div>
-        ) : viewingOrder ? (
-          <div>
-            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-              {viewingOrder.customerName || ''}
-              {viewingOrder.customerName ? ' · ' : ''}
-              {formatDateTime(viewingOrder.createdAt)}
-            </p>
+        {detailsDebt && (
+          <p className="mb-5 text-sm text-gray-500 dark:text-gray-400">
+            {detailsDebt.user?.name ? `${detailsDebt.user.name} · ` : ''}
+            {t('userDebt.remaining') || 'Remaining'}:{' '}
+            <span className="font-medium text-gray-800 dark:text-white/90">
+              {formatAmount(remainingOf(detailsDebt))}
+            </span>
+            {' / '}{formatAmount(detailsDebt.amount)}
+          </p>
+        )}
 
-            <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-900">
-                  <tr className="text-gray-500 dark:text-gray-400">
-                    <th className="px-4 py-2.5 font-medium">{t('checkout.table.products')}</th>
-                    <th className="px-4 py-2.5 text-center font-medium">{t('checkout.table.quantity')}</th>
-                    <th className="px-4 py-2.5 text-right font-medium">{t('checkout.table.total')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {(viewingOrder.items || []).map((it) => (
-                    <tr key={it.id}>
-                      <td className="px-4 py-2.5 text-gray-800 dark:text-white/90">
-                        {it.productName}
-                        <span className="ml-1 text-xs text-gray-400">
-                          ({formatAmount(it.priceOut)})
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400">{it.quantity}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">{formatAmount(it.lineTotal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Bought items (only for debts that came from a POS sale) */}
+        {detailsDebt?.orderId && (
+          <div className="mb-6">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                {t('userDebt.orderItems') || 'Items bought'}
+              </h5>
+              {viewingOrder && (
+                <span className="text-xs text-gray-400 whitespace-nowrap">
+                  {formatDateTime(viewingOrder.createdAt)}
+                </span>
+              )}
             </div>
-
-            <dl className="mt-4 space-y-1.5 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-gray-500 dark:text-gray-400">{t('checkout.total')}</dt>
-                <dd className="font-medium text-gray-800 dark:text-white/90">{formatAmount(viewingOrder.totalAmount)}</dd>
+            {orderLoading ? (
+              <div className="flex items-center justify-center gap-3 py-8">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">{t('userDebt.loadingDebts')}</span>
               </div>
-
-              {/* Per-method breakdown of what was paid now (cash / card) */}
-              {(viewingOrder.payments ?? []).map((p, i) => (
-                <div key={i} className="flex justify-between pl-3 text-xs text-gray-500 dark:text-gray-400">
-                  <dt>{t(`checkout.${p.method}`) || p.method}</dt>
-                  <dd>{formatAmount(p.amount)}</dd>
+            ) : viewingOrder ? (
+              <div>
+                <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
+                      <tr className="text-gray-500 dark:text-gray-400">
+                        <th className="px-4 py-2.5 font-medium">{t('checkout.table.products')}</th>
+                        <th className="px-4 py-2.5 text-center font-medium">{t('checkout.table.quantity')}</th>
+                        <th className="px-4 py-2.5 text-right font-medium">{t('checkout.table.total')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {(viewingOrder.items || []).map((it) => (
+                        <tr key={it.id}>
+                          <td className="px-4 py-2.5 text-gray-800 dark:text-white/90">
+                            {it.productName}
+                            <span className="ml-1 text-xs text-gray-400">
+                              ({formatAmount(it.priceOut)})
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400">{it.quantity}</td>
+                          <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">{formatAmount(it.lineTotal)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
 
-              <div className="flex justify-between">
-                <dt className="font-medium text-gray-600 dark:text-gray-300">{t('userDebt.paidAmount') || 'Paid'}</dt>
-                <dd className="font-medium text-success-600 dark:text-success-500">
-                  {formatAmount(viewingOrder.amountPaid || '0')}
-                </dd>
-              </div>
+                <dl className="mt-4 space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500 dark:text-gray-400">{t('checkout.total')}</dt>
+                    <dd className="font-medium text-gray-800 dark:text-white/90">{formatAmount(viewingOrder.totalAmount)}</dd>
+                  </div>
 
-              <div className="flex justify-between border-t border-gray-200 pt-1.5 dark:border-gray-800">
-                <dt className="font-medium text-gray-700 dark:text-gray-300">{t('userDebt.debtAmount') || 'Debt'}</dt>
-                <dd className="font-semibold text-warning-600 dark:text-warning-400">
-                  {formatAmount(Number(viewingOrder.totalAmount) - Number(viewingOrder.amountPaid || 0))}
-                </dd>
+                  {/* Per-method breakdown of what was paid at the time of sale */}
+                  {(viewingOrder.payments ?? []).map((p, i) => (
+                    <div key={i} className="flex justify-between pl-3 text-xs text-gray-500 dark:text-gray-400">
+                      <dt>{t(`checkout.${p.method}`) || p.method}</dt>
+                      <dd>{formatAmount(p.amount)}</dd>
+                    </div>
+                  ))}
+
+                  <div className="flex justify-between">
+                    <dt className="font-medium text-gray-600 dark:text-gray-300">{t('userDebt.paidAmount') || 'Paid'}</dt>
+                    <dd className="font-medium text-success-600 dark:text-success-500">
+                      {formatAmount(viewingOrder.amountPaid || '0')}
+                    </dd>
+                  </div>
+
+                  <div className="flex justify-between border-t border-gray-200 pt-1.5 dark:border-gray-800">
+                    <dt className="font-medium text-gray-700 dark:text-gray-300">{t('userDebt.debtAmount') || 'Debt'}</dt>
+                    <dd className="font-semibold text-warning-600 dark:text-warning-400">
+                      {formatAmount(Number(viewingOrder.totalAmount) - Number(viewingOrder.amountPaid || 0))}
+                    </dd>
+                  </div>
+                </dl>
               </div>
-            </dl>
+            ) : (
+              <p className="py-6 text-center text-sm text-gray-400">—</p>
+            )}
           </div>
-        ) : (
-          <p className="py-10 text-center text-sm text-gray-400">—</p>
+        )}
+
+        {/* Installment payment history (Pro) */}
+        {isPro && detailsDebt && (
+          <div>
+            <h5 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+              {t('userDebt.paymentsHistory') || 'Payments'}
+            </h5>
+            {loadingPayments.has(detailsDebt.id) ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
+                {t('userDebt.loadingPayments') || 'Loading payments...'}
+              </div>
+            ) : (paymentsByDebt[detailsDebt.id]?.length ?? 0) === 0 ? (
+              <p className="text-sm text-gray-400">{t('userDebt.noPayments') || 'No payments yet'}</p>
+            ) : (
+              <ul className="flex flex-col gap-1.5">
+                {paymentsByDebt[detailsDebt.id].map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-800 dark:bg-gray-900"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-gray-800 dark:text-white/90">{formatAmount(p.amount)}</span>
+                      <Badge color={p.method === 'card' ? 'info' : 'light'}>
+                        {t(`userDebt.${p.method}`) || p.method}
+                      </Badge>
+                      {p.note && <span className="text-gray-400">{p.note}</span>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-gray-400">{formatDateTime(p.createdAt)}</span>
+                      <button
+                        onClick={() => handleDeletePayment(detailsDebt.id, p.id)}
+                        className="text-gray-400 transition hover:text-red-500"
+                        title={t('userDebt.deletePayment') || 'Delete payment'}
+                      >
+                        <TrashBinIcon />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </Modal>
+
+      {/* Record installment payment ("bo'lib to'lash") — its own modal */}
+      <Modal
+        isOpen={payDebtModal.isOpen}
+        onClose={() => { payDebtModal.closeModal(); setPayingDebt(null); }}
+        className="max-w-[440px] p-5 lg:p-8"
+      >
+        <h4 className="mb-1 text-title-sm font-semibold text-gray-800 dark:text-white/90">
+          {t('userDebt.recordPayment') || 'Record payment'}
+        </h4>
+        {payingDebt && (
+          <p className="mb-5 text-sm text-gray-500 dark:text-gray-400">
+            {payingDebt.user?.name ? `${payingDebt.user.name} · ` : ''}
+            {t('userDebt.remaining') || 'Remaining'}:{' '}
+            <span className="font-medium text-gray-800 dark:text-white/90">
+              {formatAmount(remainingOf(payingDebt))}
+            </span>
+          </p>
+        )}
+        <form onSubmit={handlePaySubmit} className="space-y-4">
+          <div>
+            <Label>{t('userDebt.paymentAmount') || 'Amount'} *</Label>
+            <Input
+              type="text"
+              name="payAmount"
+              value={formatAmountInput(payAmount)}
+              onChange={(e) => setPayAmount(e.target.value.replace(/\D/g, ""))}
+              placeholder="0"
+              required
+            />
+          </div>
+          <div>
+            <Label>{t('userDebt.paymentMethod') || 'Method'}</Label>
+            <SelectField
+              value={payMethod}
+              onChange={(value) => setPayMethod(value as "cash" | "card")}
+              options={[
+                { value: "cash", label: t('userDebt.cash') || 'Cash' },
+                { value: "card", label: t('userDebt.card') || 'Card' },
+              ]}
+            />
+          </div>
+          <div>
+            <Label>{t('userDebt.paymentNote') || 'Note'}</Label>
+            <Input
+              type="text"
+              name="payNote"
+              value={payNote}
+              onChange={(e) => setPayNote(e.target.value)}
+              placeholder={t('userDebt.paymentNotePlaceholder') || 'Optional note'}
+            />
+          </div>
+          <div className="flex items-center justify-end gap-3 pt-4 mt-4 border-t border-gray-100 dark:border-gray-800">
+            <button
+              type="button"
+              onClick={() => { payDebtModal.closeModal(); setPayingDebt(null); }}
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+            >
+              {t('userDebt.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-500 dark:hover:bg-brand-600"
+            >
+              {isSubmitting ? (t('userDebt.saving') || 'Saving...') : (t('userDebt.pay') || 'Pay')}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete confirmation (shared ConfirmModal) */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => { deleteConfirm.closeModal(); setDeletingId(null); }}
+        onConfirm={handleConfirmDelete}
+        title={t('userDebt.deleteConfirmTitle') || 'Delete debt'}
+        message={t('userDebt.deleteConfirm') || 'Are you sure you want to delete this debt?'}
+        confirmLabel={t('userDebt.delete') || 'Delete'}
+        cancelLabel={t('userDebt.cancel') || 'Cancel'}
+        variant="danger"
+        isLoading={isDeleting}
+        loadingLabel={t('userDebt.deleting') || undefined}
+      />
     </div>
   );
 }

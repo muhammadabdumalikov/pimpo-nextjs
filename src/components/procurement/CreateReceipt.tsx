@@ -9,6 +9,7 @@ import Input from "@/components/form/input/InputField";
 import SelectField from "@/components/form/SelectField";
 import Button from "@/components/ui/button/Button";
 import { PlusIcon, TrashBinIcon } from "@/icons/index";
+import { formatNumberInput, digitsOnly } from "@/lib/number";
 import {
   getProducts,
   getSuppliers,
@@ -376,11 +377,10 @@ export default function CreateReceipt() {
                     ref={(el) => {
                       priceRefs.current.set(l.key, el);
                     }}
-                    type="number"
-                    min="0"
-                    step={0.01}
-                    value={l.priceIn}
-                    onChange={(e) => updateLine(l.key, { priceIn: e.target.value })}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatNumberInput(l.priceIn)}
+                    onChange={(e) => updateLine(l.key, { priceIn: digitsOnly(e.target.value) })}
                     onKeyDown={(e) => onPriceKeyDown(e, l.key)}
                   />
                 </div>
@@ -392,11 +392,10 @@ export default function CreateReceipt() {
                     ref={(el) => {
                       priceOutRefs.current.set(l.key, el);
                     }}
-                    type="number"
-                    min="0"
-                    step={0.01}
-                    value={l.priceOut}
-                    onChange={(e) => updateLine(l.key, { priceOut: e.target.value })}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatNumberInput(l.priceOut)}
+                    onChange={(e) => updateLine(l.key, { priceOut: digitsOnly(e.target.value) })}
                     onKeyDown={(e) => onPriceOutKeyDown(e, index)}
                   />
                 </div>

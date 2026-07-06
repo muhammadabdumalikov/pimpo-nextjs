@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import { formatPhone } from "@/lib/phone";
+import { formatNumberInput, digitsOnly } from "@/lib/number";
 import {
   getProducts,
   createOrder,
@@ -1117,11 +1118,10 @@ export default function Checkout() {
                   {t("checkout.received") || "Cash received"}
                 </label>
                 <input
-                  type="number"
-                  min={0}
+                  type="text"
                   inputMode="numeric"
-                  value={cashReceived}
-                  onChange={(e) => setCashReceived(e.target.value)}
+                  value={formatNumberInput(cashReceived)}
+                  onChange={(e) => setCashReceived(digitsOnly(e.target.value))}
                   placeholder={formatMoney(total)}
                   className={inputClass}
                 />
@@ -1164,12 +1164,11 @@ export default function Checkout() {
                       {t("checkout.cash")}
                     </label>
                     <input
-                      type="number"
-                      min={0}
+                      type="text"
                       inputMode="numeric"
-                      value={splitCash}
+                      value={formatNumberInput(splitCash)}
                       onChange={(e) => {
-                        const v = e.target.value;
+                        const v = digitsOnly(e.target.value);
                         setSplitCash(v);
                         const left = total - (Number(v) || 0);
                         setSplitCard(left > 0 ? String(left) : "0");
@@ -1182,11 +1181,10 @@ export default function Checkout() {
                       {t("checkout.card")}
                     </label>
                     <input
-                      type="number"
-                      min={0}
+                      type="text"
                       inputMode="numeric"
-                      value={splitCard}
-                      onChange={(e) => setSplitCard(e.target.value)}
+                      value={formatNumberInput(splitCard)}
+                      onChange={(e) => setSplitCard(digitsOnly(e.target.value))}
                       className={inputClass}
                     />
                   </div>
@@ -1328,12 +1326,10 @@ export default function Checkout() {
                     </div>
                   </div>
                   <input
-                    type="number"
-                    min={0}
-                    max={total}
+                    type="text"
                     inputMode="numeric"
-                    value={paidNow}
-                    onChange={(e) => setPaidNow(e.target.value)}
+                    value={formatNumberInput(paidNow)}
+                    onChange={(e) => setPaidNow(digitsOnly(e.target.value))}
                     placeholder="0"
                     className={inputClass}
                   />

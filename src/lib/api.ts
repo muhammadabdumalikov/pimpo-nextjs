@@ -702,21 +702,37 @@ export async function searchCustomers(
   return data.users ?? [];
 }
 
+export type DebtStatus = 'Paid' | 'Pending' | 'Overdue' | 'Partial';
+
 export interface UserDebt {
   id: string;
   businessId: string;
   userId: string;
   orderId?: string | null;
   amount: string;
-  status: 'Paid' | 'Pending' | 'Overdue';
+  status: DebtStatus;
   dueDate: Date | string | null;
   description: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  // Present on grouped listings: total paid so far and outstanding balance.
+  paid?: number;
+  remaining?: number;
   user?: {
     name: string;
     phone: string;
   };
+}
+
+// An installment payment recorded against a debt (Pro tier).
+export interface DebtPayment {
+  id: string;
+  businessId: string;
+  debtId: string;
+  amount: string;
+  method: 'cash' | 'card';
+  note: string | null;
+  createdAt: Date | string;
 }
 
 export interface DebtListResponse {
@@ -796,6 +812,8 @@ export interface DebtGroup {
   userName: string;
   phone: string;
   totalDebt: number;
+  // Outstanding balance across the group's debts (total minus paid installments).
+  totalRemaining: number;
   debtCount: number;
   latestDate: string | null;
   debts: UserDebt[];
@@ -952,6 +970,54 @@ export async function deleteDebt(id: string): Promise<void> {
     const error = await response.json().catch(() => ({ message: 'Failed to delete debt' }));
     throw new Error(error.message || 'Failed to delete debt');
   }
+}
+
+// ─── Installment payments (Pro tier) ─────────────────────────────────────────
+
+export interface RecordPaymentDto {
+  amount: string;
+  method?: 'cash' | 'card';
+  note?: string;
+}
+
+/** List the installment payments recorded against a debt (newest first). */
+export async function getDebtPayments(debtId: string): Promise<DebtPayment[]> {
+  const response = await fetch(`${API_BASE_URL}/debts/${debtId}/payments`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch payments');
+  const result = await response.json();
+  return result.payments ?? [];
+}
+
+/** Record an installment payment. The backend caps it at the remaining balance. */
+export async function recordDebtPayment(
+  debtId: string,
+  data: RecordPaymentDto,
+): Promise<{ debt: UserDebt; payment: DebtPayment }> {
+  const response = await fetch(`${API_BASE_URL}/debts/${debtId}/payments`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to record payment');
+  return response.json();
+}
+
+/** Delete a payment entered by mistake; the debt's status is recomputed. */
+export async function deleteDebtPayment(
+  debtId: string,
+  paymentId: string,
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/debts/${debtId}/payments/${paymentId}`,
+    {
+      method: 'DELETE',
+      headers: authHeaders(),
+    },
+  );
+  if (!response.ok) await parseError(response, 'Failed to delete payment');
 }
 
 export async function getDebtCount(): Promise<number> {
