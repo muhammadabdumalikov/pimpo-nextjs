@@ -8,9 +8,10 @@
       "start": "Start free"
     },
     "hero": {
+      "badge": "For businesses in Uzbekistan",
       "title": "Run your store —",
       "titleHighlight": "credit sales included",
-      "subtitle": "Pimpo brings sales, credit (debt), inventory, supply and your team together in one simple system. Built for market and shop retail.",
+      "subtitle": "KPOS brings sales, credit (debt), inventory, supply and your team together in one simple system. Built for market and shop retail.",
       "ctaPrimary": "Start free",
       "ctaSecondary": "See pricing",
       "note": "No credit card required · Starter plan free forever"
@@ -22,7 +23,7 @@
       },
       "credit": {
         "value": "Credit",
-        "label": "Pimpo's core advantage"
+        "label": "KPOS's core advantage"
       },
       "trial": {
         "value": "14 days",
@@ -59,9 +60,9 @@
       }
     },
     "diff": {
-      "badge": "Why Pimpo?",
+      "badge": "Why KPOS?",
       "title": "Credit — the problem we solved best",
-      "desc": "In big POS systems credit is an afterthought. In Pimpo it's central — because credit is what market and shop retail runs on.",
+      "desc": "In big POS systems credit is an afterthought. In KPOS it's central — because credit is what market and shop retail runs on.",
       "cta": "Try it now",
       "points": [
         "Every customer's debt and payment history in one place",
@@ -83,11 +84,12 @@
         "cta": "Start free",
         "features": [
           "1 branch",
-          "Up to 100 products",
+          "Up to 150 products",
           "1 user",
           "Sales and checkout",
-          "Credit (up to 20 records)",
-          "Basic inventory"
+          "Credit (up to 20 customers)",
+          "Basic inventory",
+          "Chat support"
         ]
       },
       "basic": {
@@ -98,7 +100,7 @@
         "cta": "Choose Standard",
         "features": [
           "1 branch",
-          "Up to 1,500 products",
+          "Up to 3,000 products",
           "4 users",
           "Full credit management",
           "Full inventory",
@@ -157,7 +159,51 @@
     },
     "footer": {
       "tagline": "POS for shop and market",
-      "rights": "© 2026 Pimpo. All rights reserved."
+      "rights": "© 2026 KPOS. All rights reserved."
+    },
+    "compare": {
+      "title": "Compare plans",
+      "feature": "Feature",
+      "groups": {
+        "core": "Core",
+        "pos": "Sales / POS",
+        "credit": "Credit (debt)",
+        "inventory": "Inventory",
+        "procurement": "Procurement",
+        "reports": "Reports & analytics",
+        "team": "Team",
+        "support": "Support"
+      },
+      "rows": {
+        "branches": "Branches",
+        "products": "Products",
+        "users": "Users",
+        "checkout": "Sales & checkout",
+        "barcode": "Barcode scanning",
+        "payments": "Cash / card / split",
+        "discount": "Manual discount",
+        "receipt": "Receipt with logo + VAT",
+        "creditSale": "Sell on credit",
+        "ledger": "Debt ledger + due dates",
+        "stock": "Inventory (stock)",
+        "bulk": "Bulk product import",
+        "suppliers": "Suppliers & receiving",
+        "dashboard": "Dashboard",
+        "performance": "Product performance",
+        "staffSales": "Sales by employee",
+        "roles": "Roles & staff",
+        "support": "Support"
+      },
+      "values": {
+        "unlimited": "Unlimited",
+        "full": "Full",
+        "basic": "Basic",
+        "limited": "Limited",
+        "extended": "Extended",
+        "standard": "Standard",
+        "priority": "Priority",
+        "credit20": "up to 20"
+      }
     }
   },
   "userDebt": {
@@ -212,6 +258,8 @@
     "allStatuses": "All statuses",
     "dateFrom": "From",
     "dateTo": "To",
+    "dateRange": "Date range",
+    "selectDateRange": "Select date range",
     "clearFilters": "Clear",
     "ascending": "Ascending",
     "descending": "Descending",
@@ -248,8 +296,7 @@
     "previous": "Previous",
     "next": "Next",
     "limitReached": "Limit reached ({limit} products max)",
-    "limitInfo": "{current}/{limit} products",
-    "upgradeCta": "Upgrade plan"
+    "limitInfo": "{current}/{limit} products"
   },
   "categories": {
     "title": "Categories",
@@ -285,7 +332,7 @@
     "monthlySales": "Monthly Sales",
     "monthlyTarget": "Monthly Target",
     "targetDescription": "Target you've set for each month",
-    "earnMessage": "You've made {amount} in sales this month. Keep it up!",
+    "earnMessage": "You earn ${amount} this month, it's higher than last month. Keep up your good work!",
     "recentProducts": "Recent Products",
     "recentProductsDescription": "Latest products added to inventory",
     "viewMore": "View More",
@@ -368,12 +415,12 @@
         "userDebtList": "Debt (credit) ledger",
         "ecommerceDashboard": "Dashboard & checkout",
         "productsList": "1 branch, 1 user",
-        "debtsLimit": "Up to 20 debts",
-        "productsLimit": "Up to 100 products"
+        "debtsLimit": "Up to 20 debt customers",
+        "productsLimit": "Up to 150 products"
       },
       "basic": {
         "everythingInFree": "Everything in Free",
-        "addProducts": "Up to 1,500 products",
+        "addProducts": "Up to 3,000 products",
         "formElements": "Up to 4 users",
         "imagesVideos": "Procurement (suppliers & receipts)",
         "emailSupport": "Full debt management + Email support"
@@ -409,7 +456,7 @@
       "chat": "Chat",
       "standard": "Standard",
       "priority": "Priority",
-      "debtCustomers": "20 debts"
+      "debtCustomers": "20 customers"
     }
   },
   "sidebar": {
@@ -462,8 +509,7 @@
     "goodsReceipts": "Goods Receipts",
     "comingSoon": "Coming soon",
     "editProduct": "Edit Product",
-    "receiptManagement": "Receipt Management",
-    "staffSales": "Staff sales"
+    "receiptManagement": "Receipt Management"
   },
   "inventory": {
     "costingTitle": "Cost accounting",
@@ -830,32 +876,7 @@
     "loginLabel": "Login",
     "passwordLabel": "Password",
     "forgotPassword": "Forgot password?",
-    "signOut": "Sign out",
-    "backHome": "Back to home",
-    "registerTitle": "Create a business account",
-    "registerSubtitle": "Sign up in a few minutes and start selling.",
-    "selectedPlan": "Selected plan",
-    "plan": {
-      "free": "Free",
-      "basic": "Standard",
-      "pro": "Business"
-    },
-    "businessNameLabel": "Business name",
-    "businessNamePlaceholder": "e.g. Diyor Market",
-    "usernameLabel": "Username (login)",
-    "usernamePlaceholder": "Login to sign in",
-    "emailLabel": "Email",
-    "emailPlaceholder": "Enter your email",
-    "passwordHint": "At least 6 characters",
-    "agreeTerms": "By signing up I agree to the Terms of Service and Privacy Policy",
-    "registering": "Creating...",
-    "createAccount": "Create account",
-    "haveAccount": "Already have an account?",
-    "mustAgree": "Please accept the terms to continue",
-    "loginTooShort": "Login must be at least 3 characters",
-    "passwordTooShort": "Password must be at least 6 characters",
-    "registerError": "Registration failed",
-    "perMonth": "UZS/mo"
+    "signOut": "Sign out"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -953,16 +974,5 @@
       "save": "Save",
       "cancel": "Cancel"
     }
-  },
-  "staffSales": {
-    "title": "Sales by employee",
-    "description": "How much each cashier (employee) sold.",
-    "selectDateRange": "Select date range",
-    "employee": "Employee",
-    "orders": "Orders",
-    "revenue": "Revenue",
-    "total": "Total",
-    "unassigned": "Store / guest",
-    "noData": "No data found"
   }
 }

@@ -8,7 +8,10 @@ import {
   TableRow,
 } from "../ui/table";
 import Badge from "../ui/badge/Badge";
-import { PlusIcon, DownloadIcon, ChevronLeftIcon, PencilIcon, ChevronDownIcon, ChevronUpIcon, TrashBinIcon } from "@/icons/index";
+import { PlusIcon, DownloadIcon, ChevronLeftIcon, PencilIcon, ChevronDownIcon, ChevronUpIcon, TrashBinIcon, CalenderIcon } from "@/icons/index";
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.css";
+import { getFlatpickrLocale } from "@/lib/flatpickrLocale";
 import DatePicker from "../form/date-picker";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
@@ -40,7 +43,7 @@ interface UserDebt {
 }
 
 export default function UserDebtList() {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const { getLimit, isLimitReached } = useSubscription();
   const { showToast } = useToast();
   // Customer groups come pre-grouped, sorted, paginated from the backend.
@@ -53,6 +56,9 @@ export default function UserDebtList() {
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  // Single range date-picker (from - to in one input), like Product Performance.
+  const dateRangeRef = useRef<HTMLInputElement>(null);
+  const fpRef = useRef<flatpickr.Instance | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "amount" | "count">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -179,6 +185,47 @@ export default function UserDebtList() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, statusFilter, dateFrom, dateTo, sortBy, sortDir]);
+
+  // Single range date-picker. Only mounts while the filter panel is open, so it
+  // re-inits on open and on locale change. Selecting a range fills dateFrom/dateTo.
+  useEffect(() => {
+    if (!showFilters || !dateRangeRef.current) return;
+
+    const toYMD = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+        d.getDate(),
+      ).padStart(2, "0")}`;
+
+    const fp = flatpickr(dateRangeRef.current, {
+      mode: "range",
+      static: false,
+      monthSelectorType: "static",
+      dateFormat: "d.m.y",
+      defaultDate: dateFrom && dateTo ? [dateFrom, dateTo] : undefined,
+      clickOpens: true,
+      locale: getFlatpickrLocale(locale),
+      onChange: (selectedDates, dateStr, instance) => {
+        if (selectedDates.length === 2) {
+          setDateFrom(toYMD(selectedDates[0]));
+          setDateTo(toYMD(selectedDates[1]));
+        } else if (selectedDates.length === 0) {
+          setDateFrom("");
+          setDateTo("");
+        }
+        (instance.element as HTMLInputElement).value = dateStr.replace("to", " - ");
+      },
+      onReady: (_, dateStr, instance) => {
+        (instance.element as HTMLInputElement).value = dateStr.replace("to", " - ");
+      },
+    });
+    fpRef.current = Array.isArray(fp) ? fp[0] : fp;
+
+    return () => {
+      fpRef.current = null;
+      if (!Array.isArray(fp)) fp.destroy();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showFilters, locale]);
 
   // The server already returns the page, grouped + sorted.
   const paginatedGroups = groups;
@@ -367,6 +414,12 @@ export default function UserDebtList() {
     handleEditChange("dueDate", dateStr);
   };
 
+  const clearDateRange = () => {
+    fpRef.current?.clear();
+    setDateFrom("");
+    setDateTo("");
+  };
+
   const statusOptions = [
     { value: "Paid", label: t('userDebt.paid') },
     { value: "Pending", label: t('userDebt.pending') },
@@ -488,7 +541,7 @@ export default function UserDebtList() {
 
       {/* Filter panel */}
       {showFilters && (
-        <div className="mb-4 grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900 sm:grid-cols-4">
+        <div className="mb-4 grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t('userDebt.status') || 'Status'}</label>
             <SelectField
@@ -506,31 +559,25 @@ export default function UserDebtList() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t('userDebt.dateFrom') || 'From'}</label>
-            <input
-              type="date"
-              value={dateFrom}
-              max={dateTo || undefined}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t('userDebt.dateTo') || 'To'}</label>
-            <input
-              type="date"
-              value={dateTo}
-              min={dateFrom || undefined}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
-            />
+            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t('userDebt.dateRange') || t('userDebt.dateFrom') || 'Date range'}</label>
+            <div className="relative">
+              <input
+                ref={dateRangeRef}
+                type="text"
+                readOnly
+                placeholder={t('userDebt.selectDateRange') || 'Select date range'}
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30"
+              />
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                <CalenderIcon />
+              </span>
+            </div>
           </div>
           <div className="flex items-end">
             <button
               onClick={() => {
                 setStatusFilter("");
-                setDateFrom("");
-                setDateTo("");
+                clearDateRange();
               }}
               disabled={!statusFilter && !dateFrom && !dateTo}
               className="h-10 w-full rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"

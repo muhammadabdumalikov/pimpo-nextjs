@@ -159,6 +159,50 @@
     "footer": {
       "tagline": "Do'kon va bozor uchun POS",
       "rights": "© 2026 KPOS. Barcha huquqlar himoyalangan."
+    },
+    "compare": {
+      "title": "Tariflarni solishtiring",
+      "feature": "Imkoniyat",
+      "groups": {
+        "core": "Asosiy",
+        "pos": "Sotuv / Kassa",
+        "credit": "Nasiya (qarz)",
+        "inventory": "Inventar",
+        "procurement": "Ta'minot",
+        "reports": "Hisobot va tahlil",
+        "team": "Jamoa",
+        "support": "Qo'llab-quvvatlash"
+      },
+      "rows": {
+        "branches": "Filiallar",
+        "products": "Mahsulotlar",
+        "users": "Foydalanuvchilar",
+        "checkout": "Sotuv va kassa",
+        "barcode": "Shtrix-kod skanerlash",
+        "payments": "Naqd / karta / bo'lib to'lash",
+        "discount": "Qo'lda chegirma",
+        "receipt": "Logotipli chek + QQS",
+        "creditSale": "Nasiyaga sotish",
+        "ledger": "Qarz daftari + muddat",
+        "stock": "Inventar (qoldiq)",
+        "bulk": "Ommaviy mahsulot qo'shish",
+        "suppliers": "Ta'minotchilar va qabul",
+        "dashboard": "Boshqaruv paneli",
+        "performance": "Mahsulot samaradorligi",
+        "staffSales": "Xodim bo'yicha sotuv",
+        "roles": "Rollar va xodimlar",
+        "support": "Yordam"
+      },
+      "values": {
+        "unlimited": "Cheksiz",
+        "full": "To'liq",
+        "basic": "Asosiy",
+        "limited": "Cheklangan",
+        "extended": "Kengaytirilgan",
+        "standard": "Standart",
+        "priority": "Prioritet",
+        "credit20": "20 tagacha"
+      }
     }
   },
   "userDebt": {
@@ -213,6 +257,8 @@
     "allStatuses": "Barcha holatlar",
     "dateFrom": "Dan",
     "dateTo": "Gacha",
+    "dateRange": "Sana oralig'i",
+    "selectDateRange": "Sana oralig'ini tanlang",
     "clearFilters": "Tozalash",
     "ascending": "O'sish bo'yicha",
     "descending": "Kamayish bo'yicha",
@@ -623,6 +669,7 @@
     "pieces": "dona",
     "subtotal": "Jami",
     "discount": "Chegirma",
+    "discountApplied": "Chegirma qo'llandi",
     "pay": "TO'LASH",
     "postpone": "Keyinroq",
     "client": "Mijoz",

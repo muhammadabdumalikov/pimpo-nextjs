@@ -1176,6 +1176,10 @@ export interface Order {
   customerName: string | null;
   status: string;
   totalAmount: string;
+  subtotalAmount: string;
+  discountType: string | null;
+  discountValue: string | null;
+  discountAmount: string;
   itemCount: number;
   paymentMethod: string | null;
   payments: PaymentSplit[] | null;
@@ -1202,6 +1206,8 @@ export interface CreateOrderDto {
   dueDate?: string;
   note?: string;
   source?: string;
+  discountType?: "amount" | "percent";
+  discountValue?: number;
 }
 
 export interface OrdersResponse {

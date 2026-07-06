@@ -16,7 +16,7 @@ import CameraScanner from "./CameraScanner";
 
 // Static VAT (QQS) config for now. Flip VAT_ENABLED to false to hide the line.
 // TODO: wire back to the business's receipt settings API.
-const VAT_ENABLED = true;
+const VAT_ENABLED = false;
 const VAT_RATE = 12;
 
 type CartLine = {
@@ -132,6 +132,13 @@ export default function Checkout() {
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
   const [customerFocused, setCustomerFocused] = useState(false);
   const [note, setNote] = useState("");
+  // Manual whole-receipt discount: a fixed soʻm amount or a percent of subtotal.
+  // Hidden behind a toggle so the common no-discount sale stays uncluttered.
+  const [showDiscount, setShowDiscount] = useState(false);
+  const [discountType, setDiscountType] = useState<"amount" | "percent">("percent");
+  const [discountInput, setDiscountInput] = useState("");
+  // One-tap percentage presets for the most common discounts.
+  const DISCOUNT_PRESETS = [5, 10, 15, 20];
   // Advanced options (Split/Credit, client, note) stay tucked away so the common
   // cash sale is one tap. Selecting Credit forces them open.
   const [showMore, setShowMore] = useState(false);
@@ -197,10 +204,22 @@ export default function Checkout() {
   const formatMoney = (value: number) =>
     `${new Intl.NumberFormat("uz-UZ").format(Math.round(value))} ${currency}`;
 
-  const total = useMemo(
+  // Gross total before the manual discount.
+  const subtotal = useMemo(
     () => cart.reduce((sum, line) => sum + line.price * line.quantity, 0),
     [cart],
   );
+  // Resolve the discount (clamped to [0, subtotal]) and the net payable total.
+  const discountValueNum = Number(discountInput) || 0;
+  const discountAmount = useMemo(() => {
+    if (discountValueNum <= 0 || subtotal <= 0) return 0;
+    const raw =
+      discountType === "percent"
+        ? (subtotal * Math.min(discountValueNum, 100)) / 100
+        : discountValueNum;
+    return Math.max(0, Math.min(raw, subtotal));
+  }, [discountType, discountValueNum, subtotal]);
+  const total = Math.max(0, subtotal - discountAmount);
   const itemCount = useMemo(
     () => cart.reduce((sum, line) => sum + line.quantity, 0),
     [cart],
@@ -447,6 +466,21 @@ export default function Checkout() {
     searchRef.current?.focus();
   };
 
+  const clearDiscount = () => {
+    setDiscountInput("");
+    setDiscountType("percent");
+  };
+
+  // One-tap preset: apply a percentage, or toggle it off if it's already set.
+  const applyPreset = (percent: number) => {
+    if (discountType === "percent" && discountValueNum === percent) {
+      clearDiscount();
+      return;
+    }
+    setDiscountType("percent");
+    setDiscountInput(String(percent));
+  };
+
   const handleComplete = async () => {
     if (cart.length === 0 || !paymentValid) return;
     setIsSubmitting(true);
@@ -485,6 +519,8 @@ export default function Checkout() {
         note: note.trim() || undefined,
         status: "Completed",
         source: "admin",
+        discountType: discountAmount > 0 ? discountType : undefined,
+        discountValue: discountAmount > 0 ? discountValueNum : undefined,
       });
       const successMsg =
         paymentMethod === "debt"
@@ -498,6 +534,8 @@ export default function Checkout() {
       setCart([]);
       setCustomerName("");
       setNote("");
+      clearDiscount();
+      setShowDiscount(false);
       setLastScanned("");
       setCashReceived("");
       setSplitCash("");
@@ -900,8 +938,105 @@ export default function Checkout() {
               <li className="flex justify-between gap-5 text-sm">
                 <span className="text-gray-500 dark:text-gray-400">{t("checkout.subtotal")}</span>
                 <span className="font-medium text-gray-700 dark:text-gray-300">
-                  {formatMoney(total)}
+                  {formatMoney(subtotal)}
                 </span>
+              </li>
+              {/* Manual discount — hidden behind a toggle; one-tap % presets. */}
+              <li className="text-sm">
+                <div className="flex items-center justify-between gap-5">
+                  <button
+                    type="button"
+                    onClick={() => setShowDiscount((v) => !v)}
+                    className="flex items-center gap-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    <span>{t("checkout.discount") || "Discount"}</span>
+                    <svg
+                      className={`h-4 w-4 transition-transform ${showDiscount ? "rotate-180" : ""}`}
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m6 8 4 4 4-4" />
+                    </svg>
+                  </button>
+                  {discountAmount > 0 ? (
+                    <span className="flex items-center gap-2">
+                      <span className="font-medium text-brand-600 dark:text-brand-400">
+                        −{formatMoney(discountAmount)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={clearDiscount}
+                        aria-label={t("checkout.removeDiscount") || "Remove discount"}
+                        className="flex h-5 w-5 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/[0.06]"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="text-gray-400 dark:text-gray-500">—</span>
+                  )}
+                </div>
+
+                {showDiscount && (
+                  <div className="mt-2.5 space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        value={discountInput}
+                        onChange={(e) => setDiscountInput(e.target.value)}
+                        placeholder="0"
+                        className="h-8 w-full rounded-lg border border-gray-300 bg-transparent px-2 text-right text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90"
+                      />
+                      <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-gray-300 dark:border-gray-700">
+                        <button
+                          type="button"
+                          onClick={() => setDiscountType("amount")}
+                          className={`px-2.5 py-1 text-xs font-medium transition ${
+                            discountType === "amount"
+                              ? "bg-brand-500 text-white"
+                              : "bg-transparent text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+                          }`}
+                        >
+                          {currency}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDiscountType("percent")}
+                          className={`px-2.5 py-1 text-xs font-medium transition ${
+                            discountType === "percent"
+                              ? "bg-brand-500 text-white"
+                              : "bg-transparent text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+                          }`}
+                        >
+                          %
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {DISCOUNT_PRESETS.map((p) => {
+                        const active = discountType === "percent" && discountValueNum === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => applyPreset(p)}
+                            className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                              active
+                                ? "border-brand-500 bg-brand-500 text-white"
+                                : "border-gray-300 bg-transparent text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+                            }`}
+                          >
+                            {p}%
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </li>
               {vatEnabled && vatRate > 0 && (
                 <li className="flex justify-between gap-5 text-sm">

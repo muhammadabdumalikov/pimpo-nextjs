@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "@/hooks/useTranslations";
 import LandingHeader from "./LandingHeader";
+import PricingCompare from "./PricingCompare";
 import {
   ArrowIcon,
   CheckIcon,
@@ -255,6 +256,8 @@ export default function LandingPage() {
           <p className="mt-10 text-center text-sm text-gray-500 dark:text-gray-400">
             {t("landing.pricing.annualNote")}
           </p>
+
+          <PricingCompare />
         </div>
       </section>
 
