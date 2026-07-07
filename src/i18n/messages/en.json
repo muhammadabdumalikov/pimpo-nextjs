@@ -126,6 +126,11 @@
           "Team and roles (full)",
           "Priority support"
         ]
+      },
+      "billing": {
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "perYear": "billed yearly"
       }
     },
     "faq": {
@@ -204,6 +209,35 @@
         "priority": "Priority",
         "credit20": "up to 20"
       }
+    },
+    "heroPreview": {
+      "label": "Credit ledger",
+      "balance": "Total balance",
+      "customers": "customers",
+      "overdue": "Overdue",
+      "ontime": "On time",
+      "salesLabel": "Today's sales",
+      "receipts": "receipts",
+      "revenue": "Revenue",
+      "cash": "Cash",
+      "card": "Card",
+      "credit": "Credit",
+      "txns": "txns",
+      "total": "Total"
+    },
+    "audience": {
+      "items": [
+        "Grocery store",
+        "Clothing",
+        "Appliances",
+        "Bazaar stall",
+        "Construction goods",
+        "Pharmacy",
+        "Stationery",
+        "Electronics",
+        "Flower shop",
+        "Auto parts"
+      ]
     }
   },
   "userDebt": {

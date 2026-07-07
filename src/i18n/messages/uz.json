@@ -125,6 +125,11 @@
           "Jamoa va rollar (to'liq)",
           "Prioritet yordam"
         ]
+      },
+      "billing": {
+        "monthly": "Oylik",
+        "yearly": "Yillik",
+        "perYear": "yillik to'lovda"
       }
     },
     "faq": {
@@ -203,6 +208,35 @@
         "priority": "Prioritet",
         "credit20": "20 tagacha"
       }
+    },
+    "heroPreview": {
+      "label": "Nasiya daftari",
+      "balance": "Umumiy qoldiq",
+      "customers": "mijoz",
+      "overdue": "Muddati o'tgan",
+      "ontime": "Muddatida",
+      "salesLabel": "Bugungi savdo",
+      "receipts": "ta chek",
+      "revenue": "Tushum",
+      "cash": "Naqd",
+      "card": "Karta",
+      "credit": "Nasiya",
+      "txns": "amaliyot",
+      "total": "Jami"
+    },
+    "audience": {
+      "items": [
+        "Oziq-ovqat do'koni",
+        "Kiyim-kechak",
+        "Maishiy texnika",
+        "Bozor rastasi",
+        "Qurilish mollari",
+        "Dorixona",
+        "Kanstovarlar",
+        "Poyabzal do'koni",
+        "Gullar do'koni",
+        "Avtoehtiyot qismlar"
+      ]
     }
   },
   "userDebt": {

@@ -72,6 +72,14 @@ export const ChevronIcon = ({ className }: IconProps) => (
   </svg>
 );
 
+export const GlobeIcon = ({ className }: IconProps) => (
+  <svg className={className ?? "h-5 w-5"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18" />
+    <path d="M12 3c2.6 2.5 3.9 5.7 3.9 9s-1.3 6.5-3.9 9c-2.6-2.5-3.9-5.7-3.9-9S9.4 5.5 12 3Z" />
+  </svg>
+);
+
 export const featureIcons = {
   credit: CreditIcon,
   pos: PosIcon,
