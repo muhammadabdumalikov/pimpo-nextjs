@@ -289,7 +289,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     const priceOut = parseFloat(formData.priceOut.replace(/[$,]/g, "")) || 0;
     const priceIn = parseFloat(formData.priceIn.replace(/[$,]/g, "")) || 0;
     const profit = priceOut - priceIn;
-    return `$${profit.toLocaleString()}`;
+    return profit.toLocaleString();
   };
 
   if (isLoadingProduct) {
@@ -482,7 +482,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   {t('addProduct.profit')}
                 </Label>
                 <div className="h-11 w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                  {formData.priceIn && formData.priceOut ? calculateProfit() : "$0"}
+                  {formData.priceIn && formData.priceOut ? calculateProfit() : "0"}
                 </div>
               </div>
 
