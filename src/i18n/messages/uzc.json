@@ -201,7 +201,9 @@
       "createFailed": "Маҳсулотни яратишда хатолик юз берди"
     },
     "scanBarcode": "Штрих-кодни сканерлаш",
-    "barcodeScanned": "Штрих-код сканерланди"
+    "barcodeScanned": "Штрих-код сканерланди",
+    "imageProOnly": "Маҳсулот расмлари Бизнес тарифида мавжуд. Расм қўшиш учун тарифни янгиланг.",
+    "businessBadge": "Бизнес"
   },
   "upgradePlan": {
     "headline": "Сизнинг эҳтиёжларингизга мос мослашувчан режалар!",
@@ -252,7 +254,8 @@
         "userDebtManagement": "Тўлиқ насия бошқаруви",
         "chartsAnalytics": "Кенгайтирилган таҳлил ва ҳисобот",
         "subscriptionManagement": "Жамоа: роллар ва ходимлар",
-        "prioritySupport": "Устувор қўллаб-қувватлаш"
+        "prioritySupport": "Устувор қўллаб-қувватлаш",
+        "productImages": "Маҳсулот расмини юклаш"
       }
     },
     "loadingPlans": "Режалар юкланмоқда...",
@@ -275,7 +278,8 @@
       "chat": "Чат",
       "standard": "Стандарт",
       "priority": "Устувор",
-      "debtCustomers": "20 насия"
+      "debtCustomers": "20 насия",
+      "productImages": "Маҳсулот расмини юклаш"
     }
   },
   "sidebar": {

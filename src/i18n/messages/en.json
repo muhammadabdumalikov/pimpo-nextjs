@@ -124,7 +124,8 @@
           "Bulk product import",
           "Advanced reports",
           "Team and roles (full)",
-          "Priority support"
+          "Priority support",
+          "Product image upload"
         ]
       },
       "billing": {
@@ -197,7 +198,8 @@
         "performance": "Product performance",
         "staffSales": "Sales by employee",
         "roles": "Roles & staff",
-        "support": "Support"
+        "support": "Support",
+        "productImages": "Product image upload"
       },
       "values": {
         "unlimited": "Unlimited",
@@ -355,7 +357,8 @@
     "previous": "Previous",
     "next": "Next",
     "limitReached": "Limit reached ({limit} products max)",
-    "limitInfo": "{current}/{limit} products"
+    "limitInfo": "{current}/{limit} products",
+    "upgradeCta": "Upgrade plan"
   },
   "categories": {
     "title": "Categories",
@@ -441,7 +444,9 @@
       "createFailed": "Failed to create product"
     },
     "scanBarcode": "Scan barcode",
-    "barcodeScanned": "Barcode scanned"
+    "barcodeScanned": "Barcode scanned",
+    "imageProOnly": "Product images are available on the Business plan. Upgrade to add photos.",
+    "businessBadge": "Business"
   },
   "upgradePlan": {
     "headline": "Flexible Plans Tailored to Fit Your Needs!",
@@ -492,7 +497,8 @@
         "userDebtManagement": "Full debt management",
         "chartsAnalytics": "Advanced analytics & reports",
         "subscriptionManagement": "Team: roles & staff",
-        "prioritySupport": "Priority support"
+        "prioritySupport": "Priority support",
+        "productImages": "Product image upload"
       }
     },
     "loadingPlans": "Loading plans...",
@@ -515,7 +521,8 @@
       "chat": "Chat",
       "standard": "Standard",
       "priority": "Priority",
-      "debtCustomers": "20 customers"
+      "debtCustomers": "20 customers",
+      "productImages": "Product image upload"
     }
   },
   "sidebar": {

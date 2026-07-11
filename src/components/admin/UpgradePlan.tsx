@@ -97,6 +97,7 @@ export default function UpgradePlan() {
           t('upgradePlan.features.pro.ecommerceDashboard'),
           t('upgradePlan.features.pro.productsList'),
           t('upgradePlan.features.pro.addProduct'),
+          t('upgradePlan.features.pro.productImages'),
           t('upgradePlan.features.pro.userDebtManagement'),
           t('upgradePlan.features.pro.chartsAnalytics'),
           t('upgradePlan.features.pro.subscriptionManagement'),

@@ -98,6 +98,12 @@ export default function SubscriptionManagement() {
         pro: true,
       },
       {
+        label: t("upgradePlan.compare.productImages"),
+        free: false,
+        basic: false,
+        pro: true,
+      },
+      {
         label: t("upgradePlan.compare.team"),
         free: false,
         basic: t("upgradePlan.compare.basicValue"),

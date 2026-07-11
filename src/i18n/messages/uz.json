@@ -123,7 +123,8 @@
           "Ommaviy mahsulot qo'shish",
           "Kengaytirilgan hisobotlar",
           "Jamoa va rollar (to'liq)",
-          "Prioritet yordam"
+          "Prioritet yordam",
+          "Mahsulot rasmini yuklash"
         ]
       },
       "billing": {
@@ -196,7 +197,8 @@
         "performance": "Mahsulot samaradorligi",
         "staffSales": "Xodim bo'yicha sotuv",
         "roles": "Rollar va xodimlar",
-        "support": "Yordam"
+        "support": "Yordam",
+        "productImages": "Mahsulot rasmini yuklash"
       },
       "values": {
         "unlimited": "Cheksiz",
@@ -441,7 +443,9 @@
       "createFailed": "Mahsulotni yaratishda xatolik yuz berdi"
     },
     "scanBarcode": "Shtrix-kodni skanerlash",
-    "barcodeScanned": "Shtrix-kod skanerlandi"
+    "barcodeScanned": "Shtrix-kod skanerlandi",
+    "imageProOnly": "Mahsulot rasmlari Biznes tarifida mavjud. Rasm qo'shish uchun tarifni yangilang.",
+    "businessBadge": "Biznes"
   },
   "upgradePlan": {
     "headline": "Sizning ehtiyojlaringizga mos moslashuvchan rejalar!",
@@ -492,7 +496,8 @@
         "userDebtManagement": "To'liq nasiya boshqaruvi",
         "chartsAnalytics": "Kengaytirilgan tahlil va hisobot",
         "subscriptionManagement": "Jamoa: rollar va xodimlar",
-        "prioritySupport": "Ustuvor qo'llab-quvvatlash"
+        "prioritySupport": "Ustuvor qo'llab-quvvatlash",
+        "productImages": "Mahsulot rasmini yuklash"
       }
     },
     "loadingPlans": "Rejalar yuklanmoqda...",
@@ -515,7 +520,8 @@
       "chat": "Chat",
       "standard": "Standart",
       "priority": "Ustuvor",
-      "debtCustomers": "20 nasiya"
+      "debtCustomers": "20 nasiya",
+      "productImages": "Mahsulot rasmini yuklash"
     }
   },
   "sidebar": {

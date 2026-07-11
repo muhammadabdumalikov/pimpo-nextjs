@@ -24,8 +24,10 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   const { t } = useTranslations();
   const router = useRouter();
   const { showToast } = useToast();
-  const { getLimit, isLimitReached } = useSubscription();
+  const { getLimit, isLimitReached, currentTier } = useSubscription();
   const isEditMode = !!productId;
+  // Product images are a Business (pro) plan feature.
+  const canUseImages = currentTier === "pro";
   const [formData, setFormData] = useState({
     productName: "",
     categoryId: "",
@@ -186,7 +188,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
           productName: prev.productName || result.name || "",
         }));
       }
-      if (result.image) {
+      if (canUseImages && result.image) {
         setImage((prev) => prev ?? result.image);
       }
       showToast(
@@ -559,20 +561,47 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         </div>
       </div>
 
-      {/* Product Image Section */}
+      {/* Product Image Section (Business plan only) */}
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
           <h2 className="text-lg font-medium text-gray-800 dark:text-white">
-            {t('addProduct.productImage')} <span className="text-gray-500 dark:text-gray-400 font-normal">{t('addProduct.optional')}</span>
+            {t('addProduct.productImage')}{' '}
+            {canUseImages ? (
+              <span className="font-normal text-gray-500 dark:text-gray-400">{t('addProduct.optional')}</span>
+            ) : (
+              <span className="ml-1 inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                {t('addProduct.businessBadge')}
+              </span>
+            )}
           </h2>
         </div>
         <div className="p-4 sm:p-6">
-          <ImageUpload
-            value={image}
-            onChange={setImage}
-            prefix="products"
-            label={t('addProduct.productImage')}
-          />
+          {canUseImages ? (
+            <ImageUpload
+              value={image}
+              onChange={setImage}
+              prefix="products"
+              label={t('addProduct.productImage')}
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center dark:border-gray-700 dark:bg-white/[0.02]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+                  <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+                </svg>
+              </div>
+              <p className="max-w-sm text-sm text-gray-600 dark:text-gray-300">
+                {t('addProduct.imageProOnly')}
+              </p>
+              <Link
+                href="/upgrade-plan"
+                className="inline-flex items-center rounded-full bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600"
+              >
+                {t('products.upgradeCta')}
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 

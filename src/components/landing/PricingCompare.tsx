@@ -52,6 +52,7 @@ const GROUPS: { key: string; rows: Row[] }[] = [
     rows: [
       { key: "stock", free: "basic", basic: "full", pro: "full" },
       { key: "bulk", free: false, basic: false, pro: true },
+      { key: "productImages", free: false, basic: false, pro: true },
     ],
   },
   {
