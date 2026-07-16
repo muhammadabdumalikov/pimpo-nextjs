@@ -17,6 +17,8 @@ type PropsType = {
   dateFormat?: string;
   label?: string;
   placeholder?: string;
+  /** Include a time picker (24h) — e.g. editing a sale's exact timestamp. */
+  enableTime?: boolean;
 };
 
 export default function DatePicker({
@@ -27,6 +29,7 @@ export default function DatePicker({
   defaultDate,
   dateFormat,
   placeholder,
+  enableTime = false,
 }: PropsType) {
   const { locale } = useTranslations();
   useEffect(() => {
@@ -34,7 +37,9 @@ export default function DatePicker({
       mode: mode || "single",
       static: true,
       monthSelectorType: "static",
-      dateFormat: dateFormat || "Y-m-d",
+      dateFormat: dateFormat || (enableTime ? "d.m.Y | H:i" : "Y-m-d"),
+      enableTime,
+      time_24hr: enableTime,
       defaultDate,
       onChange,
       locale: getFlatpickrLocale(locale),
@@ -45,7 +50,7 @@ export default function DatePicker({
         flatPickr.destroy();
       }
     };
-  }, [mode, onChange, id, defaultDate, dateFormat, locale]);
+  }, [mode, onChange, id, defaultDate, dateFormat, locale, enableTime]);
 
   return (
     <div>

@@ -10,6 +10,7 @@ import {
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
+  MoneyDollarIcon,
   PieChartIcon,
   PlugInIcon,
   UserCircleIcon,
@@ -84,7 +85,16 @@ const AppSidebar: React.FC = () => {
         { name: t('sidebar.categories'), path: "/categories", pro: false },
         { name: t('sidebar.products'), path: "/products", pro: false },
         { name: t('sidebar.addProduct'), path: "/add-product", pro: false },
+      ],
+    },
+    {
+      icon: <MoneyDollarIcon />,
+      name: t('sidebar.sales'),
+      subItems: [
         { name: t('sidebar.checkout'), path: "/cart", pro: false },
+        { name: t('sidebar.allSales'), path: "/sales", pro: false },
+        { name: t('sidebar.kassaShifts'), path: "/kassa", pro: false },
+        { name: t('sidebar.kassaOperations'), path: "/kassa/operations", pro: false },
       ],
     },
     {

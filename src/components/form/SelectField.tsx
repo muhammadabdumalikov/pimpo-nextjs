@@ -215,7 +215,7 @@ export default function SelectField({
           }
           setOpen((v) => !v);
         }}
-        className={`flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm shadow-theme-xs transition focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 ${
+        className={`flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm shadow-theme-xs transition focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 ${
           selected ? "text-gray-700 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
         } ${buttonClassName}`}
       >

@@ -1247,6 +1247,8 @@ export interface Order {
   discountValue: string | null;
   discountAmount: string;
   itemCount: number;
+  /** Distinct-product ("tur") count — number of line items (list endpoint). */
+  itemTypes?: number;
   paymentMethod: string | null;
   payments: PaymentSplit[] | null;
   amountPaid: string | null;
@@ -1255,6 +1257,8 @@ export interface Order {
   taxAmount: string | null;
   note: string | null;
   source: string;
+  cashierId?: string | null;
+  cashierName?: string | null;
   createdAt: string;
   updatedAt: string;
   items?: OrderItem[];
@@ -1274,6 +1278,22 @@ export interface CreateOrderDto {
   source?: string;
   discountType?: "amount" | "percent";
   discountValue?: number;
+  /** Register (kassa) this admin sale is rung up on. */
+  registerId?: string;
+  /** Cashier shift this sale belongs to (offline may pass it explicitly). */
+  shiftId?: string;
+  /** Held (parked) order this sale resumes — deleted with the new order. */
+  heldOrderId?: string;
+}
+
+/** Park the current cart as a held sale (no payment yet, stock untouched). */
+export interface HoldOrderDto {
+  items: { productId: string; quantity: number }[];
+  userId?: string;
+  customerName?: string;
+  discountType?: "amount" | "percent";
+  discountValue?: number;
+  note?: string;
 }
 
 export interface OrdersResponse {
@@ -1283,22 +1303,66 @@ export interface OrdersResponse {
   limit: number;
 }
 
+export interface OrderListFilters {
+  paymentMethod?: string;
+  cashierId?: string;
+  minAmount?: string | number;
+  maxAmount?: string | number;
+}
+
 export async function getOrders(
   page?: number,
   limit?: number,
   search?: string,
   status?: string,
+  from?: string,
+  to?: string,
+  filters?: OrderListFilters,
 ): Promise<OrdersResponse> {
   const params = new URLSearchParams();
   if (page) params.set('page', String(page));
   if (limit) params.set('limit', String(limit));
   if (search) params.set('search', search);
   if (status) params.set('status', status);
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  if (filters?.paymentMethod) params.set('paymentMethod', filters.paymentMethod);
+  if (filters?.cashierId) params.set('cashierId', filters.cashierId);
+  if (filters?.minAmount) params.set('minAmount', String(filters.minAmount));
+  if (filters?.maxAmount) params.set('maxAmount', String(filters.maxAmount));
   const response = await fetch(`${API_BASE_URL}/orders?${params.toString()}`, {
     method: 'GET',
     headers: authHeaders(),
   });
   if (!response.ok) await parseError(response, 'Failed to fetch orders');
+  return response.json();
+}
+
+/** Sales summary for the "All sales" screen (completed orders in the range). */
+export interface SalesSummary {
+  count: number;
+  units: number;
+  revenue: number;
+  cash: number;
+  card: number;
+  debt: number;
+}
+
+export async function getSalesSummary(
+  from?: string,
+  to?: string,
+): Promise<SalesSummary> {
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  const response = await fetch(
+    `${API_BASE_URL}/orders/summary?${params.toString()}`,
+    {
+      method: 'GET',
+      headers: authHeaders(),
+    },
+  );
+  if (!response.ok) await parseError(response, 'Failed to fetch sales summary');
   return response.json();
 }
 
@@ -1318,6 +1382,48 @@ export async function createOrder(data: CreateOrderDto): Promise<Order> {
     body: JSON.stringify(data),
   });
   if (!response.ok) await parseError(response, 'Failed to create order');
+  return response.json();
+}
+
+export async function holdOrder(data: HoldOrderDto): Promise<Order> {
+  const response = await fetch(`${API_BASE_URL}/orders/hold`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to hold order');
+  return response.json();
+}
+
+export async function deleteOrder(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to delete order');
+}
+
+/**
+ * Editable metadata of a completed sale. Money/items/stock are immutable —
+ * only who/when/notes change. `null` clears a field; absent leaves it as is.
+ */
+export interface UpdateOrderDto {
+  userId?: string | null;
+  customerName?: string | null;
+  cashierId?: string | null;
+  note?: string | null;
+}
+
+export async function updateOrder(
+  id: string,
+  data: UpdateOrderDto,
+): Promise<Order> {
+  const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update order');
   return response.json();
 }
 
@@ -1633,4 +1739,273 @@ export async function createReceipt(
   if (!response.ok) await parseError(response, 'Failed to create receipt');
   const result = await response.json();
   return result.receipt;
+}
+
+// ─── Kassa (cash shifts) ────────────────────────────────────────────────────
+
+export interface CashRegister {
+  id: string;
+  businessId: string;
+  name: string;
+  storeId: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CashCategory {
+  id: string;
+  businessId: string;
+  name: string;
+  direction: 'in' | 'out' | 'both';
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface ReconRow {
+  method: 'cash' | 'card' | 'debt';
+  currency: 'UZS' | 'USD';
+  opening: number;
+  in: number;
+  out: number;
+  expected: number;
+  counted: number | null;
+  diff: number | null;
+}
+
+export interface Shift {
+  id: string;
+  businessId: string;
+  registerId: string;
+  registerName: string | null;
+  status: 'open' | 'closed';
+  openingFloat: string;
+  usdRate: string | null;
+  openedByCashierId: string | null;
+  openedByCashierName: string | null;
+  closedByCashierId: string | null;
+  closedByCashierName: string | null;
+  countedCash: string | null;
+  expectedCash: string | null;
+  cashIn: string | null;
+  cashOut: string | null;
+  difference: string | null;
+  reconciliation: ReconRow[] | null;
+  orderCount: number | null;
+  note: string | null;
+  openedAt: string;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CashMovement {
+  id: string;
+  businessId: string;
+  shiftId: string;
+  registerId: string | null;
+  type: 'in' | 'out';
+  isCash: boolean;
+  amount: string;
+  currency: 'UZS' | 'USD';
+  categoryId: string | null;
+  categoryName: string | null;
+  reason: string | null;
+  cashierId: string | null;
+  cashierName: string | null;
+  createdAt: string;
+}
+
+export interface ShiftReport {
+  shift: Shift;
+  movements: CashMovement[];
+  reconciliation: ReconRow[];
+  orderCount: number;
+}
+
+export interface OpenShiftDto {
+  registerId: string;
+  openingFloat?: number;
+  note?: string;
+}
+
+export interface CreateCashMovementDto {
+  type: 'in' | 'out';
+  amount: number;
+  isCash?: boolean;
+  currency?: 'UZS' | 'USD';
+  categoryId?: string;
+  reason?: string;
+}
+
+export interface CloseShiftDto {
+  counted?: { method: 'cash' | 'card' | 'debt'; currency: 'UZS' | 'USD'; amount: number }[];
+  usdRate?: number;
+  note?: string;
+}
+
+// Registers
+export async function getRegisters(): Promise<CashRegister[]> {
+  const response = await fetch(`${API_BASE_URL}/registers`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch registers');
+  return response.json();
+}
+
+export async function createRegister(data: { name: string; storeId?: string }): Promise<CashRegister> {
+  const response = await fetch(`${API_BASE_URL}/registers`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create register');
+  return (await response.json()).register;
+}
+
+export async function updateRegister(
+  id: string,
+  data: { name?: string; isActive?: boolean },
+): Promise<CashRegister> {
+  const response = await fetch(`${API_BASE_URL}/registers/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update register');
+  return (await response.json()).register;
+}
+
+// Categories
+export async function getCashCategories(): Promise<CashCategory[]> {
+  const response = await fetch(`${API_BASE_URL}/cash-categories`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch categories');
+  return response.json();
+}
+
+export async function createCashCategory(data: {
+  name: string;
+  direction?: 'in' | 'out' | 'both';
+}): Promise<CashCategory> {
+  const response = await fetch(`${API_BASE_URL}/cash-categories`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create category');
+  return (await response.json()).category;
+}
+
+export async function updateCashCategory(
+  id: string,
+  data: { name?: string; direction?: 'in' | 'out' | 'both'; isActive?: boolean },
+): Promise<CashCategory> {
+  const response = await fetch(`${API_BASE_URL}/cash-categories/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update category');
+  return (await response.json()).category;
+}
+
+// Shifts
+export async function getCurrentShift(registerId: string): Promise<Shift | null> {
+  const params = new URLSearchParams({ registerId });
+  const response = await fetch(`${API_BASE_URL}/shifts/current?${params.toString()}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch current shift');
+  // The endpoint returns null (empty body) when no shift is open.
+  const text = await response.text();
+  return text ? (JSON.parse(text) as Shift) : null;
+}
+
+export async function getOpenShifts(): Promise<Shift[]> {
+  const response = await fetch(`${API_BASE_URL}/shifts/open`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch open shifts');
+  return response.json();
+}
+
+export async function openShift(data: OpenShiftDto): Promise<Shift> {
+  const response = await fetch(`${API_BASE_URL}/shifts/open`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to open shift');
+  return (await response.json()).shift;
+}
+
+export async function addCashMovement(
+  shiftId: string,
+  data: CreateCashMovementDto,
+): Promise<CashMovement> {
+  const response = await fetch(`${API_BASE_URL}/shifts/${shiftId}/movements`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to add movement');
+  return (await response.json()).movement;
+}
+
+export async function getShiftReport(shiftId: string): Promise<ShiftReport> {
+  const response = await fetch(`${API_BASE_URL}/shifts/${shiftId}/report`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch shift report');
+  return response.json();
+}
+
+export async function closeShift(shiftId: string, data: CloseShiftDto): Promise<Shift> {
+  const response = await fetch(`${API_BASE_URL}/shifts/${shiftId}/close`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to close shift');
+  return (await response.json()).shift;
+}
+
+export interface ShiftsResponse {
+  shifts: Shift[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getShifts(params?: {
+  page?: number;
+  limit?: number;
+  registerId?: string;
+}): Promise<ShiftsResponse> {
+  const qs = new URLSearchParams();
+  if (params?.page) qs.set('page', String(params.page));
+  if (params?.limit) qs.set('limit', String(params.limit));
+  if (params?.registerId) qs.set('registerId', params.registerId);
+  const response = await fetch(`${API_BASE_URL}/shifts?${qs.toString()}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch shifts');
+  return response.json();
+}
+
+export async function getShift(id: string): Promise<Shift> {
+  const response = await fetch(`${API_BASE_URL}/shifts/${id}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch shift');
+  return response.json();
 }

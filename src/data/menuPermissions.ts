@@ -13,6 +13,9 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'ecommerce.addProduct', allowedTiers: ['free', 'basic', 'pro', ] },
   { menuItem: 'checkout', allowedTiers: ['free', 'basic', 'pro',] },
   
+  // Kassa (cash shifts) — available on every tier
+  { menuItem: 'kassa', allowedTiers: ['free', 'basic', 'pro', ] },
+
   // User Debt
   { menuItem: 'userDebt', allowedTiers: ['free', 'basic', 'pro', ] },
 
@@ -88,6 +91,11 @@ const routeMenuMap: Record<string, string> = {
   '/settings/receipts': 'settings.receipts',
   '/settings': 'settings',
   '/cart': 'checkout',
+  // All-sales history shares the checkout menu right: whoever can sell can
+  // also see the sales list.
+  '/sales': 'checkout',
+  '/kassa': 'kassa',
+  '/kassa/operations': 'kassa',
   '/inventory': 'inventory',
   '/suppliers': 'suppliers',
   '/receipts': 'receipts',

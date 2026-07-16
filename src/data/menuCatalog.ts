@@ -36,6 +36,7 @@ export const menuCatalog: MenuCatalogItem[] = [
 
   // Sales
   { key: "checkout", labelKey: "sidebar.checkout", group: "sales" },
+  { key: "kassa", labelKey: "sidebar.kassa", group: "sales" },
   { key: "productPerformance", labelKey: "sidebar.productPerformance", group: "sales" },
 
   // Customers

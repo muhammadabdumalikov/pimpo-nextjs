@@ -2,11 +2,50 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Contrast pass ──────────────────────────────────────────────────────────
+   Form fields must visibly separate from the surfaces they sit on (the page
+   canvas and the white / gray-900 cards) in both themes. Deliberately
+   UNLAYERED so these win over per-element `bg-white`/`bg-transparent`
+   utilities scattered across components; the focus rules below keep the
+   brand-colored focus border working. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+textarea,
+select {
+  background-color: var(--color-gray-50);
+  border-color: var(--color-gray-300);
+}
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+.dark textarea,
+.dark select {
+  background-color: var(--color-gray-800);
+  border-color: var(--color-gray-700);
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-brand-300);
+}
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+.dark textarea:focus,
+.dark select:focus {
+  border-color: var(--color-brand-800);
+}
+
 @theme {
   --font-*: initial;
   /* Gilroy (self-hosted) for Latin + Russian Cyrillic. The trailing families cover the
      Uzbek-specific letters қ Қ ғ Ғ ҳ Ҳ that Gilroy lacks, via per-glyph fallback. */
   --font-outfit: var(--font-gilroy), 'Segoe UI', 'Noto Sans', 'PT Sans', Arial, sans-serif;
+
+  /* Weight floor: the UI uses only semibold/bold/extrabold. Anything lighter
+     (thin..medium, incl. the default "normal") renders as semibold — these
+     tokens remap the font-* utilities app-wide. Bold (700) and extrabold
+     (800) keep their real weights so the hierarchy above 600 survives. */
+  --font-weight-thin: 600;
+  --font-weight-extralight: 600;
+  --font-weight-light: 600;
+  --font-weight-normal: 600;
+  --font-weight-medium: 600;
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;
@@ -182,12 +221,15 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
-  /* Global readability bump: scale the whole type scale up by 12.5%
-     (root 16px -> 18px). All text tokens above use rem, so they scale with
+  /* Global readability bump: scale the whole type scale up by 18.75%
+     (root 16px -> 19px). All text tokens above use rem, so they scale with
      this; the px `--breakpoint-*` tokens do not, so responsive breakpoints
      stay tied to real device widths. */
   html {
-    font-size: 112.5%;
+    font-size: 118.75%;
+    /* No regular text anywhere: unstyled text (no font-* utility) also
+       defaults to semibold, matching the weight floor set in @theme. */
+    font-weight: 600;
   }
   *,
   ::after,
@@ -502,6 +544,88 @@ span.flatpickr-weekday,
 
 .flatpickr-calendar.static {
   @apply right-0;
+}
+
+/* ── Day cells ──────────────────────────────────────────────────────────────
+   Keep flatpickr's default flex sizing (1/7 basis) so exactly 7 days fit per
+   row and stay aligned with the weekday headers — DON'T set an explicit
+   width/margin here, or the cells overflow the fixed day container and wrap to
+   6 per row. Height + full rounding just make them circular. */
+.flatpickr-day {
+  @apply !h-10 !justify-center !rounded-full;
+}
+.flatpickr-day.today:not(.selected) {
+  @apply !border-brand-300 dark:!border-brand-500/50;
+}
+
+/* ── Month/year header: kill the boxed year input look ── */
+.flatpickr-current-month input.cur-year {
+  @apply !bg-transparent;
+}
+.numInputWrapper:hover {
+  background: transparent !important;
+}
+.numInputWrapper span {
+  @apply !border-0;
+}
+
+/* ── Time picker (H:i) — was unstyled; match the day grid ── */
+.flatpickr-time {
+  @apply !mt-4 !h-auto !border-t !border-gray-100 !pt-4 dark:!border-gray-800;
+}
+.flatpickr-time.time24hr {
+  @apply flex items-center justify-center gap-1;
+}
+.flatpickr-time .numInputWrapper {
+  @apply !h-10 !w-16 overflow-hidden !rounded-lg !bg-gray-50 dark:!bg-white/[0.06];
+  flex: 0 0 auto !important;
+}
+.flatpickr-time input {
+  @apply !h-10 !text-base !font-semibold !text-gray-800 dark:!text-white/90;
+  background: transparent !important;
+}
+.flatpickr-time input:hover,
+.flatpickr-time input:focus {
+  background: transparent !important;
+}
+.flatpickr-time .flatpickr-time-separator {
+  @apply !w-4 !text-lg !font-bold !text-gray-400;
+}
+.flatpickr-time .numInputWrapper:hover {
+  @apply !bg-gray-100 dark:!bg-white/[0.1];
+  background-color: var(--color-gray-100) !important;
+}
+.dark .flatpickr-time .numInputWrapper:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ── Inline calendar (date-range filter): borderless, no shadow ── */
+.dr-cal .flatpickr-calendar {
+  @apply !mt-0 !border-0 !p-0 !shadow-none dark:!bg-transparent;
+}
+/* A whole trailing week made only of next-month days is hidden via a JS hook
+   (`.dr-hide-row`). `!hidden` is required — the base `.flatpickr-day` rule sets
+   `display:flex !important`, which a plain `hidden` can't override. */
+.dr-cal .flatpickr-day.dr-hide-row {
+  @apply !hidden;
+}
+/* Range selection: give the in-between days a clearly visible brand tint (the
+   default is near-invisible gray). The box-shadow bridges the cell margins so
+   the highlight reads as one continuous bar. */
+.dr-cal .flatpickr-day.inRange,
+.dr-cal .flatpickr-day.inRange:hover,
+.dr-cal .flatpickr-day.inRange:focus {
+  @apply !border-brand-100 !bg-brand-100 !text-brand-700 dark:!border-brand-500/25 dark:!bg-brand-500/25 dark:!text-brand-200;
+  box-shadow:
+    -5px 0 0 var(--color-brand-100),
+    5px 0 0 var(--color-brand-100) !important;
+}
+.dark .dr-cal .flatpickr-day.inRange,
+.dark .dr-cal .flatpickr-day.inRange:hover,
+.dark .dr-cal .flatpickr-day.inRange:focus {
+  box-shadow:
+    -5px 0 0 rgba(70, 95, 255, 0.25),
+    5px 0 0 rgba(70, 95, 255, 0.25) !important;
 }
 
 .fc .fc-view-harness {

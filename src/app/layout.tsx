@@ -15,7 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={gilroy.variable}>
-      <body className="dark:bg-gray-900" suppressHydrationWarning>
+      {/* The page canvas sits a step darker than the white/gray-900 surfaces
+          on it, so cards, inputs and the layout visibly separate in both
+          themes. */}
+      <body className="bg-gray-100 dark:bg-gray-950" suppressHydrationWarning>
         <AuthProvider>
           <LocaleProvider>
             <SubscriptionProvider>
