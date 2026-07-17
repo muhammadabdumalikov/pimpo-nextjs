@@ -16,6 +16,11 @@ export const defaultMenuPermissions: MenuPermission[] = [
   // Kassa (cash shifts) — available on every tier
   { menuItem: 'kassa', allowedTiers: ['free', 'basic', 'pro', ] },
 
+  // Finance (Moliya) — available on every tier
+  { menuItem: 'finance.categories', allowedTiers: ['free', 'basic', 'pro', ] },
+  { menuItem: 'finance.transactions', allowedTiers: ['free', 'basic', 'pro', ] },
+  { menuItem: 'finance.state', allowedTiers: ['free', 'basic', 'pro', ] },
+
   // User Debt
   { menuItem: 'userDebt', allowedTiers: ['free', 'basic', 'pro', ] },
 
@@ -96,9 +101,15 @@ const routeMenuMap: Record<string, string> = {
   '/sales': 'checkout',
   '/kassa': 'kassa',
   '/kassa/operations': 'kassa',
+  '/finance/categories': 'finance.categories',
+  '/finance/transactions': 'finance.transactions',
+  '/finance/state': 'finance.state',
   '/inventory': 'inventory',
   '/suppliers': 'suppliers',
   '/receipts': 'receipts',
+  // Stock-takes is merged into the Inventory (Ombor) page; the detail/count
+  // screen at /stock-takes/:id inherits the 'inventory' permission.
+  '/stock-takes': 'inventory',
   '/product-performance': 'productPerformance',
   '/roles': 'team.roles',
   '/staff': 'team.staff',

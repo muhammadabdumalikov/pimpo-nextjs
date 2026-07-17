@@ -4,19 +4,15 @@ import { Metadata } from "next";
 import React from "react";
 
 export const metadata: Metadata = {
-  title: "Next.js Inventory Management | Pimpo - Next.js Dashboard Template",
-  description:
-    "This is Next.js Inventory Management page for Pimpo Tailwind CSS Admin Dashboard Template",
+  title: "Ombor holati | Pimpo",
+  description: "Product stock levels and status",
 };
 
 export default function InventoryPage() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="Inventory" titleKey="sidebar.inventory" />
-      <div className="space-y-6">
-        <InventoryManagement />
-      </div>
+      <PageBreadcrumb pageTitle="Ombor holati" titleKey="inventory.title" />
+      <InventoryManagement />
     </div>
   );
 }
-

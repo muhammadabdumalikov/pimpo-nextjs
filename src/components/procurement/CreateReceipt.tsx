@@ -25,6 +25,8 @@ interface Line {
   priceIn: string;
   // Selling price for this batch. Blank → keep the product's current price.
   priceOut: string;
+  // Wholesale (bulk) selling price. Blank → leave the product's wholesale as is.
+  priceWholesale: string;
 }
 
 function formatMoney(n: number): string {
@@ -47,6 +49,7 @@ const newLine = (): Line => ({
   quantity: "1",
   priceIn: "",
   priceOut: "",
+  priceWholesale: "",
 });
 
 export default function CreateReceipt() {
@@ -63,6 +66,8 @@ export default function CreateReceipt() {
   const [isLoading, setIsLoading] = useState(true);
   const [supplierId, setSupplierId] = useState("");
   const [note, setNote] = useState("");
+  const [currency, setCurrency] = useState<"UZS" | "USD">("UZS");
+  const [usdRate, setUsdRate] = useState("");
   const [lines, setLines] = useState<Line[]>([newLine()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -158,6 +163,10 @@ export default function CreateReceipt() {
       productId,
       priceIn: product ? String(Math.round(Number(product.priceIn))) : "",
       priceOut: product ? String(Math.round(Number(product.priceOut))) : "",
+      priceWholesale:
+        product && product.priceWholesale
+          ? String(Math.round(Number(product.priceWholesale)))
+          : "",
     });
     // Move straight to the quantity field so the row fills with the keyboard.
     requestAnimationFrame(() => qtyRefs.current.get(key)?.focus());
@@ -211,8 +220,7 @@ export default function CreateReceipt() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (draft: boolean) => {
     const items = lines
       .filter((l) => l.productId)
       .map((l) => ({
@@ -221,6 +229,9 @@ export default function CreateReceipt() {
         priceIn: Number(l.priceIn) || 0,
         // Omit when blank so the backend keeps the product's current price.
         priceOut: l.priceOut.trim() ? Number(l.priceOut) : undefined,
+        priceWholesale: l.priceWholesale.trim()
+          ? Number(l.priceWholesale)
+          : undefined,
       }));
 
     if (items.length === 0) {
@@ -228,6 +239,10 @@ export default function CreateReceipt() {
     }
     if (items.some((i) => i.quantity < 1)) {
       return setError(t("goodsReceipt.errors.badQuantity") || "Quantity must be at least 1");
+    }
+    const rate = Number(digitsOnly(usdRate)) || 0;
+    if (currency === "USD" && rate <= 0) {
+      return setError(t("goodsReceipt.errors.rateRequired") || "Enter the USD rate");
     }
 
     setIsSubmitting(true);
@@ -237,14 +252,28 @@ export default function CreateReceipt() {
         items,
         supplierId: supplierId || undefined,
         note: note.trim() || undefined,
+        draft: draft || undefined,
+        currency,
+        usdRate: currency === "USD" ? rate : undefined,
       });
-      showToast("success", t("goodsReceipt.createSuccess") || "Receipt created — stock updated", "Success");
+      showToast(
+        "success",
+        draft
+          ? t("goodsReceipt.draftSaved")
+          : t("goodsReceipt.createSuccess") || "Receipt created — stock updated",
+        "Success",
+      );
       router.push("/receipts");
     } catch (err: unknown) {
       setError((err as Error)?.message || "Failed to create receipt");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void submit(false);
   };
 
   // Esc cancels (back to the list). An open product picker swallows Esc first,
@@ -315,17 +344,40 @@ export default function CreateReceipt() {
             onChange={(e) => setNote(e.target.value)}
           />
         </div>
+        <div>
+          <Label>{t("goodsReceipt.currency")}</Label>
+          <SelectField
+            value={currency}
+            onChange={(v) => setCurrency(v as "UZS" | "USD")}
+            options={[
+              { value: "UZS", label: "UZS" },
+              { value: "USD", label: "USD" },
+            ]}
+          />
+        </div>
+        {currency === "USD" && (
+          <div>
+            <Label>{t("goodsReceipt.usdRate")}</Label>
+            <Input
+              inputMode="numeric"
+              value={formatNumberInput(usdRate)}
+              onChange={(e) => setUsdRate(digitsOnly(e.target.value))}
+              placeholder="12800"
+            />
+          </div>
+        )}
       </div>
 
       {/* Line items — plain divs (not a table in an overflow container) so the
           product dropdown can overlay freely without being clipped. */}
       <div className="mb-3">
         {/* Column headers (desktop only) */}
-        <div className="hidden grid-cols-[minmax(0,420px)_88px_120px_120px_120px_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
+        <div className="hidden grid-cols-[minmax(0,420px)_88px_120px_120px_120px_120px_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
           <div>{t("goodsReceipt.product")}</div>
           <div>{t("goodsReceipt.quantity")}</div>
           <div>{t("goodsReceipt.priceIn")}</div>
           <div>{t("goodsReceipt.priceOut") || "Цена продажи"}</div>
+          <div>{t("goodsReceipt.priceWholesale")}</div>
           <div className="text-right">{t("goodsReceipt.lineTotal")}</div>
           <div />
         </div>
@@ -336,7 +388,7 @@ export default function CreateReceipt() {
             return (
               <div
                 key={l.key}
-                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,420px)_88px_120px_120px_120px_44px] sm:items-center"
+                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,420px)_88px_120px_120px_120px_120px_44px] sm:items-center"
               >
                 <div className="min-w-0">
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
@@ -397,6 +449,17 @@ export default function CreateReceipt() {
                     value={formatNumberInput(l.priceOut)}
                     onChange={(e) => updateLine(l.key, { priceOut: digitsOnly(e.target.value) })}
                     onKeyDown={(e) => onPriceOutKeyDown(e, index)}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
+                    {t("goodsReceipt.priceWholesale")}
+                  </span>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={formatNumberInput(l.priceWholesale)}
+                    onChange={(e) => updateLine(l.key, { priceWholesale: digitsOnly(e.target.value) })}
                   />
                 </div>
                 <div className="text-sm font-medium text-gray-800 dark:text-white/90 sm:text-right">
@@ -460,6 +523,15 @@ export default function CreateReceipt() {
             disabled={isSubmitting}
           >
             {t("goodsReceipt.cancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={() => void submit(true)}
+            disabled={isSubmitting}
+          >
+            {t("goodsReceipt.saveDraft")}
           </Button>
           <Button type="submit" size="md" disabled={isSubmitting}>
             {isSubmitting ? t("goodsReceipt.saving") : t("goodsReceipt.save")}

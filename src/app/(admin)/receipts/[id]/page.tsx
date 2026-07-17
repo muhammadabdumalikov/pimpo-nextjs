@@ -1,10 +1,9 @@
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ReceiptDetail from "@/components/procurement/ReceiptDetail";
 import { Metadata } from "next";
-import React from "react";
 
 export const metadata: Metadata = {
-  title: "Goods Receipt | Pimpo",
+  title: "Goods Receipt | KPOS",
   description: "Goods receipt details",
 };
 

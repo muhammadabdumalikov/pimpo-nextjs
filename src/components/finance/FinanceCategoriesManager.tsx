@@ -1,6 +1,6 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { Modal } from "@/components/ui/modal";
+import React, { useEffect, useMemo, useState } from "react";
+import { Drawer } from "@/components/ui/drawer";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import Button from "@/components/ui/button/Button";
 import Label from "@/components/form/Label";
@@ -10,31 +10,34 @@ import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import { PlusIcon, TrashBinIcon } from "@/icons/index";
 import {
-  getCashCategories,
-  createCashCategory,
-  updateCashCategory,
-  type CashCategory,
+  getFinanceCategories,
+  createFinanceCategory,
+  updateFinanceCategory,
+  type FinanceCategory,
 } from "@/lib/api";
 
 const CARD =
   "overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6";
 
-export default function CashCategoriesManager() {
+type Tab = "all" | "income" | "expense";
+
+export default function FinanceCategoriesManager() {
   const { t } = useTranslations();
   const { showToast } = useToast();
-  const [categories, setCategories] = useState<CashCategory[]>([]);
+  const [categories, setCategories] = useState<FinanceCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
-  const [direction, setDirection] = useState<"in" | "out" | "both">("both");
+  const [kind, setKind] = useState<"income" | "expense">("expense");
   const [saving, setSaving] = useState(false);
-  const [toDelete, setToDelete] = useState<CashCategory | null>(null);
+  const [toDelete, setToDelete] = useState<FinanceCategory | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     try {
       setLoading(true);
-      setCategories(await getCashCategories());
+      setCategories(await getFinanceCategories());
     } catch (e) {
       showToast("error", (e as Error).message, "Error");
     } finally {
@@ -47,9 +50,14 @@ export default function CashCategoriesManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const shown = useMemo(
+    () => (tab === "all" ? categories : categories.filter((c) => c.kind === tab)),
+    [categories, tab],
+  );
+
   const openAdd = () => {
     setName("");
-    setDirection("both");
+    setKind("expense");
     setModalOpen(true);
   };
 
@@ -57,8 +65,8 @@ export default function CashCategoriesManager() {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await createCashCategory({ name: name.trim(), direction });
-      showToast("success", t("kassa.add"), "Success");
+      await createFinanceCategory({ name: name.trim(), kind });
+      showToast("success", t("finance.add"), "Success");
       setModalOpen(false);
       await load();
     } catch (e) {
@@ -72,7 +80,7 @@ export default function CashCategoriesManager() {
     if (!toDelete) return;
     setDeleting(true);
     try {
-      await updateCashCategory(toDelete.id, { isActive: false });
+      await updateFinanceCategory(toDelete.id, { isActive: false });
       setToDelete(null);
       await load();
     } catch (e) {
@@ -82,42 +90,76 @@ export default function CashCategoriesManager() {
     }
   };
 
-  const dirLabel = (d: CashCategory["direction"]) =>
-    d === "in"
-      ? t("kassa.dirIn")
-      : d === "out"
-        ? t("kassa.dirOut")
-        : t("kassa.dirBoth");
+  const kindBadge = (k: FinanceCategory["kind"]) => (
+    <span
+      className={
+        k === "income"
+          ? "inline-flex rounded-full bg-success-50 px-2.5 py-0.5 text-theme-xs font-medium text-success-600 dark:bg-success-500/10 dark:text-success-400"
+          : "inline-flex rounded-full bg-warning-50 px-2.5 py-0.5 text-theme-xs font-medium text-warning-600 dark:bg-warning-500/10 dark:text-warning-400"
+      }
+    >
+      {k === "income" ? t("finance.income") : t("finance.expense")}
+    </span>
+  );
+
+  const tabs: { key: Tab; label: string; count: number }[] = [
+    { key: "all", label: t("finance.tabActive"), count: categories.length },
+    {
+      key: "income",
+      label: t("finance.tabIncome"),
+      count: categories.filter((c) => c.kind === "income").length,
+    },
+    {
+      key: "expense",
+      label: t("finance.tabExpense"),
+      count: categories.filter((c) => c.kind === "expense").length,
+    },
+  ];
 
   return (
     <div className={CARD}>
       <div className="mb-6 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-          {t("kassa.categories")}
+          {t("finance.categoriesTitle")}
         </h3>
         <Button size="sm" startIcon={<PlusIcon />} onClick={openAdd}>
-          {t("kassa.newCategory")}
+          {t("finance.newCategory")}
         </Button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {tabs.map((tb) => (
+          <button
+            key={tb.key}
+            type="button"
+            onClick={() => setTab(tb.key)}
+            className={
+              tab === tb.key
+                ? "rounded-lg bg-brand-500 px-3 py-1.5 text-theme-sm font-medium text-white"
+                : "rounded-lg bg-gray-100 px-3 py-1.5 text-theme-sm font-medium text-gray-600 hover:bg-gray-200 dark:bg-white/[0.03] dark:text-gray-400 dark:hover:bg-white/[0.06]"
+            }
+          >
+            {tb.label} ({tb.count})
+          </button>
+        ))}
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
         </div>
-      ) : categories.length > 0 ? (
+      ) : shown.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-theme-xs uppercase tracking-wide text-gray-400 dark:border-gray-800">
-                <th className="px-3 py-3 font-medium">{t("kassa.name")}</th>
-                <th className="px-3 py-3 font-medium">
-                  {t("kassa.direction")}
-                </th>
+                <th className="px-3 py-3 font-medium">{t("finance.name")}</th>
+                <th className="px-3 py-3 font-medium">{t("finance.kind")}</th>
                 <th className="px-3 py-3" />
               </tr>
             </thead>
             <tbody>
-              {categories.map((c) => (
+              {shown.map((c) => (
                 <tr
                   key={c.id}
                   className="border-b border-gray-100 dark:border-gray-800/60"
@@ -125,16 +167,14 @@ export default function CashCategoriesManager() {
                   <td className="px-3 py-3 font-medium text-gray-800 dark:text-white/90">
                     {c.name}
                   </td>
-                  <td className="px-3 py-3 text-gray-500 dark:text-gray-400">
-                    {dirLabel(c.direction)}
-                  </td>
+                  <td className="px-3 py-3">{kindBadge(c.kind)}</td>
                   <td className="px-3 py-3">
                     <div className="flex justify-end">
                       <button
                         type="button"
                         onClick={() => setToDelete(c)}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-error-50 hover:text-error-500 dark:text-gray-400 dark:hover:bg-error-500/10"
-                        aria-label={t("kassa.delete")}
+                        aria-label={t("finance.delete")}
                       >
                         <TrashBinIcon className="h-5 w-5" />
                       </button>
@@ -148,59 +188,57 @@ export default function CashCategoriesManager() {
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-12 dark:border-gray-800">
           <p className="text-center text-theme-sm text-gray-500 dark:text-gray-400">
-            {t("kassa.empty")}
+            {t("finance.empty")}
           </p>
         </div>
       )}
 
-      <Modal
+      <Drawer
         isOpen={modalOpen}
         onClose={() => !saving && setModalOpen(false)}
-        className="max-w-md w-full mx-4 p-6 sm:p-8"
+        title={t("finance.newCategory")}
+        footer={
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setModalOpen(false)}
+              disabled={saving}
+            >
+              {t("finance.cancel")}
+            </Button>
+            <Button onClick={save} disabled={saving}>
+              {t("finance.save")}
+            </Button>
+          </div>
+        }
       >
-        <h2 className="mb-5 text-xl font-semibold text-gray-800 dark:text-white/90">
-          {t("kassa.newCategory")}
-        </h2>
         <div className="space-y-4">
           <div>
-            <Label>{t("kassa.name")}</Label>
+            <Label>{t("finance.name")}</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>{t("kassa.direction")}</Label>
+            <Label>{t("finance.kind")}</Label>
             <SelectField
-              value={direction}
-              onChange={(v) => setDirection(v as "in" | "out" | "both")}
+              value={kind}
+              onChange={(v) => setKind(v as "income" | "expense")}
               options={[
-                { value: "both", label: t("kassa.dirBoth") },
-                { value: "in", label: t("kassa.dirIn") },
-                { value: "out", label: t("kassa.dirOut") },
+                { value: "expense", label: t("finance.expense") },
+                { value: "income", label: t("finance.income") },
               ]}
             />
           </div>
         </div>
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button
-            variant="outline"
-            onClick={() => setModalOpen(false)}
-            disabled={saving}
-          >
-            {t("kassa.cancel")}
-          </Button>
-          <Button onClick={save} disabled={saving}>
-            {t("kassa.save")}
-          </Button>
-        </div>
-      </Modal>
+      </Drawer>
 
       <ConfirmModal
         isOpen={!!toDelete}
         onClose={() => !deleting && setToDelete(null)}
         onConfirm={confirmDelete}
-        title={t("kassa.deleteConfirm")}
+        title={t("finance.deleteConfirm")}
         message={toDelete?.name ?? ""}
-        confirmLabel={t("kassa.delete")}
-        cancelLabel={t("kassa.cancel")}
+        confirmLabel={t("finance.delete")}
+        cancelLabel={t("finance.cancel")}
         variant="danger"
         isLoading={deleting}
       />

@@ -1,59 +1,16 @@
-"use client";
-import Link from "next/link";
 import React from "react";
-import { useTranslations } from "@/hooks/useTranslations";
 
 interface BreadcrumbProps {
   /** Literal title (used when `titleKey` is not provided). */
   pageTitle: string;
-  /** Optional i18n key; when set, the translated value is shown instead of `pageTitle`. */
+  /** Optional i18n key; when set, the translated value is shown instead. */
   titleKey?: string;
 }
 
-const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle, titleKey }) => {
-  const { t } = useTranslations();
-  const title = titleKey ? t(titleKey) : pageTitle;
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <h2
-        className="text-xl font-semibold text-gray-800 dark:text-white/90"
-        x-text="pageName"
-      >
-        {title}
-      </h2>
-      <nav>
-        <ol className="flex items-center gap-1.5">
-          <li>
-            <Link
-              className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400"
-              href="/dashboard"
-            >
-              {t("common.home")}
-              <svg
-                className="stroke-current"
-                width="17"
-                height="16"
-                viewBox="0 0 17 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.0765 12.667L10.2432 8.50033L6.0765 4.33366"
-                  stroke=""
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-          </li>
-          <li className="text-sm text-gray-800 dark:text-white/90">
-            {title}
-          </li>
-        </ol>
-      </nav>
-    </div>
-  );
-};
+// The top page-title + "Bosh sahifa › …" breadcrumb bar is removed globally by
+// design — every page already shows its own heading inside its content card.
+// Kept as a no-op so the 35 existing call sites (and their pageTitle/titleKey
+// props) don't need touching; delete the usages later for a full cleanup.
+const PageBreadcrumb: React.FC<BreadcrumbProps> = () => null;
 
 export default PageBreadcrumb;

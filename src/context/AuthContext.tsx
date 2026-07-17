@@ -1,7 +1,7 @@
 "use client";
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useContext, useCallback, useEffect, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getAuthToken, removeAuthToken, clearAccount, getStoredAccount, type AccountInfo } from "@/lib/api";
+import { getAuthToken, removeAuthToken, clearAccount, getStoredAccount, setAccount as persistAccount, getCurrentUser, type AccountInfo } from "@/lib/api";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -11,6 +11,8 @@ interface AuthContextType {
   menuKeys: string[];
   /** True if the acting account may see the given menu key. */
   hasMenuAccess: (menuKey: string) => boolean;
+  /** Manually re-fetch the account + permissions from the backend. */
+  refreshAccount: () => Promise<void>;
   logout: () => void;
 }
 
@@ -29,6 +31,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const router = useRouter();
   const pathname = usePathname();
 
+  // Pull the latest account + permissions from the backend and keep the cache
+  // (localStorage) + state in sync. Silently ignores failures — the cached
+  // account stays in effect (getCurrentUser handles 401 → logout itself).
+  // Exposed via context so screens can trigger a manual refresh on demand.
+  const refreshAccount = useCallback(async () => {
+    if (!getAuthToken()) return;
+    try {
+      const { account: fresh } = await getCurrentUser();
+      persistAccount(fresh);
+      setAccount(fresh);
+    } catch {
+      // offline / transient error — keep the cached account
+    }
+  }, []);
+
+  // Auth gate: runs on mount and on every route change. Redirects unauthenticated
+  // users off protected routes and hydrates the account from the local cache.
+  // Does NOT hit the backend — that's the mount-only refresh below.
   useEffect(() => {
     const checkAuth = () => {
       const token = getAuthToken();
@@ -62,6 +82,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [pathname, router]);
 
+  // Fetch fresh permissions/menuKeys from the backend once when the app opens
+  // (this also covers a hard refresh, which remounts the provider). Manual
+  // refreshes go through the exposed refreshAccount().
+  useEffect(() => {
+    void (async () => {
+      await refreshAccount();
+    })();
+  }, [refreshAccount]);
+
   const logout = () => {
     removeAuthToken();
     clearAccount();
@@ -78,7 +107,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, isLoading, account, menuKeys, hasMenuAccess, logout }}
+      value={{ isAuthenticated, isLoading, account, menuKeys, hasMenuAccess, refreshAccount, logout }}
     >
       {children}
     </AuthContext.Provider>

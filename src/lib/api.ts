@@ -81,6 +81,41 @@ export async function register(data: RegisterRequest): Promise<void> {
   }
 }
 
+export interface CurrentUserResponse {
+  business: {
+    id: string;
+    name: string;
+    email: string;
+    login: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+  account: AccountInfo;
+}
+
+// Re-fetch the acting account (owner or staff) with its CURRENT permissions.
+// Unlike the login response (a one-time snapshot), this reflects live role /
+// menuKey edits — the frontend uses it to drive menus and permission checks.
+export async function getCurrentUser(): Promise<CurrentUserResponse> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const response = await fetch(`${API_BASE_URL}/businesses/me/account`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    throw new Error('Failed to fetch current user');
+  }
+  return response.json();
+}
+
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('accessToken');
@@ -292,6 +327,7 @@ export interface Product {
   barcode: string | null;
   priceIn: string;
   priceOut: string;
+  priceWholesale: string | null;
   quantity: number;
   quantityType: string | null;
   image: string | null;
@@ -1922,8 +1958,44 @@ export interface GoodsReceiptItem {
   productId: string | null;
   productName: string;
   priceIn: string;
+  currency: string;
+  priceOut: string | null;
+  priceWholesale: string | null;
   quantity: number;
   lineTotal: string;
+}
+
+export interface SupplierPayment {
+  id: string;
+  businessId: string;
+  receiptId: string;
+  supplierId: string | null;
+  supplierName: string | null;
+  amount: string;
+  currency: string;
+  accountId: string | null;
+  accountName: string | null;
+  financialTransactionId: string | null;
+  note: string | null;
+  cashierId: string | null;
+  cashierName: string | null;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface SupplierReturn {
+  id: string;
+  businessId: string;
+  receiptId: string;
+  supplierId: string | null;
+  supplierName: string | null;
+  totalAmount: string;
+  currency: string;
+  itemCount: number;
+  note: string | null;
+  cashierId: string | null;
+  cashierName: string | null;
+  createdAt: string;
 }
 
 export interface GoodsReceipt {
@@ -1933,11 +2005,18 @@ export interface GoodsReceipt {
   supplierName: string | null;
   status: string;
   totalAmount: string;
+  paidAmount: string;
+  returnedAmount: string;
+  paymentStatus: 'unpaid' | 'partial' | 'paid';
+  currency: string;
+  usdRate: string | null;
   itemCount: number;
   note: string | null;
   createdAt: string;
   updatedAt: string;
   items?: GoodsReceiptItem[];
+  payments?: SupplierPayment[];
+  returns?: SupplierReturn[];
 }
 
 export interface CreateReceiptDto {
@@ -1947,11 +2026,18 @@ export interface CreateReceiptDto {
     priceIn: number;
     // Optional per-batch selling price (defaults to the product's current price).
     priceOut?: number;
+    // Optional wholesale price; when given, updates the product wholesale price.
+    priceWholesale?: number;
     // When the new selling price is higher, reprice existing stock too.
     repriceExisting?: boolean;
   }[];
   supplierId?: string;
   note?: string;
+  // Save as a draft (no stock change); receive it later to apply stock.
+  draft?: boolean;
+  // Supply/settlement currency + USD→UZS rate (required when USD).
+  currency?: 'UZS' | 'USD';
+  usdRate?: number;
 }
 
 export interface ReceiptsResponse {
@@ -1967,6 +2053,8 @@ export async function getReceipts(
   supplierId?: string,
   startDate?: string,
   endDate?: string,
+  paymentStatus?: string,
+  status?: string,
 ): Promise<ReceiptsResponse> {
   const params = new URLSearchParams();
   if (page) params.set('page', String(page));
@@ -1974,11 +2062,76 @@ export async function getReceipts(
   if (supplierId) params.set('supplierId', supplierId);
   if (startDate) params.set('startDate', startDate);
   if (endDate) params.set('endDate', endDate);
+  if (paymentStatus) params.set('paymentStatus', paymentStatus);
+  if (status) params.set('status', status);
   const response = await fetch(`${API_BASE_URL}/receipts?${params.toString()}`, {
     method: 'GET',
     headers: authHeaders(),
   });
   if (!response.ok) await parseError(response, 'Failed to fetch receipts');
+  return response.json();
+}
+
+export async function getReceiptPayments(
+  receiptId: string,
+): Promise<SupplierPayment[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/receipts/${receiptId}/payments`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok) await parseError(response, 'Failed to fetch payments');
+  return response.json();
+}
+
+export async function addReceiptPayment(
+  receiptId: string,
+  data: { accountId: string; amount: number; note?: string; paidAt?: string },
+): Promise<{ payment: SupplierPayment; receipt: GoodsReceipt }> {
+  const response = await fetch(
+    `${API_BASE_URL}/receipts/${receiptId}/payments`,
+    {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    },
+  );
+  if (!response.ok) await parseError(response, 'Failed to record payment');
+  return response.json();
+}
+
+export async function receiveReceipt(receiptId: string): Promise<GoodsReceipt> {
+  const response = await fetch(
+    `${API_BASE_URL}/receipts/${receiptId}/receive`,
+    { method: 'POST', headers: authHeaders() },
+  );
+  if (!response.ok) await parseError(response, 'Failed to receive receipt');
+  return (await response.json()).receipt;
+}
+
+export async function getReceiptReturns(
+  receiptId: string,
+): Promise<SupplierReturn[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/receipts/${receiptId}/returns`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok) await parseError(response, 'Failed to fetch returns');
+  return response.json();
+}
+
+export async function createReceiptReturn(
+  receiptId: string,
+  data: { items: { productId: string; quantity: number }[]; note?: string },
+): Promise<{ return: SupplierReturn; receipt: GoodsReceipt }> {
+  const response = await fetch(
+    `${API_BASE_URL}/receipts/${receiptId}/returns`,
+    {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    },
+  );
+  if (!response.ok) await parseError(response, 'Failed to record return');
   return response.json();
 }
 
@@ -2176,6 +2329,233 @@ export async function updateCashCategory(
   return (await response.json()).category;
 }
 
+// ─── Finance (Moliya) ───────────────────────────────────────────────────────
+
+export type Currency = 'UZS' | 'USD';
+
+export interface FinanceCategory {
+  id: string;
+  businessId: string;
+  name: string;
+  kind: 'income' | 'expense';
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AccountBalance {
+  currency: string;
+  balance: string;
+  frozen: string;
+}
+
+export interface Account {
+  id: string;
+  businessId: string;
+  name: string;
+  type: 'cash' | 'noncash';
+  registerId: string | null;
+  storeId: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  balances: AccountBalance[];
+}
+
+export interface FinanceTransaction {
+  id: string;
+  businessId: string;
+  kind: 'income' | 'expense' | 'transfer' | 'conversion' | 'shift_close';
+  accountId: string | null;
+  accountName: string | null;
+  toAccountId: string | null;
+  toAccountName: string | null;
+  isCash: boolean;
+  amount: string;
+  currency: string;
+  toAmount: string | null;
+  toCurrency: string | null;
+  rate: string | null;
+  subtype: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  cashierId: string | null;
+  cashierName: string | null;
+  note: string | null;
+  operationDate: string | null;
+  orderId: string | null;
+  shiftId: string | null;
+  cashMovementId: string | null;
+  createdAt: string;
+}
+
+export interface FinanceTransactionsResponse {
+  transactions: FinanceTransaction[];
+  total: number;
+  page: number;
+  limit: number;
+  summary: { kind: string; currency: string; total: string }[];
+}
+
+export interface TransactionFilters {
+  kind?: FinanceTransaction['kind'];
+  accountId?: string;
+  categoryId?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface CreateTransactionDto {
+  accountId: string;
+  amount: number;
+  currency?: Currency;
+  isCash?: boolean;
+  categoryId?: string;
+  note?: string;
+  operationDate?: string;
+}
+
+export interface CreateTransferDto {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  currency?: Currency;
+  note?: string;
+  operationDate?: string;
+}
+
+// Accounts
+export async function getAccounts(): Promise<Account[]> {
+  const response = await fetch(`${API_BASE_URL}/accounts`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch accounts');
+  return response.json();
+}
+
+export async function createAccount(data: {
+  name: string;
+  type: 'cash' | 'noncash';
+  registerId?: string;
+}): Promise<Account> {
+  const response = await fetch(`${API_BASE_URL}/accounts`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create account');
+  return (await response.json()).account;
+}
+
+export async function updateAccount(
+  id: string,
+  data: { name?: string; isActive?: boolean },
+): Promise<Account> {
+  const response = await fetch(`${API_BASE_URL}/accounts/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update account');
+  return (await response.json()).account;
+}
+
+// Categories
+export async function getFinanceCategories(
+  kind?: 'income' | 'expense',
+): Promise<FinanceCategory[]> {
+  const params = new URLSearchParams();
+  if (kind) params.set('kind', kind);
+  const qs = params.toString();
+  const response = await fetch(
+    `${API_BASE_URL}/finance/categories${qs ? `?${qs}` : ''}`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok) await parseError(response, 'Failed to fetch categories');
+  return response.json();
+}
+
+export async function createFinanceCategory(data: {
+  name: string;
+  kind: 'income' | 'expense';
+}): Promise<FinanceCategory> {
+  const response = await fetch(`${API_BASE_URL}/finance/categories`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create category');
+  return (await response.json()).category;
+}
+
+export async function updateFinanceCategory(
+  id: string,
+  data: { name?: string; isActive?: boolean },
+): Promise<FinanceCategory> {
+  const response = await fetch(`${API_BASE_URL}/finance/categories/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update category');
+  return (await response.json()).category;
+}
+
+// Transactions
+export async function getFinanceTransactions(
+  filters: TransactionFilters = {},
+): Promise<FinanceTransactionsResponse> {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') params.set(k, String(v));
+  });
+  const qs = params.toString();
+  const response = await fetch(
+    `${API_BASE_URL}/finance/transactions${qs ? `?${qs}` : ''}`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok) await parseError(response, 'Failed to fetch transactions');
+  return response.json();
+}
+
+export async function createIncome(
+  data: CreateTransactionDto,
+): Promise<FinanceTransaction> {
+  const response = await fetch(`${API_BASE_URL}/finance/transactions/income`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to record income');
+  return (await response.json()).transaction;
+}
+
+export async function createExpense(
+  data: CreateTransactionDto,
+): Promise<FinanceTransaction> {
+  const response = await fetch(`${API_BASE_URL}/finance/transactions/expense`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to record expense');
+  return (await response.json()).transaction;
+}
+
+export async function createTransfer(
+  data: CreateTransferDto,
+): Promise<FinanceTransaction> {
+  const response = await fetch(`${API_BASE_URL}/finance/transactions/transfer`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to record transfer');
+  return (await response.json()).transaction;
+}
+
 // Shifts
 export async function getCurrentShift(registerId: string): Promise<Shift | null> {
   const params = new URLSearchParams({ registerId });
@@ -2271,4 +2651,117 @@ export async function getShift(id: string): Promise<Shift> {
   });
   if (!response.ok) await parseError(response, 'Failed to fetch shift');
   return response.json();
+}
+
+// ---------------------------------------------------------------------------
+// Stock-takes API ("Inventarizatsiya")
+// ---------------------------------------------------------------------------
+
+export interface StockTake {
+  id: string;
+  businessId: string;
+  name: string;
+  storeId: string | null;
+  type: 'full' | 'partial';
+  status: 'in_progress' | 'completed';
+  // Decimals are returned as strings.
+  surplusQty: string | null;
+  shortageQty: string | null;
+  diffValue: string | null;
+  createdByCashierId: string | null;
+  createdByCashierName: string | null;
+  note: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export interface StockTakeItem {
+  id: string;
+  stockTakeId: string;
+  businessId: string;
+  productId: string | null;
+  productName: string;
+  bookQty: number;
+  countedQty: number;
+  diffQty: number;
+  unitCost: string | null;
+  diffValue: string | null;
+  createdAt: string;
+}
+
+export interface StockTakesResponse {
+  items: StockTake[];
+  total: number;
+}
+
+export interface CreateStockTakeDto {
+  type: 'full' | 'partial';
+  storeId?: string;
+  name?: string;
+  note?: string;
+}
+
+export async function getStockTakes(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<StockTakesResponse> {
+  const qs = new URLSearchParams();
+  if (params?.page) qs.set('page', String(params.page));
+  if (params?.limit) qs.set('limit', String(params.limit));
+  const response = await fetch(`${API_BASE_URL}/stock-takes?${qs}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch stock-takes');
+  return response.json();
+}
+
+export async function getStockTake(
+  id: string,
+): Promise<StockTake & { items: StockTakeItem[] }> {
+  const response = await fetch(`${API_BASE_URL}/stock-takes/${id}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch stock-take');
+  return response.json();
+}
+
+export async function createStockTake(
+  data: CreateStockTakeDto,
+): Promise<StockTake> {
+  const response = await fetch(`${API_BASE_URL}/stock-takes`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create stock-take');
+  return (await response.json()).stockTake;
+}
+
+export async function countStockTake(
+  id: string,
+  items: { productId: string; countedQty: number }[],
+): Promise<{ updated: number }> {
+  const response = await fetch(`${API_BASE_URL}/stock-takes/${id}/count`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ items }),
+  });
+  if (!response.ok) await parseError(response, 'Failed to save count');
+  return response.json();
+}
+
+export async function completeStockTake(
+  id: string,
+  data?: { note?: string },
+): Promise<StockTake> {
+  const response = await fetch(`${API_BASE_URL}/stock-takes/${id}/complete`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data ?? {}),
+  });
+  if (!response.ok) await parseError(response, 'Failed to complete stock-take');
+  return (await response.json()).stockTake;
 }

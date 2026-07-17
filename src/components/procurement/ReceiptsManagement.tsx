@@ -36,6 +36,7 @@ export default function ReceiptsManagement() {
   const [receipts, setReceipts] = useState<GoodsReceipt[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierFilter, setSupplierFilter] = useState("");
+  const [payFilter, setPayFilter] = useState("");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,17 +57,24 @@ export default function ReceiptsManagement() {
     };
   }, []);
 
-  // Reset to the first page whenever the supplier filter changes.
+  // Reset to the first page whenever a filter changes.
   useEffect(() => {
     setPage(1);
-  }, [supplierFilter]);
+  }, [supplierFilter, payFilter]);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         setIsLoading(true);
-        const res = await getReceipts(page, ITEMS_PER_PAGE, supplierFilter || undefined);
+        const res = await getReceipts(
+          page,
+          ITEMS_PER_PAGE,
+          supplierFilter || undefined,
+          undefined,
+          undefined,
+          payFilter || undefined,
+        );
         if (active) {
           setReceipts(res.receipts);
           setTotal(res.total);
@@ -81,7 +89,52 @@ export default function ReceiptsManagement() {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, supplierFilter]);
+  }, [page, supplierFilter, payFilter]);
+
+  const payTabs: { key: string; label: string }[] = [
+    { key: "", label: t("goodsReceipt.allPayments") },
+    { key: "unpaid", label: t("goodsReceipt.statusUnpaid") },
+    { key: "partial", label: t("goodsReceipt.statusPartial") },
+    { key: "paid", label: t("goodsReceipt.statusPaid") },
+  ];
+
+  const docBadge = (r: GoodsReceipt) => {
+    const draft = r.status === "draft";
+    return (
+      <span
+        className={`rounded-full px-2.5 py-1 text-theme-xs font-medium ${
+          draft
+            ? "bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-400"
+            : "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-400"
+        }`}
+      >
+        {draft
+          ? t("goodsReceipt.statusDraft")
+          : t("goodsReceipt.statusReceived")}
+      </span>
+    );
+  };
+
+  const statusBadge = (r: GoodsReceipt) => {
+    const s = r.paymentStatus;
+    const cls =
+      s === "paid"
+        ? "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-400"
+        : s === "partial"
+          ? "bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-400"
+          : "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-400";
+    const label =
+      s === "paid"
+        ? t("goodsReceipt.statusPaid")
+        : s === "partial"
+          ? t("goodsReceipt.statusPartial")
+          : t("goodsReceipt.statusUnpaid");
+    return (
+      <span className={`rounded-full px-2.5 py-1 text-theme-xs font-medium ${cls}`}>
+        {label}
+      </span>
+    );
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
 
@@ -134,6 +187,23 @@ export default function ReceiptsManagement() {
         onClose={() => setConfigOpen(false)}
       />
 
+      <div className="mb-4 flex flex-wrap gap-2">
+        {payTabs.map((tb) => (
+          <button
+            key={tb.key || "all"}
+            type="button"
+            onClick={() => setPayFilter(tb.key)}
+            className={
+              payFilter === tb.key
+                ? "rounded-lg bg-brand-500 px-3 py-1.5 text-theme-sm font-medium text-white"
+                : "rounded-lg bg-gray-100 px-3 py-1.5 text-theme-sm font-medium text-gray-600 hover:bg-gray-200 dark:bg-white/[0.03] dark:text-gray-400 dark:hover:bg-white/[0.06]"
+            }
+          >
+            {tb.label}
+          </button>
+        ))}
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
@@ -145,9 +215,11 @@ export default function ReceiptsManagement() {
                 <tr className="border-b border-gray-200 text-theme-xs uppercase tracking-wide text-gray-400 dark:border-gray-800">
                   <th className="px-3 py-3 font-medium">{t("goodsReceipt.date")}</th>
                   <th className="px-3 py-3 font-medium">{t("goodsReceipt.supplier")}</th>
+                  <th className="px-3 py-3 font-medium">{t("goodsReceipt.docStatus")}</th>
                   <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.itemCount")}</th>
                   <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.total")}</th>
-                  <th className="px-3 py-3 font-medium">{t("goodsReceipt.note")}</th>
+                  <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.paid")}</th>
+                  <th className="px-3 py-3 font-medium">{t("goodsReceipt.paymentStatus")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,11 +239,16 @@ export default function ReceiptsManagement() {
                     <td className="px-3 py-3 text-gray-700 dark:text-gray-300">
                       {r.supplierName || "—"}
                     </td>
+                    <td className="px-3 py-3">{docBadge(r)}</td>
                     <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">{r.itemCount}</td>
                     <td className="px-3 py-3 text-right font-medium text-gray-800 dark:text-white/90">
                       {formatMoney(Number(r.totalAmount))}
+                      {r.currency !== "UZS" ? ` ${r.currency}` : ""}
                     </td>
-                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400">{r.note || "—"}</td>
+                    <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
+                      {formatMoney(Number(r.paidAmount))}
+                    </td>
+                    <td className="px-3 py-3">{statusBadge(r)}</td>
                   </tr>
                 ))}
               </tbody>

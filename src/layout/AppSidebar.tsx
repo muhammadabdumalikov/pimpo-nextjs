@@ -6,15 +6,13 @@ import { useSidebar } from "../context/SidebarContext";
 import {
   AccountSettingsIcon,
   BoxIcon,
-  BoxIconLine,
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
-  MoneyDollarIcon,
   PieChartIcon,
-  PlugInIcon,
   UserCircleIcon,
 } from "../icons/index";
+import { LuScanBarcode, LuTruck } from "react-icons/lu";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useAuth } from "@/context/AuthContext";
@@ -85,45 +83,38 @@ const AppSidebar: React.FC = () => {
         { name: t('sidebar.categories'), path: "/categories", pro: false },
         { name: t('sidebar.products'), path: "/products", pro: false },
         { name: t('sidebar.addProduct'), path: "/add-product", pro: false },
+        { name: t('inventory.title'), path: "/inventory", pro: false },
+        { name: t('sidebar.stockTakes'), path: "/stock-takes", pro: false },
       ],
     },
     {
-      icon: <MoneyDollarIcon />,
+      icon: <LuScanBarcode size={24} />,
       name: t('sidebar.sales'),
       subItems: [
         { name: t('sidebar.checkout'), path: "/cart", pro: false },
         { name: t('sidebar.allSales'), path: "/sales", pro: false },
+        { name: t('sidebar.productPerformance'), path: "/product-performance", pro: false },
+        { name: t('sidebar.userDebt'), path: "/user-debt", pro: false },
         { name: t('sidebar.kassaShifts'), path: "/kassa", pro: false },
         { name: t('sidebar.kassaOperations'), path: "/kassa/operations", pro: false },
       ],
     },
     {
-      icon: <UserCircleIcon />,
-      name: t('sidebar.userDebt'),
-      path: "/user-debt",
+      icon: <PieChartIcon />,
+      name: t('sidebar.finance'),
+      subItems: [
+        { name: t('sidebar.financeTransactions'), path: "/finance/transactions", pro: false },
+        { name: t('sidebar.financeCategories'), path: "/finance/categories", pro: false },
+        { name: t('sidebar.financeState'), path: "/finance/state", pro: false },
+      ],
     },
     {
-      icon: <BoxIconLine />,
-      name: t('sidebar.inventory'),
-      path: "/inventory",
-    },
-    {
-      icon: <BoxIcon />,
+      icon: <LuTruck size={24} />,
       name: t('sidebar.procurement'),
       subItems: [
         { name: t('sidebar.suppliers'), path: "/suppliers", pro: false },
         { name: t('sidebar.goodsReceipts'), path: "/receipts", pro: false },
       ],
-    },
-    {
-      icon: <PieChartIcon />,
-      name: t('sidebar.productPerformance'),
-      path: "/product-performance",
-    },
-    {
-      icon: <PlugInIcon />,
-      name: t('sidebar.subscriptionManagement'),
-      path: "/subscription-management",
     },
     {
       icon: <UserCircleIcon />,
@@ -139,6 +130,7 @@ const AppSidebar: React.FC = () => {
       name: t('sidebar.settings'),
       subItems: [
         { name: t('sidebar.receipts'), path: "/settings/receipts", pro: false },
+        { name: t('sidebar.subscriptionManagement'), path: "/subscription-management", pro: false },
       ],
     },
   ]);
@@ -149,7 +141,7 @@ const AppSidebar: React.FC = () => {
   ) => (
     <ul className="flex flex-col gap-4">
       {navItems.map((nav, index) => (
-        <li key={nav.name}>
+        <li key={`${menuType}-${index}`}>
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}

@@ -17,6 +17,7 @@ export type MenuGroup =
   | "dashboard"
   | "catalog"
   | "sales"
+  | "finance"
   | "customers"
   | "team"
   | "settings"
@@ -30,6 +31,7 @@ export const menuCatalog: MenuCatalogItem[] = [
   { key: "ecommerce.categories", labelKey: "sidebar.categories", group: "catalog" },
   { key: "ecommerce.products", labelKey: "sidebar.products", group: "catalog" },
   { key: "ecommerce.addProduct", labelKey: "sidebar.addProduct", group: "catalog" },
+  // Inventory (Ombor) — includes stock levels + stock-takes (as tabs).
   { key: "inventory", labelKey: "sidebar.inventory", group: "catalog" },
   { key: "suppliers", labelKey: "sidebar.suppliers", group: "catalog" },
   { key: "receipts", labelKey: "sidebar.goodsReceipts", group: "catalog" },
@@ -38,6 +40,11 @@ export const menuCatalog: MenuCatalogItem[] = [
   { key: "checkout", labelKey: "sidebar.checkout", group: "sales" },
   { key: "kassa", labelKey: "sidebar.kassa", group: "sales" },
   { key: "productPerformance", labelKey: "sidebar.productPerformance", group: "sales" },
+
+  // Finance (Moliya)
+  { key: "finance.categories", labelKey: "sidebar.financeCategories", group: "finance" },
+  { key: "finance.transactions", labelKey: "sidebar.financeTransactions", group: "finance" },
+  { key: "finance.state", labelKey: "sidebar.financeState", group: "finance" },
 
   // Customers
   { key: "userDebt", labelKey: "sidebar.userDebt", group: "customers" },
@@ -58,6 +65,7 @@ export const menuGroupLabelKeys: Record<MenuGroup, string> = {
   dashboard: "roles.groups.dashboard",
   catalog: "roles.groups.catalog",
   sales: "roles.groups.sales",
+  finance: "roles.groups.finance",
   customers: "roles.groups.customers",
   team: "roles.groups.team",
   settings: "roles.groups.settings",

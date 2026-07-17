@@ -1,6 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Modal } from "@/components/ui/modal";
+import { Drawer } from "@/components/ui/drawer";
 import Button from "@/components/ui/button/Button";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
@@ -156,10 +156,38 @@ export default function ShiftModal({
   };
 
   return (
-    <Modal
+    <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      className="max-w-7xl w-full min-w-0 mx-4 p-6 sm:p-8"
+      widthClass="max-w-6xl"
+      title={
+        <span className="flex items-center gap-2">
+          {shift && (
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${
+                closed ? "bg-gray-400" : "bg-success-500"
+              }`}
+            />
+          )}
+          {shift?.registerName ?? t("kassa.closeShift")}
+        </span>
+      }
+      footer={
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            {t("kassa.cancel")}
+          </Button>
+          {shift && !closed && (
+            <Button
+              startIcon={<LockIcon className="h-5 w-5" />}
+              onClick={handleClose}
+              disabled={submitting}
+            >
+              {t("kassa.closeShift")}
+            </Button>
+          )}
+        </div>
+      }
     >
       {loading || !shift ? (
         <div className="flex items-center justify-center py-16">
@@ -167,19 +195,9 @@ export default function ShiftModal({
         </div>
       ) : (
         <div className="space-y-5">
-          {/* Header (kept clear of the modal's close button with right padding) */}
-          <div className="pr-10">
-            <div className="flex items-center gap-2">
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${
-                  closed ? "bg-gray-400" : "bg-success-500"
-                }`}
-              />
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-                {shift.registerName ?? "—"}
-              </h2>
-            </div>
-            <p className="mt-0.5 text-theme-sm text-gray-500 dark:text-gray-400">
+          {/* Opened / closed by */}
+          <div>
+            <p className="text-theme-sm text-gray-500 dark:text-gray-400">
               {t("kassa.openedBy")}: {shift.openedByCashierName ?? "—"} ·{" "}
               {new Date(shift.openedAt).toLocaleString("uz-UZ")}
             </p>
@@ -371,23 +389,8 @@ export default function ShiftModal({
             </div>
           )}
 
-          {/* Footer */}
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={onClose} disabled={submitting}>
-              {t("kassa.cancel")}
-            </Button>
-            {!closed && (
-              <Button
-                startIcon={<LockIcon className="h-5 w-5" />}
-                onClick={handleClose}
-                disabled={submitting}
-              >
-                {t("kassa.closeShift")}
-              </Button>
-            )}
-          </div>
         </div>
       )}
-    </Modal>
+    </Drawer>
   );
 }

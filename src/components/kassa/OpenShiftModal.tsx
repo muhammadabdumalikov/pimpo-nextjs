@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Modal } from "@/components/ui/modal";
+import { Drawer } from "@/components/ui/drawer";
 import Button from "@/components/ui/button/Button";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
@@ -58,14 +58,21 @@ export default function OpenShiftModal({
   };
 
   return (
-    <Modal
+    <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      className="max-w-md w-full mx-4 p-6 sm:p-8"
+      title={t("kassa.openShift")}
+      footer={
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            {t("kassa.cancel")}
+          </Button>
+          <Button onClick={handleOpen} disabled={submitting || !registerId}>
+            {t("kassa.openShift")}
+          </Button>
+        </div>
+      }
     >
-      <h2 className="mb-5 text-xl font-semibold text-gray-800 dark:text-white/90">
-        {t("kassa.openShift")}
-      </h2>
       <div className="space-y-4">
         <div>
           <Label>{t("kassa.register")}</Label>
@@ -92,14 +99,6 @@ export default function OpenShiftModal({
           />
         </div>
       </div>
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Button variant="outline" onClick={onClose} disabled={submitting}>
-          {t("kassa.cancel")}
-        </Button>
-        <Button onClick={handleOpen} disabled={submitting || !registerId}>
-          {t("kassa.openShift")}
-        </Button>
-      </div>
-    </Modal>
+    </Drawer>
   );
 }

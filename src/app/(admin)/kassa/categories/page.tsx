@@ -1,18 +1,7 @@
-import PageBreadcrumb from "@/components/common/PageBreadCrumb";
-import CashCategoriesManager from "@/components/kassa/CashCategoriesManager";
-import { Metadata } from "next";
-import React from "react";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Toifalar | Pimpo",
-  description: "Manage cash operation categories",
-};
-
-export default function KassaCategoriesPage() {
-  return (
-    <div>
-      <PageBreadcrumb pageTitle="Toifalar" titleKey="kassa.categories" />
-      <CashCategoriesManager />
-    </div>
-  );
+// Operation categories are now managed under Finance (Moliya → Toifalar);
+// the kassa-specific page was a duplicate of the same financial_categories.
+export default function Page() {
+  redirect("/finance/categories");
 }
