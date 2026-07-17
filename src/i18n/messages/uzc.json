@@ -203,7 +203,11 @@
     "scanBarcode": "Штрих-кодни сканерлаш",
     "barcodeScanned": "Штрих-код сканерланди",
     "imageProOnly": "Маҳсулот расмлари Бизнес тарифида мавжуд. Расм қўшиш учун тарифни янгиланг.",
-    "businessBadge": "Бизнес"
+    "businessBadge": "Бизнес",
+    "categorySuggestion": "Бу маҳсулот сизда ҳали йўқ категорияга тегишли:",
+    "categoryCreateSelect": "Яратиш ва танлаш",
+    "categoryCreating": "Яратилмоқда...",
+    "categoryCreated": "Категория яратилди ва танланди"
   },
   "upgradePlan": {
     "headline": "Сизнинг эҳтиёжларингизга мос мослашувчан режалар!",
@@ -718,7 +722,8 @@
     "showing": "Кўрсатилмоқда",
     "to": "–",
     "of": "дан",
-    "results": "натижа"
+    "results": "натижа",
+    "dismiss": "Ёпиш"
   },
   "auth": {
     "backToDashboard": "Бошқарув панелига қайтиш",

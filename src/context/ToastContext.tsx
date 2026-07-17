@@ -139,15 +139,46 @@ const ToastItem: React.FC<{ toast: Toast; onClose: () => void }> = ({ toast, onC
 
   const variant = variantClasses[toast.variant];
 
-  // Icon-only toast: a compact circular badge, click to dismiss.
+  // Errors and warnings carry a message the user needs to read, so show the text
+  // beside the icon. Success/info stay as compact, icon-only confirmation badges.
+  const showText = toast.variant === 'error' || toast.variant === 'warning';
+
+  if (!showText) {
+    // Icon-only toast: a compact circular badge, click to dismiss.
+    return (
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={toast.title || toast.message}
+        className={`animate-toast-in pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full text-white shadow-theme-lg transition active:scale-95 ${variant.iconBg}`}
+      >
+        {icons[toast.variant]}
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
       onClick={onClose}
       aria-label={toast.title || toast.message}
-      className={`animate-toast-in pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full text-white shadow-theme-lg transition active:scale-95 ${variant.iconBg}`}
+      className="animate-toast-in pointer-events-auto flex max-w-sm items-start gap-3 rounded-xl bg-white px-4 py-3 text-left shadow-theme-lg transition active:scale-[0.99] dark:bg-gray-800"
     >
-      {icons[toast.variant]}
+      <span
+        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white ${variant.iconBg}`}
+      >
+        {icons[toast.variant]}
+      </span>
+      <span className="min-w-0">
+        {toast.title && (
+          <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+            {toast.title}
+          </span>
+        )}
+        <span className="block break-words text-sm text-gray-600 dark:text-gray-300">
+          {toast.message}
+        </span>
+      </span>
     </button>
   );
 };

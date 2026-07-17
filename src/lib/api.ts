@@ -383,10 +383,12 @@ export async function getProduct(productId: string): Promise<Product> {
 
 export interface BarcodeLookupResult {
   found: boolean;
-  source: 'own' | 'community' | null;
+  source: 'own' | 'community' | 'classifier' | null;
   name: string | null;
   image: string | null;
   categoryName: string | null;
+  /** 17-digit MXIK/IKPU code, when the match came from the national classifier. */
+  mxikCode: string | null;
   existsInBusiness: boolean;
   productId: string | null;
 }

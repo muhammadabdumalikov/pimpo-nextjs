@@ -446,7 +446,11 @@
     "scanBarcode": "Scan barcode",
     "barcodeScanned": "Barcode scanned",
     "imageProOnly": "Product images are available on the Business plan. Upgrade to add photos.",
-    "businessBadge": "Business"
+    "businessBadge": "Business",
+    "categorySuggestion": "This product belongs to a category you don’t have yet:",
+    "categoryCreateSelect": "Create & select",
+    "categoryCreating": "Creating...",
+    "categoryCreated": "Category created and selected"
   },
   "upgradePlan": {
     "headline": "Flexible Plans Tailored to Fit Your Needs!",
@@ -959,7 +963,8 @@
     "showing": "Showing",
     "to": "to",
     "of": "of",
-    "results": "results"
+    "results": "results",
+    "dismiss": "Dismiss"
   },
   "auth": {
     "backToDashboard": "Back to dashboard",

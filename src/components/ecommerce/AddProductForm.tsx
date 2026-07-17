@@ -11,13 +11,36 @@ import Button from "../ui/button/Button";
 // only. Keep the import so it can be re-enabled later.
 // import CameraScanner from "../checkout/CameraScanner";
 import { useTranslations } from "@/hooks/useTranslations";
-import { createProduct, updateProduct, generateProductCode, getProduct, getCategories, getProductCount, lookupBarcode, type Product } from "@/lib/api";
+import { createProduct, updateProduct, generateProductCode, getProduct, getCategories, getProductCount, lookupBarcode, createCategory, type Product } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { formatNumberInput, digitsOnly } from "@/lib/number";
 
 interface AddProductFormProps {
   productId?: string;
+}
+
+// Category ids are client-generated slugs (mirrors AddCategoryModal). Cyrillic is
+// kept so classifier group names produce readable ids.
+function slugify(name: string): string {
+  return (
+    name
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9Ѐ-ӿ-]/gi, "")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || `cat-${Date.now()}`
+  );
+}
+
+// Classifier group names arrive ALL-CAPS (e.g. "ҲАЙВОНЛАРДАН..."); show them in
+// sentence case so a suggested category reads naturally.
+function prettifyCategoryName(raw: string): string {
+  const s = raw.trim();
+  if (!s) return s;
+  const base = s === s.toUpperCase() ? s.toLowerCase() : s;
+  return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
 export default function AddProductForm({ productId }: AddProductFormProps) {
@@ -48,8 +71,23 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   // Remember the last barcode we looked up so re-blurring the field (e.g. after a
   // scanner's Enter) doesn't fire the same request again.
   const lastLookedUpBarcode = useRef<string>("");
+  // A category the barcode lookup found that the business doesn't have yet — we
+  // offer to create it on the fly. Null when there's nothing to suggest.
+  const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [productCount, setProductCount] = useState<number | null>(null);
+  // Which required fields failed validation on the last submit — drives the red
+  // error style on the inputs. Cleared per-field as the user fixes each one.
+  const [errors, setErrors] = useState<{
+    productName?: boolean;
+    priceIn?: boolean;
+    priceOut?: boolean;
+  }>({});
+  // Refs to the required inputs so we can focus the first invalid one on submit.
+  const productNameRef = useRef<HTMLInputElement>(null);
+  const priceInRef = useRef<HTMLInputElement>(null);
+  const priceOutRef = useRef<HTMLInputElement>(null);
 
   // Plan product limit — reached only when creating (edits never add a product).
   const productLimit = getLimit('products');
@@ -110,6 +148,9 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     if (name === 'barcode' && value.length > 14) {
       return;
     }
+    if (name === 'productName' && value.trim()) {
+      setErrors((prev) => ({ ...prev, productName: false }));
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -123,7 +164,11 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   // Price fields: digits only, stored raw and shown grouped ("65 000").
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: digitsOnly(value) }));
+    const digits = digitsOnly(value);
+    if ((name === 'priceIn' || name === 'priceOut') && parseFloat(digits) > 0) {
+      setErrors((prev) => ({ ...prev, [name]: false }));
+    }
+    setFormData((prev) => ({ ...prev, [name]: digits }));
   };
 
   // Quantity typed directly (still clamped at 0; +/- buttons keep working).
@@ -133,6 +178,8 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   };
 
   const handleSelectChange = (name: string) => (value: string) => {
+    // Picking a category by hand dismisses any pending "create this" suggestion.
+    if (name === "categoryId") setSuggestedCategory(null);
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -191,6 +238,25 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
       if (canUseImages && result.image) {
         setImage((prev) => prev ?? result.image);
       }
+
+      // Category from the catalog: select it if we already have it (by name,
+      // case-insensitive), otherwise offer to create it on the fly.
+      if (result.categoryName) {
+        const pretty = prettifyCategoryName(result.categoryName);
+        const existing = categories.find(
+          (c) => c.name.toLowerCase() === pretty.toLowerCase(),
+        );
+        if (existing) {
+          setSuggestedCategory(null);
+          setFormData((prev) => ({
+            ...prev,
+            categoryId: prev.categoryId || existing.id,
+          }));
+        } else {
+          setSuggestedCategory(pretty);
+        }
+      }
+
       showToast(
         'success',
         t('addProduct.barcodeAutoFilled') || 'Product info auto-filled from catalog',
@@ -199,6 +265,38 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
       // Lookup is best-effort; ignore errors so the user can keep typing.
     } finally {
       setIsLookingUpBarcode(false);
+    }
+  };
+
+  // Create the category the barcode lookup suggested (one the business lacks),
+  // then add it to the list and select it for this product.
+  const handleCreateSuggestedCategory = async () => {
+    if (!suggestedCategory || isCreatingCategory) return;
+    const name = suggestedCategory.trim();
+    if (!name) return;
+
+    try {
+      setIsCreatingCategory(true);
+      const existingIds = categories.map((c) => c.id);
+      let id = slugify(name);
+      let counter = 1;
+      while (existingIds.includes(id)) {
+        id = `${slugify(name)}-${counter}`;
+        counter += 1;
+      }
+
+      const category = await createCategory({ id, name });
+      setCategories((prev) => [...prev, { id: category.id, name: category.name }]);
+      setFormData((prev) => ({ ...prev, categoryId: category.id }));
+      setSuggestedCategory(null);
+      showToast(
+        'success',
+        t('addProduct.categoryCreated') || 'Category created and selected',
+      );
+    } catch (error: any) {
+      showToast('error', error?.message || 'Failed to create category', 'Error');
+    } finally {
+      setIsCreatingCategory(false);
     }
   };
 
@@ -239,18 +337,27 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   };
 
   const handleSubmit = async (type: "draft" | "publish") => {
-    // Validate form
-    if (!formData.productName.trim()) {
+    // Validate all required fields at once so every offending input gets the red
+    // error style, not just the first one.
+    const nextErrors = {
+      productName: !formData.productName.trim(),
+      priceIn: !formData.priceIn || parseFloat(parsePrice(formData.priceIn)) <= 0,
+      priceOut: !formData.priceOut || parseFloat(parsePrice(formData.priceOut)) <= 0,
+    };
+    setErrors(nextErrors);
+
+    if (nextErrors.productName) {
+      productNameRef.current?.focus();
       showToast('error', t('addProduct.errors.productNameRequired') || 'Product name is required', 'Error');
       return;
     }
-
-    if (!formData.priceIn || parseFloat(parsePrice(formData.priceIn)) <= 0) {
+    if (nextErrors.priceIn) {
+      priceInRef.current?.focus();
       showToast('error', t('addProduct.errors.priceInRequired') || 'Price in is required and must be greater than 0', 'Error');
       return;
     }
-
-    if (!formData.priceOut || parseFloat(parsePrice(formData.priceOut)) <= 0) {
+    if (nextErrors.priceOut) {
+      priceOutRef.current?.focus();
       showToast('error', t('addProduct.errors.priceOutRequired') || 'Price out is required and must be greater than 0', 'Error');
       return;
     }
@@ -348,8 +455,9 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
           <form>
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div className="col-span-full">
-                <Label htmlFor="productName">{t('addProduct.productName')}</Label>
+                <Label htmlFor="productName" required>{t('addProduct.productName')}</Label>
                 <Input
+                  ref={productNameRef}
                   id="productName"
                   name="productName"
                   type="text"
@@ -357,6 +465,8 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   value={formData.productName}
                   onChange={handleInputChange}
                   required
+                  error={errors.productName}
+                  hint={errors.productName ? (t('addProduct.errors.productNameRequired') || 'Product name is required') : undefined}
                 />
               </div>
 
@@ -371,6 +481,35 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   searchable
                   searchPlaceholder={t('addProduct.categorySearch') || 'Search category...'}
                 />
+                {suggestedCategory && (
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2.5 dark:border-brand-500/30 dark:bg-brand-500/10">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                        {t('addProduct.categorySuggestion') || 'This product belongs to a category you don’t have yet:'}
+                      </p>
+                      <p className="mt-0.5 text-base font-semibold text-gray-900 dark:text-white">
+                        {suggestedCategory}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCreateSuggestedCategory}
+                      disabled={isCreatingCategory}
+                      className="ml-auto rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isCreatingCategory
+                        ? t('addProduct.categoryCreating') || 'Creating...'
+                        : t('addProduct.categoryCreateSelect') || 'Create & select'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSuggestedCategory(null)}
+                      className="rounded-lg px-2 py-1.5 text-sm text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      {t('common.dismiss') || 'Dismiss'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -467,8 +606,9 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
               </div>
 
               <div>
-                <Label htmlFor="priceIn">{t('addProduct.priceIn')}</Label>
+                <Label htmlFor="priceIn" required>{t('addProduct.priceIn')}</Label>
                 <Input
+                  ref={priceInRef}
                   id="priceIn"
                   name="priceIn"
                   type="text"
@@ -477,12 +617,15 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   value={formatNumberInput(formData.priceIn)}
                   onChange={handlePriceChange}
                   required
+                  error={errors.priceIn}
+                  hint={errors.priceIn ? (t('addProduct.errors.priceInRequired') || 'Price in is required and must be greater than 0') : undefined}
                 />
               </div>
 
               <div>
-                <Label htmlFor="priceOut">{t('addProduct.priceOut')}</Label>
+                <Label htmlFor="priceOut" required>{t('addProduct.priceOut')}</Label>
                 <Input
+                  ref={priceOutRef}
                   id="priceOut"
                   name="priceOut"
                   type="text"
@@ -491,6 +634,8 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   value={formatNumberInput(formData.priceOut)}
                   onChange={handlePriceChange}
                   required
+                  error={errors.priceOut}
+                  hint={errors.priceOut ? (t('addProduct.errors.priceOutRequired') || 'Price out is required and must be greater than 0') : undefined}
                 />
               </div>
 

@@ -54,8 +54,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   // Add styles for the different states
   if (disabled) {
     inputClasses += ` text-gray-500 border-gray-300 cursor-not-allowed dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700`;
+    // The global input styles in globals.css set a brand-colored border on focus
+    // with high specificity, so the error color must be !important to win.
   } else if (error) {
-    inputClasses += ` text-error-800 border-error-500 focus:ring-3 focus:ring-error-500/10  dark:text-error-400 dark:border-error-500`;
+    inputClasses += ` text-error-800 border-2 !border-error-400 focus:ring-3 focus:ring-error-400/10 dark:text-error-400 dark:!border-error-400`;
   } else if (success) {
     inputClasses += ` text-success-500 border-success-400 focus:ring-success-500/10 focus:border-success-300  dark:text-success-400 dark:border-success-500`;
   } else {
@@ -90,7 +92,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         <p
           className={`mt-1.5 text-xs ${
             error
-              ? "text-error-500"
+              ? "text-error-450"
               : success
               ? "text-success-500"
               : "text-gray-500"

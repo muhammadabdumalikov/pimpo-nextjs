@@ -445,7 +445,11 @@
     "scanBarcode": "Shtrix-kodni skanerlash",
     "barcodeScanned": "Shtrix-kod skanerlandi",
     "imageProOnly": "Mahsulot rasmlari Biznes tarifida mavjud. Rasm qo'shish uchun tarifni yangilang.",
-    "businessBadge": "Biznes"
+    "businessBadge": "Biznes",
+    "categorySuggestion": "Bu mahsulot sizda hali yo‘q kategoriyaga tegishli:",
+    "categoryCreateSelect": "Yaratish va tanlash",
+    "categoryCreating": "Yaratilmoqda...",
+    "categoryCreated": "Kategoriya yaratildi va tanlandi"
   },
   "upgradePlan": {
     "headline": "Sizning ehtiyojlaringizga mos moslashuvchan rejalar!",
@@ -960,7 +964,8 @@
     "showing": "Ko‘rsatilmoqda",
     "to": "–",
     "of": "dan",
-    "results": "natija"
+    "results": "natija",
+    "dismiss": "Yopish"
   },
   "auth": {
     "backToDashboard": "Boshqaruv paneliga qaytish",

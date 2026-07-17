@@ -445,7 +445,11 @@
     "scanBarcode": "Сканировать штрихкод",
     "barcodeScanned": "Штрихкод отсканирован",
     "imageProOnly": "Изображения товаров доступны на тарифе Бизнес. Обновите тариф, чтобы добавлять фото.",
-    "businessBadge": "Бизнес"
+    "businessBadge": "Бизнес",
+    "categorySuggestion": "Этот товар относится к категории, которой у вас ещё нет:",
+    "categoryCreateSelect": "Создать и выбрать",
+    "categoryCreating": "Создание...",
+    "categoryCreated": "Категория создана и выбрана"
   },
   "upgradePlan": {
     "headline": "Гибкие планы под ваши потребности",
@@ -960,7 +964,8 @@
     "showing": "Показано",
     "to": "–",
     "of": "из",
-    "results": "результатов"
+    "results": "результатов",
+    "dismiss": "Закрыть"
   },
   "auth": {
     "backToDashboard": "Назад в панель",
