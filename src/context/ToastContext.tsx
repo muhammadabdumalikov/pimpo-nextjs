@@ -53,7 +53,7 @@ const ToastContainer: React.FC<{ toasts: Toast[]; removeToast: (id: string) => v
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-20 right-4 z-[100000] flex flex-col gap-3 max-w-md">
+    <div className="pointer-events-none fixed bottom-6 right-6 z-[100000] flex flex-col items-end gap-3">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
       ))}
@@ -63,26 +63,10 @@ const ToastContainer: React.FC<{ toasts: Toast[]; removeToast: (id: string) => v
 
 const ToastItem: React.FC<{ toast: Toast; onClose: () => void }> = ({ toast, onClose }) => {
   const variantClasses = {
-    success: {
-      border: 'border-l-success-500',
-      iconBg: 'bg-success-500',
-      iconText: 'text-white',
-    },
-    error: {
-      border: 'border-l-warning-500',
-      iconBg: 'bg-warning-500',
-      iconText: 'text-white',
-    },
-    warning: {
-      border: 'border-l-warning-500',
-      iconBg: 'bg-warning-500',
-      iconText: 'text-white',
-    },
-    info: {
-      border: 'border-l-blue-light-500',
-      iconBg: 'bg-blue-light-500',
-      iconText: 'text-white',
-    },
+    success: { iconBg: 'bg-success-500' },
+    error: { iconBg: 'bg-error-500' },
+    warning: { iconBg: 'bg-warning-500' },
+    info: { iconBg: 'bg-brand-500' },
   };
 
   const icons = {
@@ -155,54 +139,16 @@ const ToastItem: React.FC<{ toast: Toast; onClose: () => void }> = ({ toast, onC
 
   const variant = variantClasses[toast.variant];
 
+  // Icon-only toast: a compact circular badge, click to dismiss.
   return (
-    <div
-      className={`rounded-lg ${variant.border} border-l-4 bg-white dark:bg-gray-900 shadow-lg p-4 min-w-[320px] max-w-md transition-all duration-300 ease-in-out`}
+    <button
+      type="button"
+      onClick={onClose}
+      aria-label={toast.title || toast.message}
+      className={`animate-toast-in pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full text-white shadow-theme-lg transition active:scale-95 ${variant.iconBg}`}
     >
-      <div className="flex items-start gap-4">
-        {/* Left border indicator is handled by border-l-4 */}
-        
-        {/* Circular icon */}
-        <div className={`flex-shrink-0 w-8 h-8 rounded-full ${variant.iconBg} ${variant.iconText} flex items-center justify-center`}>
-          {icons[toast.variant]}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {toast.title && (
-            <h4 className="mb-1 text-sm font-semibold text-gray-800 dark:text-white/90">
-              {toast.title}
-            </h4>
-          )}
-          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            {toast.message}
-          </p>
-        </div>
-
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-          aria-label="Close notification"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M12 4L4 12M4 4L12 12"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
+      {icons[toast.variant]}
+    </button>
   );
 };
 

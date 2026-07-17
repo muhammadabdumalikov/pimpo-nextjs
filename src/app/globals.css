@@ -2,6 +2,21 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Toast entrance — slide up + in from the bottom-right corner. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(1rem) translateX(0.5rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0) scale(1);
+  }
+}
+.animate-toast-in {
+  animation: toast-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* ── Contrast pass ──────────────────────────────────────────────────────────
    Form fields must visibly separate from the surfaces they sit on (the page
    canvas and the white / gray-900 cards) in both themes. Deliberately

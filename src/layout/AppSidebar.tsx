@@ -30,7 +30,7 @@ type NavItem = {
 
 const AppSidebar: React.FC = () => {
   const { t } = useTranslations();
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar, headerOpen, toggleHeader } = useSidebar();
 
   // On mobile the sidebar is an overlay — close it once a destination is picked.
   const handleNavClick = () => {
@@ -370,8 +370,8 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex  ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+        className={`py-8 flex items-center ${
+          !isExpanded && !isHovered ? "lg:justify-center" : "justify-between"
         }`}
       >
         <Link href="/dashboard" className="flex items-center" aria-label="KPOS">
@@ -385,6 +385,46 @@ const AppSidebar: React.FC = () => {
             </span>
           )}
         </Link>
+        {/* Header show/hide — a "top panel" toggle: the top bar of the panel
+            fills when the header is shown and empties when it's hidden. */}
+        {(isExpanded || isHovered || isMobileOpen) && (
+          <button
+            type="button"
+            onClick={toggleHeader}
+            aria-label={headerOpen ? "Hide header" : "Show header"}
+            className="flex items-center justify-center text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <rect
+                x="3"
+                y="4"
+                width="18"
+                height="16"
+                rx="2.5"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              {/* Top bar: solid when shown, hollow line when hidden */}
+              <path
+                d="M3 9h18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <rect
+                x="4.5"
+                y="5.5"
+                width="15"
+                height="2"
+                rx="1"
+                fill="currentColor"
+                className={`origin-center transition-all duration-300 ease-in-out ${
+                  headerOpen ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
+                }`}
+              />
+            </svg>
+          </button>
+        )}
       </div>
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">

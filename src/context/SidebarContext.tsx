@@ -7,12 +7,16 @@ type SidebarContextType = {
   isHovered: boolean;
   activeItem: string | null;
   openSubmenu: string | null;
+  headerOpen: boolean;
   toggleSidebar: () => void;
   toggleMobileSidebar: () => void;
+  toggleHeader: () => void;
   setIsHovered: (isHovered: boolean) => void;
   setActiveItem: (item: string | null) => void;
   toggleSubmenu: (item: string) => void;
 };
+
+const HEADER_OPEN_KEY = "kpos-header-open";
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
@@ -33,6 +37,20 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  // The top app header can be tucked away to free vertical space; the toggle
+  // lives in the sidebar next to the logo. Preference persists across sessions.
+  const [headerOpen, setHeaderOpen] = useState(
+    () =>
+      typeof window === "undefined" ||
+      localStorage.getItem(HEADER_OPEN_KEY) !== "0",
+  );
+
+  const toggleHeader = () => {
+    setHeaderOpen((v) => {
+      localStorage.setItem(HEADER_OPEN_KEY, v ? "0" : "1");
+      return !v;
+    });
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -71,8 +89,10 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({
         isHovered,
         activeItem,
         openSubmenu,
+        headerOpen,
         toggleSidebar,
         toggleMobileSidebar,
+        toggleHeader,
         setIsHovered,
         setActiveItem,
         toggleSubmenu,

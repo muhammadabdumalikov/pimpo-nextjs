@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
+import { useSidebar } from "@/context/SidebarContext";
 import { formatPhone } from "@/lib/phone";
 import { formatNumberInput, digitsOnly } from "@/lib/number";
 import {
@@ -110,6 +111,7 @@ function ProductThumb({
 export default function Checkout() {
   const { t } = useTranslations();
   const { showToast } = useToast();
+  const { headerOpen } = useSidebar();
 
   const [cart, setCart] = useState<CartLine[]>([]);
 
@@ -322,6 +324,34 @@ export default function Checkout() {
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
   }, [showHeld, showShortcuts, showPayment]);
+
+  // Drawers start below the app header so its (higher z-index) bar never covers
+  // the drawer's top controls. The header is collapsible, so we re-measure its
+  // bottom edge on layout changes; when it's hidden the drawer fills the screen.
+  const [headerBottom, setHeaderBottom] = useState(0);
+  useEffect(() => {
+    // The header is always mounted (collapsed via animation), so its own rect
+    // still reports full height when hidden — gate on `headerOpen`.
+    const measure = () => {
+      if (!headerOpen) {
+        setHeaderBottom(0);
+        return;
+      }
+      const header = document.querySelector("header");
+      const bottom = header ? header.getBoundingClientRect().bottom : 0;
+      setHeaderBottom(Math.max(0, Math.round(bottom)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    const ro = new ResizeObserver(measure);
+    ro.observe(document.body);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+      ro.disconnect();
+    };
+  }, [headerOpen]);
 
   // Client-side filter over the parked sales: order id, customer or note.
   const filteredHeld = useMemo(() => {
@@ -2035,11 +2065,27 @@ export default function Checkout() {
         </aside>
       </div>
 
-      {/* ── Payment drawer (BiLLZ-style full screen). The payment is composed
-          from method entries; tapping a tile auto-fills what's left to pay. ── */}
-      {showPayment && (
-        <div className="fixed inset-0 z-50 flex bg-gray-50 dark:bg-gray-950">
-          {/* Receipt preview (desktop) */}
+      {/* ── Payment drawer — slides in from the RIGHT, below the app header. The
+          payment is composed from method entries; tapping a tile auto-fills
+          what's left to pay. ── */}
+      <div
+        style={{ top: headerBottom }}
+        className={`fixed inset-x-0 bottom-0 z-40 bg-gray-900/50 transition-opacity duration-300 ${
+          showPayment ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={closePayment}
+        aria-hidden="true"
+      />
+      <aside
+        style={{ top: headerBottom, height: `calc(100dvh - ${headerBottom}px)` }}
+        className={`fixed right-0 z-50 flex w-full max-w-4xl bg-gray-50 shadow-theme-lg transition-transform duration-300 dark:bg-gray-950 ${
+          showPayment ? "translate-x-0" : "translate-x-full"
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("checkout.pay") || "Pay"}
+      >
+        {/* Receipt preview (desktop) */}
           <div className="hidden w-[380px] shrink-0 overflow-y-auto border-r border-gray-200 p-8 lg:block dark:border-gray-800">
             <div className="rounded-lg bg-white p-6 text-gray-800 shadow-theme-md dark:bg-gray-900 dark:text-white/90">
               <p className="border-b border-gray-200 pb-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
@@ -2097,18 +2143,7 @@ export default function Checkout() {
 
           {/* Payment area */}
           <div className="flex min-w-0 flex-1 flex-col overflow-y-auto p-5 sm:p-8">
-            <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={closePayment}
-                className="flex h-12 items-center gap-2.5 rounded-xl border border-gray-300 bg-white px-5 text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03]"
-              >
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12.5 5l-5 5 5 5" />
-                </svg>
-                {t("checkout.back") || "Back"}
-                <Kbd>B</Kbd>
-              </button>
+            <div className="flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={handleComplete}
@@ -2346,8 +2381,7 @@ export default function Checkout() {
               </div>
             )}
           </div>
-        </div>
-      )}
+      </aside>
     </div>
   );
 }
