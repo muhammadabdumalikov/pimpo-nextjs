@@ -8,6 +8,7 @@ import { useToast } from "@/context/ToastContext";
 import { useSidebar } from "@/context/SidebarContext";
 import { formatPhone } from "@/lib/phone";
 import { formatNumberInput, digitsOnly } from "@/lib/number";
+import DatePicker from "@/components/form/date-picker";
 import {
   getProducts,
   getProduct,
@@ -173,7 +174,12 @@ export default function Checkout() {
   );
   const [payEntries, setPayEntries] = useState<PayEntry[]>([]);
   const [phone, setPhone] = useState("");
-  const [dueDate, setDueDate] = useState(""); // optional
+  const [dueDate, setDueDate] = useState(""); // optional, "YYYY-MM-DD"
+  // Stable handler so the flatpickr instance isn't re-created on unrelated
+  // re-renders (e.g. typing a payment amount). dateStr is "Y-m-d".
+  const handleDueDateChange = useCallback((_dates: Date[], dateStr: string) => {
+    setDueDate(dateStr);
+  }, []);
   // Customer search (clients history) for debt sales. The Client field doubles
   // as the search box: typing searches history; picking a result locks it in.
   const [customerUserId, setCustomerUserId] = useState<string | null>(null);
@@ -1781,7 +1787,7 @@ export default function Checkout() {
                     </button>
                   </div>
 
-                  <div className="w-24 shrink-0 text-right text-sm font-semibold text-gray-800 dark:text-white/90">
+                  <div className="w-32 shrink-0 whitespace-nowrap text-right text-sm font-semibold tabular-nums text-gray-800 dark:text-white/90">
                     {formatMoney(line.price * line.quantity)}
                   </div>
 
@@ -2225,7 +2231,7 @@ export default function Checkout() {
       />
       <aside
         style={{ top: headerBottom, height: `calc(100dvh - ${headerBottom}px)` }}
-        className={`fixed right-0 z-50 flex w-full max-w-4xl bg-gray-50 shadow-theme-lg transition-transform duration-300 dark:bg-gray-950 ${
+        className={`fixed right-0 z-50 flex w-full max-w-6xl bg-gray-50 shadow-theme-lg transition-transform duration-300 dark:bg-gray-950 ${
           showPayment ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"
@@ -2528,11 +2534,12 @@ export default function Checkout() {
                       ({t("checkout.optional") || "optional"})
                     </span>
                   </label>
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className={inputClass}
+                  <DatePicker
+                    id="debt-due-date"
+                    static={false}
+                    defaultDate={dueDate || undefined}
+                    onChange={handleDueDateChange}
+                    placeholder={t("checkout.dueDatePlaceholder")}
                   />
                 </div>
 

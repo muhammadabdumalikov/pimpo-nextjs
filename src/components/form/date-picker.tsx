@@ -19,6 +19,12 @@ type PropsType = {
   placeholder?: string;
   /** Include a time picker (24h) — e.g. editing a sale's exact timestamp. */
   enableTime?: boolean;
+  /**
+   * Render the calendar inline in the layout (default) vs. as a floating popover.
+   * Pass `false` inside scrollable containers so opening it doesn't push content
+   * and add a scrollbar — the popover floats and auto-flips when short on room.
+   */
+  static?: boolean;
 };
 
 export default function DatePicker({
@@ -30,12 +36,13 @@ export default function DatePicker({
   dateFormat,
   placeholder,
   enableTime = false,
+  static: isStatic = true,
 }: PropsType) {
   const { locale } = useTranslations();
   useEffect(() => {
     const flatPickr = flatpickr(`#${id}`, {
       mode: mode || "single",
-      static: true,
+      static: isStatic,
       monthSelectorType: "static",
       dateFormat: dateFormat || (enableTime ? "d.m.Y | H:i" : "Y-m-d"),
       enableTime,
@@ -50,7 +57,7 @@ export default function DatePicker({
         flatPickr.destroy();
       }
     };
-  }, [mode, onChange, id, defaultDate, dateFormat, locale, enableTime]);
+  }, [mode, onChange, id, defaultDate, dateFormat, locale, enableTime, isStatic]);
 
   return (
     <div>

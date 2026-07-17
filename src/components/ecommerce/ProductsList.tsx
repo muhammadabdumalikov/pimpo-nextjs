@@ -144,6 +144,16 @@ export default function ProductsList() {
             <DownloadIcon />
             {t('products.export')}
           </button>
+          <Link
+            href="/import-products"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 16V4m0 0-4 4m4-4 4 4" />
+              <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+            </svg>
+            {t('products.import')}
+          </Link>
           {productLimitReached ? (
             <div className="flex items-center gap-2 text-sm text-warning-600 dark:text-warning-500">
               <span>{t('products.limitReached').replace('{limit}', String(productLimit))}</span>
@@ -486,7 +496,18 @@ export default function ProductsList() {
                     {product.barcode || '-'}
                   </TableCell>
                   <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
-                    {product.quantity}
+                    <span className="inline-flex items-center gap-1.5">
+                      {product.quantity}
+                      {product.lowStockThreshold != null &&
+                        product.quantity <= product.lowStockThreshold && (
+                          <span
+                            className="inline-flex items-center rounded-full bg-warning-50 px-2 py-0.5 text-xs font-medium text-warning-600 dark:bg-warning-500/15 dark:text-warning-400"
+                            title={t('products.lowStock') || 'Low stock'}
+                          >
+                            ⚠ {t('products.lowStock') || 'Low stock'}
+                          </span>
+                        )}
+                    </span>
                   </TableCell>
                   <TableCell className="py-3 px-4 sm:px-6 w-[10%]">
                     <div className="flex items-center gap-2">

@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
+import { useSidebar } from "@/context/SidebarContext";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import {
   getOrders,
   getOrder,
@@ -10,11 +12,20 @@ import {
   updateOrder,
   getStaff,
   searchCustomers,
+  resolveReceiptTemplate,
+  getStoredAccount,
   type Order,
   type SalesSummary,
   type Staff,
   type UpdateOrderDto,
 } from "@/lib/api";
+import {
+  buildReceiptHtml,
+  printReceiptHtml,
+  type ReceiptData,
+} from "@/lib/receiptRender";
+import { receiptTplStrings } from "@/lib/receiptTemplateI18n";
+import type { Locale } from "@/i18n/config";
 import SelectField from "@/components/form/SelectField";
 import DateRangeFilter, { toYmd, type DateRange } from "./DateRangeFilter";
 import SalesFilters, {
@@ -33,8 +44,35 @@ function todayStr() {
 }
 
 export default function AllSales() {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const { showToast } = useToast();
+  const { headerOpen } = useSidebar();
+  const receiptStrings = useMemo(() => receiptTplStrings(locale as Locale), [locale]);
+
+  // The detail drawer starts below the app header so its (higher z-index) bar
+  // never covers the drawer's top — re-measured when the header is toggled.
+  const [headerBottom, setHeaderBottom] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      if (!headerOpen) {
+        setHeaderBottom(0);
+        return;
+      }
+      const header = document.querySelector("header");
+      const bottom = header ? header.getBoundingClientRect().bottom : 0;
+      setHeaderBottom(Math.max(0, Math.round(bottom)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    const ro = new ResizeObserver(measure);
+    ro.observe(document.body);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+      ro.disconnect();
+    };
+  }, [headerOpen]);
 
   // Filters: an inclusive day range (BiLLZ-style; default = today). Both empty
   // means all time.
@@ -56,6 +94,8 @@ export default function AllSales() {
   // Sale detail — a BiLLZ-style slide-over drawer from the right.
   const [detail, setDetail] = useState<Order | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  // Lock background scroll while the detail drawer is open.
+  useBodyScrollLock(detailOpen);
 
   // Edit mode inside the drawer ("Tranzaksiyani tahrirlash"): only the sale's
   // metadata is editable — date, customer, cashier, note. Money stays as rung.
@@ -164,6 +204,40 @@ export default function AllSales() {
   };
 
   // ── Edit mode ─────────────────────────────────────────────────────────────
+  // Reprint any past sale's receipt (same renderer as checkout). Uses the
+  // business-wide default template; falls back to the account name for the store.
+  const printReceipt = async (order: Order) => {
+    const account = getStoredAccount();
+    const created = order.createdAt ? new Date(order.createdAt) : new Date();
+    const data: ReceiptData = {
+      saleNumber: order.id.slice(0, 8),
+      storeName: account?.name || receiptStrings.out.defaultStoreName,
+      date: created.toLocaleDateString("ru-RU"),
+      time: created.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      cashier: order.cashierName ?? account?.name ?? undefined,
+      customer: order.customerName ?? undefined,
+      saleComment: order.note ?? undefined,
+      items: (order.items ?? []).map((it) => ({
+        name: it.productName,
+        qty: it.quantity,
+        price: Number(it.priceOut),
+      })),
+      subtotal: Number(order.subtotalAmount),
+      discount: Number(order.discountAmount),
+      total: Number(order.totalAmount),
+      currency: "сум",
+    };
+    try {
+      const template = await resolveReceiptTemplate();
+      printReceiptHtml(buildReceiptHtml(template, data, receiptStrings), 80);
+    } catch {
+      showToast("error", t("sales.printFailed") || "Failed to print receipt", "Error");
+    }
+  };
+
   const startEdit = () => {
     if (!detail) return;
     setEditCustomerId(detail.userId ?? "");
@@ -541,7 +615,8 @@ export default function AllSales() {
         aria-hidden="true"
       />
       <aside
-        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-lg flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
+        style={{ top: headerBottom, height: `calc(100dvh - ${headerBottom}px)` }}
+        className={`fixed right-0 z-50 flex w-full max-w-lg flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
           detailOpen ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"
@@ -673,31 +748,16 @@ export default function AllSales() {
                   {fmt(detail.totalAmount)} {currency}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {/* Edit lives in the header so it stays reachable no matter how
-                    long the item list scrolls. */}
-                <button
-                  type="button"
-                  onClick={startEdit}
-                  aria-label={t("sales.edit") || "Edit"}
-                  className="flex h-10 items-center gap-2 rounded-full bg-brand-500 px-4 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600"
-                >
-                  <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.75 3.25a1.77 1.77 0 0 1 2.5 2.5L6.5 15.5l-3.25.75.75-3.25 9.75-9.75Z" />
-                  </svg>
-                  {t("sales.edit") || "Edit"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDetailOpen(false)}
-                  aria-label="×"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-700 dark:bg-white/[0.06] dark:text-gray-400 dark:hover:bg-white/[0.1]"
-                >
-                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                    <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setDetailOpen(false)}
+                aria-label="×"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-700 dark:bg-white/[0.06] dark:text-gray-400 dark:hover:bg-white/[0.1]"
+              >
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                  <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto px-6 pb-8">
@@ -831,6 +891,31 @@ export default function AllSales() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Actions pinned to the bottom so they stay reachable and clear of
+                the app header when it expands over the drawer's top. */}
+            <div className="flex shrink-0 gap-3 border-t border-gray-200 p-4 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => detail && printReceipt(detail)}
+                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6z" />
+                </svg>
+                {t("sales.printReceipt") || "Print receipt"}
+              </button>
+              <button
+                type="button"
+                onClick={startEdit}
+                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-brand-500 text-sm font-semibold text-white shadow-theme-md transition hover:bg-brand-600"
+              >
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.75 3.25a1.77 1.77 0 0 1 2.5 2.5L6.5 15.5l-3.25.75.75-3.25 9.75-9.75Z" />
+                </svg>
+                {t("sales.edit") || "Edit"}
+              </button>
             </div>
           </>
         )}

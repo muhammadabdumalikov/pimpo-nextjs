@@ -297,6 +297,12 @@ export interface Product {
   image: string | null;
   isActive: boolean;
   categoryId: string | null;
+  /** Markup over cost as a percent string (e.g. "22.50"); null when unset. */
+  markupPercent: string | null;
+  /** Reorder point — product is "low stock" when quantity <= this. Null = off. */
+  lowStockThreshold: number | null;
+  brandId: string | null;
+  supplierId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -311,6 +317,10 @@ export interface CreateProductRequest {
   quantityType?: string;
   image?: string;
   categoryId?: string;
+  markupPercent?: string;
+  lowStockThreshold?: number;
+  brandId?: string;
+  supplierId?: string;
 }
 
 export interface UpdateProductRequest {
@@ -323,6 +333,10 @@ export interface UpdateProductRequest {
   quantityType?: string;
   image?: string;
   categoryId?: string;
+  markupPercent?: string;
+  lowStockThreshold?: number;
+  brandId?: string;
+  supplierId?: string;
 }
 
 export interface ProductsResponse {
@@ -536,6 +550,79 @@ export async function generateProductCode(): Promise<string> {
 
   const result = await response.json();
   return result.code;
+}
+
+export async function generateBarcode(): Promise<string> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/products/generate-barcode`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const error = await response.json().catch(() => ({ message: 'Failed to generate barcode' }));
+    throw new Error(error.message || 'Failed to generate barcode');
+  }
+
+  const result = await response.json();
+  return result.barcode;
+}
+
+// A single row to import (scalar fields only; refs like category/brand are not
+// imported yet). Sent as strings/numbers matching the product create shape.
+export interface BulkImportItem {
+  name?: string;
+  code?: string;
+  barcode?: string;
+  priceIn?: string;
+  priceOut?: string;
+  quantity?: number;
+  quantityType?: string;
+  markupPercent?: string;
+  lowStockThreshold?: number;
+}
+
+export interface BulkImportResult {
+  created: number;
+  skipped: { row: number; reason: string }[];
+  errors: { row: number; reason: string }[];
+  limitReached: boolean;
+}
+
+export async function bulkCreateProducts(
+  products: BulkImportItem[],
+): Promise<BulkImportResult> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/products/bulk`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ products }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const error = await response
+      .json()
+      .catch(() => ({ message: 'Failed to import products' }));
+    throw new Error(error.message || 'Failed to import products');
+  }
+
+  return response.json();
 }
 
 // Categories API
@@ -1771,6 +1858,58 @@ export async function deleteSupplier(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!response.ok) await parseError(response, 'Failed to delete supplier');
+}
+
+// ---------------------------------------------------------------------------
+// Brands API
+// ---------------------------------------------------------------------------
+
+export interface Brand {
+  id: string;
+  businessId: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BrandsResponse {
+  brands: Brand[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface CreateBrandDto {
+  name: string;
+}
+
+export async function getBrands(
+  page?: number,
+  limit?: number,
+  search?: string,
+): Promise<BrandsResponse> {
+  const params = new URLSearchParams();
+  if (page) params.set('page', String(page));
+  if (limit) params.set('limit', String(limit));
+  if (search) params.set('search', search);
+  const response = await fetch(`${API_BASE_URL}/brands?${params.toString()}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch brands');
+  return response.json();
+}
+
+export async function createBrand(data: CreateBrandDto): Promise<Brand> {
+  const response = await fetch(`${API_BASE_URL}/brands`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create brand');
+  const result = await response.json();
+  return result.brand;
 }
 
 // ---------------------------------------------------------------------------
