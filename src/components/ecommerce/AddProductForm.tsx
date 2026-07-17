@@ -162,8 +162,8 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   // When a barcode is entered/scanned on a new product, look it up against our own
   // catalog and the shared community catalog to auto-fill name/image. Convenience
   // only: it never overwrites values the user already typed, and failures are silent.
-  const handleBarcodeLookup = async () => {
-    const barcode = formData.barcode.trim();
+  const handleBarcodeLookup = async (rawBarcode?: string) => {
+    const barcode = (rawBarcode ?? formData.barcode).trim();
     if (isEditMode || !barcode || barcode === lastLookedUpBarcode.current) return;
     lastLookedUpBarcode.current = barcode;
 
@@ -201,6 +201,21 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
       setIsLookingUpBarcode(false);
     }
   };
+
+  // Auto-look up as the barcode is typed or scanned, once it reaches a plausible
+  // EAN/UPC length (EAN-8, UPC-A, EAN-13, or 14-digit GTIN). Debounced so it fires
+  // when the user pauses, not on every keystroke. The blur handler still covers
+  // odd-length/manual cases; lastLookedUpBarcode dedupes the two paths.
+  useEffect(() => {
+    if (isEditMode) return;
+    const barcode = formData.barcode.trim();
+    if (![8, 12, 13, 14].includes(barcode.length)) return;
+    const timer = setTimeout(() => {
+      handleBarcodeLookup(barcode);
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.barcode, isEditMode]);
 
   // Camera scan (parked — physical scanners only for now). Fills the barcode
   // field from a camera-decoded value; re-enable with the CameraScanner import.
@@ -412,7 +427,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   value={formData.barcode}
                   onChange={handleInputChange}
                   onKeyDown={handleBarcodeKeyDown}
-                  onBlur={handleBarcodeLookup}
+                  onBlur={() => handleBarcodeLookup()}
                   maxLength={14}
                 />
                 {isLookingUpBarcode && (
