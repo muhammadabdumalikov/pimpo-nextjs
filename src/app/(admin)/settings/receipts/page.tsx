@@ -1,12 +1,11 @@
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
-import ReceiptManagement from "@/components/settings/ReceiptManagement";
+import ReceiptTemplateManagement from "@/components/settings/receipt-template/ReceiptTemplateManagement";
 import { Metadata } from "next";
-import React from "react";
 
 export const metadata: Metadata = {
-  title: "Receipt Management | Pimpo - Next.js Dashboard Template",
+  title: "Receipt Management | KPOS - Next.js Dashboard Template",
   description:
-    "This is Receipt Management page for Pimpo Tailwind CSS Admin Dashboard Template",
+    "This is Receipt Management page for KPOS Tailwind CSS Admin Dashboard Template",
 };
 
 export default function ReceiptsPage() {
@@ -14,7 +13,7 @@ export default function ReceiptsPage() {
     <div>
       <PageBreadcrumb pageTitle="Receipt Management" titleKey="sidebar.receiptManagement" />
       <div className="space-y-6">
-        <ReceiptManagement />
+        <ReceiptTemplateManagement />
       </div>
     </div>
   );

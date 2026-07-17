@@ -138,7 +138,7 @@ const AppSidebar: React.FC = () => {
       icon: <AccountSettingsIcon />,
       name: t('sidebar.settings'),
       subItems: [
-        { name: t('sidebar.receipts'), path: "/settings/receipts", pro: false, comingSoon: true },
+        { name: t('sidebar.receipts'), path: "/settings/receipts", pro: false },
       ],
     },
   ]);

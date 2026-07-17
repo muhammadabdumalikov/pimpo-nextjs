@@ -738,6 +738,7 @@
     "currency": "sum",
     "pieces": "pcs",
     "subtotal": "Subtotal",
+    "printReceipt": "Print receipt",
     "discount": "Discount",
     "pay": "PAY",
     "postpone": "Postpone",

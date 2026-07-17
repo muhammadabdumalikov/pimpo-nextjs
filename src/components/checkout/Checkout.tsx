@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "@/hooks/useTranslations";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { useToast } from "@/context/ToastContext";
 import { useSidebar } from "@/context/SidebarContext";
 import { formatPhone } from "@/lib/phone";
@@ -20,13 +21,31 @@ import {
   getRegisters,
   getShifts,
   openShift,
+  resolveReceiptTemplate,
+  getStoredAccount,
   type Product,
   type Customer,
   type Shift,
   type Order,
   type CashRegister,
+  type ReceiptTemplate,
 } from "@/lib/api";
+import {
+  buildReceiptHtml,
+  printReceiptHtml,
+  receiptCss,
+  type ReceiptData,
+} from "@/lib/receiptRender";
+import { receiptTplStrings } from "@/lib/receiptTemplateI18n";
+import type { Locale } from "@/i18n/config";
 import SelectField from "@/components/form/SelectField";
+import Toggle from "@/components/settings/receipt-template/Toggle";
+
+// Thermal paper width for auto-printed receipts (mm). 80mm is the common till
+// width; 58mm compact printers are also supported by the template renderer.
+const PRINT_WIDTH_MM = 80;
+// Persisted cashier preference: print a receipt after each completed sale.
+const PRINT_RECEIPT_KEY = "printReceiptEnabled";
 
 // Static VAT (QQS) config for now. Flip VAT_ENABLED to false to hide the line.
 // TODO: wire back to the business's receipt settings API.
@@ -109,7 +128,11 @@ function ProductThumb({
 }
 
 export default function Checkout() {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
+  const receiptStrings = useMemo(
+    () => receiptTplStrings(locale as Locale),
+    [locale],
+  );
   const { showToast } = useToast();
   const { headerOpen } = useSidebar();
 
@@ -141,6 +164,13 @@ export default function Checkout() {
   // cashier composes the payment from method entries. Clicking a method tile
   // auto-fills whatever is still left to pay.
   const [showPayment, setShowPayment] = useState(false);
+  // Whether to print a receipt after a completed sale (default on, persisted).
+  const [printReceiptOn, setPrintReceiptOn] = useState(true);
+  // The register's resolved receipt template, used to render the drawer
+  // preview so it matches what will actually be printed.
+  const [receiptTemplate, setReceiptTemplate] = useState<ReceiptTemplate | null>(
+    null,
+  );
   const [payEntries, setPayEntries] = useState<PayEntry[]>([]);
   const [phone, setPhone] = useState("");
   const [dueDate, setDueDate] = useState(""); // optional
@@ -184,6 +214,10 @@ export default function Checkout() {
   // The shortcuts legend collapses to a one-line bar (BiLLZ-style) by default.
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [isHolding, setIsHolding] = useState(false);
+
+  // Lock background scroll while a full-screen drawer (payment / held sales) is
+  // open, so the page behind it doesn't scroll.
+  useBodyScrollLock(showPayment || showHeld);
   const [resumingId, setResumingId] = useState<string | null>(null);
   // The held order the current cart was resumed from. Completing the sale sends
   // it as `heldOrderId` so the backend retires it in the same transaction.
@@ -435,6 +469,44 @@ export default function Checkout() {
     () => cart.reduce((sum, line) => sum + line.quantity, 0),
     [cart],
   );
+
+  // Live receipt HTML for the payment-drawer preview, rendered from the
+  // resolved template + current sale so it mirrors the printout. Null until a
+  // template loads (falls back to the plain summary).
+  const drawerReceiptHtml = useMemo(() => {
+    if (!receiptTemplate) return null;
+    const account = getStoredAccount();
+    const now = new Date();
+    const data: ReceiptData = {
+      saleNumber: "—",
+      storeName: account?.name || receiptStrings.out.defaultStoreName,
+      date: now.toLocaleDateString("ru-RU"),
+      time: now.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      cashier: account?.name ?? undefined,
+      customer: customerName.trim() || undefined,
+      customerPhone: phone.trim() || undefined,
+      saleComment: note.trim() || undefined,
+      items: cart.map((l) => ({ name: l.name, qty: l.quantity, price: l.price })),
+      subtotal,
+      discount: discountAmount,
+      total,
+      currency: "сум",
+    };
+    return buildReceiptHtml(receiptTemplate, data, receiptStrings);
+  }, [
+    receiptTemplate,
+    receiptStrings,
+    cart,
+    customerName,
+    phone,
+    note,
+    subtotal,
+    discountAmount,
+    total,
+  ]);
   // True if any line would sell more than the product has in stock. Blocks the
   // sale (defense in depth — the quantity input already clamps to stock).
   const hasOversell = useMemo(
@@ -884,6 +956,46 @@ export default function Checkout() {
     }
   };
 
+  // Resolve the register's receipt template and print the just-completed sale.
+  // Best-effort: any failure (no template, print blocked) is swallowed so the
+  // sale flow is never disrupted. Reads the current sale state, so it must be
+  // called before resetSale().
+  const printSaleReceipt = async (order: Order) => {
+    const account = getStoredAccount();
+    const created = order.createdAt ? new Date(order.createdAt) : new Date();
+    const data: ReceiptData = {
+      saleNumber: order.id.slice(0, 8),
+      storeName: account?.name || receiptStrings.out.defaultStoreName,
+      date: created.toLocaleDateString("ru-RU"),
+      time: created.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      cashier: order.cashierName ?? account?.name ?? undefined,
+      customer: customerName.trim() || undefined,
+      customerPhone: hasDebt && phone.trim() ? phone.trim() : undefined,
+      saleComment: note.trim() || undefined,
+      items: cart.map((l) => ({
+        name: l.name,
+        qty: l.quantity,
+        price: l.price,
+      })),
+      subtotal,
+      discount: discountAmount,
+      total,
+      currency: "сум",
+    };
+    try {
+      const template = await resolveReceiptTemplate(activeShift?.registerId);
+      printReceiptHtml(
+        buildReceiptHtml(template, data, receiptStrings),
+        PRINT_WIDTH_MM,
+      );
+    } catch {
+      // Printing is best-effort; ignore failures.
+    }
+  };
+
   const handleComplete = async () => {
     if (cart.length === 0 || !paymentValid) return;
     // A sale must be rung up against an open cash shift.
@@ -913,7 +1025,7 @@ export default function Checkout() {
         : (payments[0]?.method ?? "cash");
 
     try {
-      await createOrder({
+      const order = await createOrder({
         items: cart.map((l) => ({ productId: l.productId, quantity: l.quantity })),
         customerName: customerName.trim() || undefined,
         userId: customerUserId ?? undefined,
@@ -931,6 +1043,13 @@ export default function Checkout() {
         discountValue: discountAmount > 0 ? discountValueNum : undefined,
         heldOrderId: resumedHoldId ?? undefined,
       });
+
+      // Print the receipt using the register's resolved template — only when
+      // the cashier's "print receipt" toggle is on. Capture the sale snapshot
+      // before resetSale() clears it; never let a printing hiccup interrupt
+      // the completed sale.
+      if (printReceiptOn) void printSaleReceipt(order);
+
       const successMsg = hasDebt
         ? `${t("checkout.debtSold") || "Sold on credit"} — ${
             t("checkout.debtRemaining") || "Debt"
@@ -954,6 +1073,33 @@ export default function Checkout() {
     const ua = `${navigator.platform || ""} ${navigator.userAgent || ""}`;
     setIsMac(/Mac|iPhone|iPad|iPod/.test(ua));
   }, []);
+
+  // Restore the print-receipt preference (defaults to on when never set).
+  useEffect(() => {
+    const saved = localStorage.getItem(PRINT_RECEIPT_KEY);
+    if (saved !== null) setPrintReceiptOn(saved === "true");
+  }, []);
+
+  const togglePrintReceipt = (on: boolean) => {
+    setPrintReceiptOn(on);
+    localStorage.setItem(PRINT_RECEIPT_KEY, String(on));
+  };
+
+  // Resolve the register's receipt template once the payment drawer is opened
+  // (and when the register changes), so the preview + printout use the same
+  // configured layout. Best-effort: a failure just leaves the fallback preview.
+  useEffect(() => {
+    if (!showPayment) return;
+    let cancelled = false;
+    resolveReceiptTemplate(activeShift?.registerId)
+      .then((tpl) => {
+        if (!cancelled) setReceiptTemplate(tpl);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [showPayment, activeShift?.registerId]);
 
   // J: reveal + focus the customer field (its section may be collapsed).
   const openCustomer = () => {
@@ -1365,7 +1511,8 @@ export default function Checkout() {
         aria-hidden="true"
       />
       <aside
-        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
+        style={{ top: headerBottom, height: `calc(100dvh - ${headerBottom}px)` }}
+        className={`fixed right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
           showHeld ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"
@@ -2085,8 +2232,20 @@ export default function Checkout() {
         aria-modal="true"
         aria-label={t("checkout.pay") || "Pay"}
       >
-        {/* Receipt preview (desktop) */}
+        {/* Receipt preview (desktop) — renders the resolved template so the
+            on-screen receipt matches the printout. Falls back to a plain
+            summary until the template loads. */}
           <div className="hidden w-[380px] shrink-0 overflow-y-auto border-r border-gray-200 p-8 lg:block dark:border-gray-800">
+            {drawerReceiptHtml ? (
+              <>
+                <style>{receiptCss(80)}</style>
+                <div
+                  className="mx-auto shadow-theme-md"
+                  style={{ background: "#fff" }}
+                  dangerouslySetInnerHTML={{ __html: drawerReceiptHtml }}
+                />
+              </>
+            ) : (
             <div className="rounded-lg bg-white p-6 text-gray-800 shadow-theme-md dark:bg-gray-900 dark:text-white/90">
               <p className="border-b border-gray-200 pb-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
                 {new Date().toLocaleString("uz-UZ", {
@@ -2139,11 +2298,17 @@ export default function Checkout() {
                 ))}
               </div>
             </div>
+            )}
           </div>
 
           {/* Payment area */}
           <div className="flex min-w-0 flex-1 flex-col overflow-y-auto p-5 sm:p-8">
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <Toggle
+                checked={printReceiptOn}
+                onChange={togglePrintReceipt}
+                label={t("checkout.printReceipt") || "Печатать чек"}
+              />
               <button
                 type="button"
                 onClick={handleComplete}

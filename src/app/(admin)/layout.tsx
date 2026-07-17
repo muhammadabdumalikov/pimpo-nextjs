@@ -40,7 +40,10 @@ export default function AdminLayout({
             headerOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
           }`}
         >
-          <div className="overflow-hidden">
+          {/* Clip only while collapsing (the grid-rows height animation needs
+              it); when open, allow overflow so header dropdowns — locale, user,
+              notifications — aren't cut off. */}
+          <div className={headerOpen ? "overflow-visible" : "overflow-hidden"}>
             <AppHeader />
           </div>
         </div>

@@ -738,6 +738,7 @@
     "currency": "сум",
     "pieces": "шт",
     "subtotal": "Подитог",
+    "printReceipt": "Печатать чек",
     "discount": "Скидка",
     "discountApplied": "Скидка применена",
     "pay": "ОПЛАТИТЬ",

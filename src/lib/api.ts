@@ -1508,6 +1508,128 @@ export async function updateReceiptSettings(
   return response.json();
 }
 
+// ─── Receipt templates (configurable receipt/waybill layouts) ───────────────
+
+export type ReceiptPrintType = 'receipt' | 'waybill';
+
+// One entry in a template's info block / footer links: a field key, whether it
+// is shown, and (footer links only) an optional value (social handle / url).
+export interface ReceiptFieldConfig {
+  key: string;
+  enabled: boolean;
+  value?: string;
+}
+
+export interface ReceiptTemplate {
+  id: string;
+  businessId: string;
+  name: string;
+  printType: ReceiptPrintType;
+  registerId: string | null;
+  showLogo: boolean;
+  logoUrl: string | null;
+  extraImageUrl: string | null;
+  showCustomerBalance: boolean;
+  showCustomerDebt: boolean;
+  showProductAttributes: boolean;
+  showPoweredBy: boolean;
+  infoFields: ReceiptFieldConfig[] | null;
+  footerLinks: ReceiptFieldConfig[] | null;
+  footerText: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertReceiptTemplateDto {
+  name?: string;
+  printType?: ReceiptPrintType;
+  registerId?: string | null;
+  showLogo?: boolean;
+  logoUrl?: string | null;
+  extraImageUrl?: string | null;
+  showCustomerBalance?: boolean;
+  showCustomerDebt?: boolean;
+  showProductAttributes?: boolean;
+  showPoweredBy?: boolean;
+  infoFields?: ReceiptFieldConfig[];
+  footerLinks?: ReceiptFieldConfig[];
+  footerText?: string | null;
+  isDefault?: boolean;
+}
+
+export async function getReceiptTemplates(): Promise<ReceiptTemplate[]> {
+  const response = await fetch(`${API_BASE_URL}/receipt-templates`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch receipt templates');
+  return response.json();
+}
+
+export async function getReceiptTemplate(id: string): Promise<ReceiptTemplate> {
+  const response = await fetch(`${API_BASE_URL}/receipt-templates/${id}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch receipt template');
+  return response.json();
+}
+
+/** The template that applies to a register, or the business default. */
+export async function resolveReceiptTemplate(
+  registerId?: string | null,
+): Promise<ReceiptTemplate> {
+  const qs = registerId
+    ? `?registerId=${encodeURIComponent(registerId)}`
+    : '';
+  const response = await fetch(
+    `${API_BASE_URL}/receipt-templates/resolve${qs}`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok)
+    await parseError(response, 'Failed to resolve receipt template');
+  return response.json();
+}
+
+export async function createReceiptTemplate(
+  data: UpsertReceiptTemplateDto & { name: string },
+): Promise<ReceiptTemplate> {
+  const response = await fetch(`${API_BASE_URL}/receipt-templates`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to create receipt template');
+  return response.json();
+}
+
+export async function updateReceiptTemplate(
+  id: string,
+  data: UpsertReceiptTemplateDto,
+): Promise<ReceiptTemplate> {
+  const response = await fetch(`${API_BASE_URL}/receipt-templates/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to update receipt template');
+  return response.json();
+}
+
+export async function deleteReceiptTemplate(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/receipt-templates/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to delete receipt template');
+}
+
 export interface ProductPerformanceRow {
   productId: string | null;
   name: string;
