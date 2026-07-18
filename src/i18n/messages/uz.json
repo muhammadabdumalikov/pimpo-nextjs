@@ -95,7 +95,7 @@
         "name": "Standart",
         "desc": "O'sib borayotgan do'konlar uchun",
         "price": "119 000",
-        "introPrice": "95 000",
+        "introPrice": "99 000",
         "period": "so'm/oy",
         "cta": "Standartni tanlash",
         "features": [
@@ -114,7 +114,7 @@
         "name": "Biznes",
         "desc": "Ko'p filialli tarmoqlar uchun",
         "price": "299 000",
-        "introPrice": "239 000",
+        "introPrice": "249 000",
         "period": "so'm/oy",
         "cta": "Biznesni tanlash",
         "features": [

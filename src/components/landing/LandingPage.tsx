@@ -405,11 +405,6 @@ export default function LandingPage() {
                     // Launch offer applies to monthly billing only; yearly keeps
                     // its own −20% treatment so the two discounts never stack.
                     const introActive = paid && intro > 0 && intro < monthly && !yearly;
-                    // Real percent off the list price (both tiers land on −17%);
-                    // computed, so it stays honest if prices change in i18n.
-                    const pct = introActive
-                      ? Math.round((intro / monthly - 1) * 100)
-                      : 0;
                     const shown = introActive
                       ? intro
                       : yearly
@@ -424,11 +419,6 @@ export default function LandingPage() {
                           <span className="mb-1 text-sm text-gray-500 dark:text-gray-400">
                             {t(`landing.pricing.${plan.id}.period`)}
                           </span>
-                          {introActive && (
-                            <span className="ml-1 self-center rounded-full bg-brand-500 px-2 py-0.5 text-xs font-bold text-white">
-                              {pct}%
-                            </span>
-                          )}
                         </div>
                         {introActive && (
                           <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">

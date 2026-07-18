@@ -96,7 +96,7 @@
         "name": "Standard",
         "desc": "For growing shops",
         "price": "119,000",
-        "introPrice": "95,000",
+        "introPrice": "99,000",
         "period": "UZS/mo",
         "cta": "Choose Standard",
         "features": [
@@ -115,7 +115,7 @@
         "name": "Business",
         "desc": "For multi-branch networks",
         "price": "299,000",
-        "introPrice": "239,000",
+        "introPrice": "249,000",
         "period": "UZS/mo",
         "cta": "Choose Business",
         "features": [
