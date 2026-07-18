@@ -13,9 +13,11 @@ import { formatNumberInput, digitsOnly } from "@/lib/number";
 import {
   getProducts,
   getSuppliers,
+  getBranches,
   createReceipt,
   type Product,
   type Supplier,
+  type Branch,
 } from "@/lib/api";
 
 interface Line {
@@ -25,8 +27,6 @@ interface Line {
   priceIn: string;
   // Selling price for this batch. Blank → keep the product's current price.
   priceOut: string;
-  // Wholesale (bulk) selling price. Blank → leave the product's wholesale as is.
-  priceWholesale: string;
 }
 
 function formatMoney(n: number): string {
@@ -49,7 +49,6 @@ const newLine = (): Line => ({
   quantity: "1",
   priceIn: "",
   priceOut: "",
-  priceWholesale: "",
 });
 
 export default function CreateReceipt() {
@@ -63,8 +62,10 @@ export default function CreateReceipt() {
   const [productsLoading, setProductsLoading] = useState(false);
   const productCache = useRef<Map<string, Product>>(new Map());
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [supplierId, setSupplierId] = useState("");
+  const [branchId, setBranchId] = useState("");
   const [note, setNote] = useState("");
   const [currency, setCurrency] = useState<"UZS" | "USD">("UZS");
   const [usdRate, setUsdRate] = useState("");
@@ -92,8 +93,17 @@ export default function CreateReceipt() {
     (async () => {
       try {
         setIsLoading(true);
-        const supRes = await getSuppliers(1, 1000);
-        if (active) setSuppliers(supRes.suppliers);
+        const [supRes, brRes] = await Promise.all([
+          getSuppliers(1, 1000),
+          getBranches(),
+        ]);
+        if (active) {
+          setSuppliers(supRes.suppliers);
+          setBranches(brRes.branches);
+          // Preselect the default branch ("Asosiy do'kon").
+          const def = brRes.branches.find((b) => b.isDefault) ?? brRes.branches[0];
+          if (def) setBranchId(def.id);
+        }
       } catch (err: unknown) {
         showToast("error", (err as Error)?.message || "Failed to load data", "Error");
       } finally {
@@ -163,10 +173,6 @@ export default function CreateReceipt() {
       productId,
       priceIn: product ? String(Math.round(Number(product.priceIn))) : "",
       priceOut: product ? String(Math.round(Number(product.priceOut))) : "",
-      priceWholesale:
-        product && product.priceWholesale
-          ? String(Math.round(Number(product.priceWholesale)))
-          : "",
     });
     // Move straight to the quantity field so the row fills with the keyboard.
     requestAnimationFrame(() => qtyRefs.current.get(key)?.focus());
@@ -229,9 +235,6 @@ export default function CreateReceipt() {
         priceIn: Number(l.priceIn) || 0,
         // Omit when blank so the backend keeps the product's current price.
         priceOut: l.priceOut.trim() ? Number(l.priceOut) : undefined,
-        priceWholesale: l.priceWholesale.trim()
-          ? Number(l.priceWholesale)
-          : undefined,
       }));
 
     if (items.length === 0) {
@@ -251,6 +254,7 @@ export default function CreateReceipt() {
       await createReceipt({
         items,
         supplierId: supplierId || undefined,
+        branchId: branchId || undefined,
         note: note.trim() || undefined,
         draft: draft || undefined,
         currency,
@@ -324,6 +328,17 @@ export default function CreateReceipt() {
       )}
 
       <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {branches.length > 1 && (
+          <div>
+            <Label>{t("goodsReceipt.branchLabel")}</Label>
+            <SelectField
+              value={branchId}
+              onChange={setBranchId}
+              placeholder={t("goodsReceipt.selectBranch")}
+              options={branches.map((b) => ({ value: b.id, label: b.name }))}
+            />
+          </div>
+        )}
         <div>
           <Label>{t("goodsReceipt.supplierLabel")}</Label>
           <SelectField
@@ -372,12 +387,11 @@ export default function CreateReceipt() {
           product dropdown can overlay freely without being clipped. */}
       <div className="mb-3">
         {/* Column headers (desktop only) */}
-        <div className="hidden grid-cols-[minmax(0,420px)_88px_120px_120px_120px_120px_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
+        <div className="hidden grid-cols-[minmax(0,420px)_88px_120px_120px_120px_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
           <div>{t("goodsReceipt.product")}</div>
           <div>{t("goodsReceipt.quantity")}</div>
           <div>{t("goodsReceipt.priceIn")}</div>
           <div>{t("goodsReceipt.priceOut") || "Цена продажи"}</div>
-          <div>{t("goodsReceipt.priceWholesale")}</div>
           <div className="text-right">{t("goodsReceipt.lineTotal")}</div>
           <div />
         </div>
@@ -388,7 +402,7 @@ export default function CreateReceipt() {
             return (
               <div
                 key={l.key}
-                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,420px)_88px_120px_120px_120px_120px_44px] sm:items-center"
+                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,420px)_88px_120px_120px_120px_44px] sm:items-center"
               >
                 <div className="min-w-0">
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
@@ -449,17 +463,6 @@ export default function CreateReceipt() {
                     value={formatNumberInput(l.priceOut)}
                     onChange={(e) => updateLine(l.key, { priceOut: digitsOnly(e.target.value) })}
                     onKeyDown={(e) => onPriceOutKeyDown(e, index)}
-                  />
-                </div>
-                <div>
-                  <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
-                    {t("goodsReceipt.priceWholesale")}
-                  </span>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    value={formatNumberInput(l.priceWholesale)}
-                    onChange={(e) => updateLine(l.key, { priceWholesale: digitsOnly(e.target.value) })}
                   />
                 </div>
                 <div className="text-sm font-medium text-gray-800 dark:text-white/90 sm:text-right">

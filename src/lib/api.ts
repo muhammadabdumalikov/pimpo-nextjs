@@ -1813,6 +1813,61 @@ export async function getSalesByEmployee(
 // Suppliers API
 // ---------------------------------------------------------------------------
 
+// ─── Branches ("do'kon" / stores) ────────────────────────────────────────────
+export interface Branch {
+  id: string;
+  businessId: string;
+  name: string;
+  address: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getBranches(): Promise<{ branches: Branch[] }> {
+  const response = await fetch(`${API_BASE_URL}/branches`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch branches');
+  return response.json();
+}
+
+export async function createBranch(data: {
+  name: string;
+  address?: string;
+}): Promise<Branch> {
+  const response = await fetch(`${API_BASE_URL}/branches`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create branch');
+  return response.json();
+}
+
+export async function updateBranch(
+  id: string,
+  data: { name?: string; address?: string },
+): Promise<Branch> {
+  const response = await fetch(`${API_BASE_URL}/branches/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update branch');
+  return response.json();
+}
+
+export async function deleteBranch(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/branches/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to delete branch');
+}
+
 export interface Supplier {
   id: string;
   businessId: string;
@@ -2003,6 +2058,9 @@ export interface GoodsReceipt {
   businessId: string;
   supplierId: string | null;
   supplierName: string | null;
+  branchId: string | null;
+  // Branch ("do'kon") name, resolved on list/detail. Null on legacy rows.
+  branchName?: string | null;
   status: string;
   totalAmount: string;
   paidAmount: string;
@@ -2032,6 +2090,8 @@ export interface CreateReceiptDto {
     repriceExisting?: boolean;
   }[];
   supplierId?: string;
+  // Branch ("do'kon"). Defaults to the business default branch when omitted.
+  branchId?: string;
   note?: string;
   // Save as a draft (no stock change); receive it later to apply stock.
   draft?: boolean;
@@ -2055,6 +2115,7 @@ export async function getReceipts(
   endDate?: string,
   paymentStatus?: string,
   status?: string,
+  branchId?: string,
 ): Promise<ReceiptsResponse> {
   const params = new URLSearchParams();
   if (page) params.set('page', String(page));
@@ -2064,6 +2125,7 @@ export async function getReceipts(
   if (endDate) params.set('endDate', endDate);
   if (paymentStatus) params.set('paymentStatus', paymentStatus);
   if (status) params.set('status', status);
+  if (branchId) params.set('branchId', branchId);
   const response = await fetch(`${API_BASE_URL}/receipts?${params.toString()}`, {
     method: 'GET',
     headers: authHeaders(),

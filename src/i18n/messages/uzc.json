@@ -420,7 +420,8 @@
     "finance": "Молия",
     "financeCategories": "Молиявий тоифалар",
     "financeTransactions": "Транзаксиялар",
-    "financeState": "Ҳисоблар ҳолати"
+    "financeState": "Ҳисоблар ҳолати",
+    "branches": "Дўконлар"
   },
   "stockTakes": {
     "title": "Инвентаризация",
@@ -980,7 +981,11 @@
     "draftHint": "Қоралама — сток ҳали ўзгармаган. Тўлов/қайтариш учун аввал қабул қилинг.",
     "docStatus": "Ҳолат",
     "currency": "Валюта",
-    "usdRate": "USD курси"
+    "usdRate": "USD курси",
+    "branch": "Дўкон",
+    "branchLabel": "Дўкон",
+    "selectBranch": "Дўконни танланг",
+    "allBranches": "Барча дўконлар"
   },
   "staffSales": {
     "title": "Ходимлар бўйича сотув",
@@ -1161,5 +1166,22 @@
     "cashType": "Нақд",
     "noncashType": "Нақдсиз",
     "newAccount": "Янги ҳисоб"
+  },
+  "branches": {
+    "title": "Дўконлар",
+    "description": "Бизнесингиз дўконлари (филиаллари)",
+    "add": "Дўкон қўшиш",
+    "name": "Номи",
+    "namePlaceholder": "Масалан: Чилонзор филиали",
+    "address": "Манзил",
+    "addressPlaceholder": "Ихтиёрий",
+    "default": "Асосий",
+    "actions": "Амаллар",
+    "edit": "Таҳрирлаш",
+    "delete": "Ўчириш",
+    "editTitle": "Дўконни таҳрирлаш",
+    "addTitle": "Янги дўкон",
+    "deleteConfirm": "Дўкон ўчирилсинми?",
+    "nameRequired": "Дўкон номини киритинг"
   }
 }

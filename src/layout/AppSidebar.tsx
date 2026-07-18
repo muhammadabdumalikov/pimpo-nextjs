@@ -132,6 +132,7 @@ const AppSidebar: React.FC = () => {
       icon: <LuSettings size={24} />,
       name: t('sidebar.settings'),
       subItems: [
+        { name: t('sidebar.branches'), path: "/settings/branches", pro: false },
         { name: t('sidebar.receipts'), path: "/settings/receipts", pro: false },
         { name: t('sidebar.subscriptionManagement'), path: "/subscription-management", pro: false },
       ],

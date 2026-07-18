@@ -99,7 +99,7 @@
         "period": "so'm/oy",
         "cta": "Standartni tanlash",
         "features": [
-          "Har yangi filial uchun −20% (3 qo'shimcha)",
+          "Har yangi filial uchun −20% (3 tagacha)",
           "Cheksiz mahsulot",
           "4 foydalanuvchi",
           "To'liq nasiya boshqaruvi",
@@ -118,7 +118,7 @@
         "period": "so'm/oy",
         "cta": "Biznesni tanlash",
         "features": [
-          "Har yangi filial uchun −50% (5 qo'shimcha)",
+          "Har yangi filial uchun −50% (5 tagacha)",
           "Cheksiz mahsulot",
           "10 tagacha foydalanuvchi",
           "To'liq nasiya boshqaruvi",
@@ -575,7 +575,7 @@
       },
       "pro": {
         "everythingInBasic": "Asosiy rejadagi hamma narsa",
-        "ecommerceDashboard": "Har yangi filial uchun −50% (5 qo'shimcha)",
+        "ecommerceDashboard": "Har yangi filial uchun −50% (5 tagacha)",
         "productsList": "Cheksiz mahsulot",
         "addProduct": "Ommaviy mahsulot qo'shish",
         "userDebtManagement": "To'liq nasiya boshqaruvi",
@@ -671,7 +671,8 @@
     "finance": "Moliya",
     "financeCategories": "Moliyaviy toifalar",
     "financeTransactions": "Tranzaksiyalar",
-    "financeState": "Hisoblar holati"
+    "financeState": "Hisoblar holati",
+    "branches": "Do'konlar"
   },
   "stockTakes": {
     "title": "Inventarizatsiya",
@@ -1256,7 +1257,11 @@
     "draftHint": "Qoralama — stok hali o'zgarmagan. To'lov/qaytarish uchun avval qabul qiling.",
     "docStatus": "Holat",
     "currency": "Valyuta",
-    "usdRate": "USD kursi"
+    "usdRate": "USD kursi",
+    "branch": "Do'kon",
+    "branchLabel": "Do'kon",
+    "selectBranch": "Do'konni tanlang",
+    "allBranches": "Barcha do'konlar"
   },
   "staffSales": {
     "title": "Xodimlar bo'yicha sotuv",
@@ -1437,5 +1442,22 @@
     "cashType": "Naqd",
     "noncashType": "Naqdsiz",
     "newAccount": "Yangi hisob"
+  },
+  "branches": {
+    "title": "Do'konlar",
+    "description": "Biznesingiz do'konlari (filiallari)",
+    "add": "Do'kon qo'shish",
+    "name": "Nomi",
+    "namePlaceholder": "Masalan: Chilonzor filiali",
+    "address": "Manzil",
+    "addressPlaceholder": "Ixtiyoriy",
+    "default": "Asosiy",
+    "actions": "Amallar",
+    "edit": "Tahrirlash",
+    "delete": "O'chirish",
+    "editTitle": "Do'konni tahrirlash",
+    "addTitle": "Yangi do'kon",
+    "deleteConfirm": "Do'kon o'chirilsinmi?",
+    "nameRequired": "Do'kon nomini kiriting"
   }
 }

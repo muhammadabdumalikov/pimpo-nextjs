@@ -100,7 +100,7 @@
         "period": "UZS/mo",
         "cta": "Choose Standard",
         "features": [
-          "−20% per new branch (up to 3 extra)",
+          "−20% per new branch (up to 3)",
           "Unlimited products",
           "4 users",
           "Full credit management",
@@ -119,7 +119,7 @@
         "period": "UZS/mo",
         "cta": "Choose Business",
         "features": [
-          "−50% per new branch (up to 5 extra)",
+          "−50% per new branch (up to 5)",
           "Unlimited products",
           "Up to 10 users",
           "Full credit management",
@@ -576,7 +576,7 @@
       },
       "pro": {
         "everythingInBasic": "Everything in Basic",
-        "ecommerceDashboard": "−50% per new branch (up to 5 extra)",
+        "ecommerceDashboard": "−50% per new branch (up to 5)",
         "productsList": "Unlimited products",
         "addProduct": "Bulk product import",
         "userDebtManagement": "Full debt management",
@@ -671,7 +671,8 @@
     "finance": "Finance",
     "financeCategories": "Finance categories",
     "financeTransactions": "Transactions",
-    "financeState": "Accounts state"
+    "financeState": "Accounts state",
+    "branches": "Stores"
   },
   "stockTakes": {
     "title": "Stock-take",
@@ -1230,7 +1231,11 @@
     "draftHint": "Draft — stock not applied yet. Receive it first to pay/return.",
     "docStatus": "Status",
     "currency": "Currency",
-    "usdRate": "USD rate"
+    "usdRate": "USD rate",
+    "branch": "Store",
+    "branchLabel": "Store",
+    "selectBranch": "Select store",
+    "allBranches": "All stores"
   },
   "kassa": {
     "title": "Cash shifts",
@@ -1400,5 +1405,22 @@
     "cashType": "Cash",
     "noncashType": "Non-cash",
     "newAccount": "New account"
+  },
+  "branches": {
+    "title": "Stores",
+    "description": "Your business stores (branches)",
+    "add": "Add store",
+    "name": "Name",
+    "namePlaceholder": "e.g. Downtown store",
+    "address": "Address",
+    "addressPlaceholder": "Optional",
+    "default": "Default",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editTitle": "Edit store",
+    "addTitle": "New store",
+    "deleteConfirm": "Delete this store?",
+    "nameRequired": "Enter a store name"
   }
 }

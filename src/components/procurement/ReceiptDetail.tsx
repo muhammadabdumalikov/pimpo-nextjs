@@ -244,6 +244,12 @@ export default function ReceiptDetail({ id }: { id: string }) {
                 <dt>{t("goodsReceipt.date")}:</dt>
                 <dd className="text-gray-700 dark:text-gray-300">{formatDateTime(receipt.createdAt)}</dd>
               </div>
+              {receipt.branchName && (
+                <div className="flex gap-2">
+                  <dt>{t("goodsReceipt.branch")}:</dt>
+                  <dd className="text-gray-700 dark:text-gray-300">{receipt.branchName}</dd>
+                </div>
+              )}
               <div className="flex gap-2">
                 <dt>{t("goodsReceipt.supplier")}:</dt>
                 <dd className="text-gray-700 dark:text-gray-300">{receipt.supplierName || "—"}</dd>
@@ -321,7 +327,6 @@ export default function ReceiptDetail({ id }: { id: string }) {
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.quantity")}</th>
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceIn")}</th>
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceOut")}</th>
-                <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceWholesale")}</th>
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.lineTotal")}</th>
               </tr>
             </thead>
@@ -336,9 +341,6 @@ export default function ReceiptDetail({ id }: { id: string }) {
                   <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
                     {item.priceOut ? formatMoney(Number(item.priceOut)) : "—"}
                   </td>
-                  <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
-                    {item.priceWholesale ? formatMoney(Number(item.priceWholesale)) : "—"}
-                  </td>
                   <td className="px-3 py-3 text-right font-medium text-gray-800 dark:text-white/90">
                     {formatMoney(Number(item.lineTotal))}
                   </td>
@@ -347,7 +349,7 @@ export default function ReceiptDetail({ id }: { id: string }) {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={5} className="px-3 py-3 text-right font-semibold text-gray-800 dark:text-white/90">
+                <td colSpan={4} className="px-3 py-3 text-right font-semibold text-gray-800 dark:text-white/90">
                   {t("goodsReceipt.total")}
                 </td>
                 <td className="px-3 py-3 text-right font-semibold text-gray-800 dark:text-white/90">

@@ -11,8 +11,10 @@ import CostingSettingsModal from "./CostingSettingsModal";
 import {
   getReceipts,
   getSuppliers,
+  getBranches,
   type GoodsReceipt,
   type Supplier,
+  type Branch,
 } from "@/lib/api";
 
 const ITEMS_PER_PAGE = 10;
@@ -35,14 +37,16 @@ export default function ReceiptsManagement() {
   const { showToast } = useToast();
   const [receipts, setReceipts] = useState<GoodsReceipt[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [supplierFilter, setSupplierFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
   const [payFilter, setPayFilter] = useState("");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [configOpen, setConfigOpen] = useState(false);
 
-  // Load suppliers once for the filter dropdown.
+  // Load suppliers + branches once for the filter dropdowns.
   useEffect(() => {
     let active = true;
     getSuppliers(1, 1000)
@@ -52,6 +56,13 @@ export default function ReceiptsManagement() {
       .catch(() => {
         /* non-fatal: the list still works without the filter */
       });
+    getBranches()
+      .then((res) => {
+        if (active) setBranches(res.branches);
+      })
+      .catch(() => {
+        /* non-fatal */
+      });
     return () => {
       active = false;
     };
@@ -60,7 +71,7 @@ export default function ReceiptsManagement() {
   // Reset to the first page whenever a filter changes.
   useEffect(() => {
     setPage(1);
-  }, [supplierFilter, payFilter]);
+  }, [supplierFilter, branchFilter, payFilter]);
 
   useEffect(() => {
     let active = true;
@@ -74,6 +85,8 @@ export default function ReceiptsManagement() {
           undefined,
           undefined,
           payFilter || undefined,
+          undefined,
+          branchFilter || undefined,
         );
         if (active) {
           setReceipts(res.receipts);
@@ -89,7 +102,7 @@ export default function ReceiptsManagement() {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, supplierFilter, payFilter]);
+  }, [page, supplierFilter, branchFilter, payFilter]);
 
   const payTabs: { key: string; label: string }[] = [
     { key: "", label: t("goodsReceipt.allPayments") },
@@ -150,6 +163,18 @@ export default function ReceiptsManagement() {
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {branches.length > 1 && (
+            <SelectField
+              value={branchFilter}
+              onChange={setBranchFilter}
+              placeholder={t("goodsReceipt.allBranches")}
+              className="min-w-[180px]"
+              options={[
+                { value: "", label: t("goodsReceipt.allBranches") },
+                ...branches.map((b) => ({ value: b.id, label: b.name })),
+              ]}
+            />
+          )}
           {suppliers.length > 0 && (
             <SelectField
               value={supplierFilter}
@@ -210,10 +235,11 @@ export default function ReceiptsManagement() {
         </div>
       ) : receipts.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="min-w-[640px] w-full text-left text-sm">
+            <table className="min-w-[720px] w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-theme-xs uppercase tracking-wide text-gray-400 dark:border-gray-800">
                   <th className="px-3 py-3 font-medium">{t("goodsReceipt.date")}</th>
+                  <th className="px-3 py-3 font-medium">{t("goodsReceipt.branch")}</th>
                   <th className="px-3 py-3 font-medium">{t("goodsReceipt.supplier")}</th>
                   <th className="px-3 py-3 font-medium">{t("goodsReceipt.docStatus")}</th>
                   <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.itemCount")}</th>
@@ -235,6 +261,9 @@ export default function ReceiptsManagement() {
                       >
                         {formatDate(r.createdAt)}
                       </Link>
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 dark:text-gray-300">
+                      {r.branchName || "—"}
                     </td>
                     <td className="px-3 py-3 text-gray-700 dark:text-gray-300">
                       {r.supplierName || "—"}
