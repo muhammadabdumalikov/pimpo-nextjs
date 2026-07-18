@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
-import { SubscriptionTier } from "@/types/subscription";
 import { CheckLineIcon } from "@/icons/index";
 import Button from "../ui/button/Button";
 import {
@@ -14,7 +13,7 @@ import {
 } from "../ui/table";
 
 type Plan = {
-  tier: SubscriptionTier;
+  tier: string;
   name: string;
   monthlyPrice: number;
   popular?: boolean;
@@ -24,9 +23,9 @@ type Plan = {
 type CellValue = string | boolean;
 type CompareRow = {
   label: string;
-  free: CellValue;
   basic: CellValue;
   pro: CellValue;
+  proplus: CellValue;
 };
 
 export default function SubscriptionManagement() {
@@ -35,14 +34,18 @@ export default function SubscriptionManagement() {
 
   const plans = useMemo<Plan[]>(
     () => [
-      { tier: "free", name: t("upgradePlan.free"), monthlyPrice: 0 },
+      { tier: "basic", name: t("upgradePlan.basic"), monthlyPrice: 119000 },
       {
-        tier: "basic",
-        name: t("upgradePlan.basic"),
-        monthlyPrice: 99000,
+        tier: "pro",
+        name: t("upgradePlan.pro"),
+        monthlyPrice: 299000,
         popular: true,
       },
-      { tier: "pro", name: t("upgradePlan.pro"), monthlyPrice: 249000 },
+      {
+        tier: "proplus",
+        name: t("upgradePlan.proplus"),
+        monthlyPrice: 499000,
+      },
     ],
     [t],
   );
@@ -51,75 +54,75 @@ export default function SubscriptionManagement() {
     () => [
       {
         label: t("upgradePlan.compare.branches"),
-        free: "1",
         basic: "1 + 3",
         pro: "1 + 5",
+        proplus: t("upgradePlan.compare.unlimited"),
       },
       {
         label: t("upgradePlan.compare.branchDiscount"),
-        free: false,
-        basic: "−20%",
-        pro: "−50%",
+        basic: "+150 000",
+        pro: "+150 000",
+        proplus: "+150 000",
       },
       {
         label: t("upgradePlan.compare.products"),
-        free: (100).toLocaleString("ru-RU"),
         basic: t("upgradePlan.compare.unlimited"),
         pro: t("upgradePlan.compare.unlimited"),
+        proplus: t("upgradePlan.compare.unlimited"),
       },
       {
         label: t("upgradePlan.compare.users"),
-        free: "1",
         basic: "4",
         pro: "10",
+        proplus: t("upgradePlan.compare.unlimited"),
       },
       {
         label: t("upgradePlan.compare.debt"),
-        free: t("upgradePlan.compare.debtCustomers"),
         basic: true,
         pro: true,
+        proplus: true,
       },
       {
         label: t("upgradePlan.compare.inventory"),
-        free: t("upgradePlan.compare.basicValue"),
         basic: true,
         pro: true,
+        proplus: true,
       },
       {
         label: t("upgradePlan.compare.procurement"),
-        free: false,
         basic: true,
         pro: true,
+        proplus: true,
       },
       {
         label: t("upgradePlan.compare.reports"),
-        free: t("upgradePlan.compare.limited"),
         basic: true,
         pro: t("upgradePlan.compare.extended"),
+        proplus: t("upgradePlan.compare.extended"),
       },
       {
         label: t("upgradePlan.compare.bulkImport"),
-        free: false,
         basic: false,
         pro: true,
+        proplus: true,
       },
       {
         label: t("upgradePlan.compare.productImages"),
-        free: false,
         basic: false,
         pro: true,
+        proplus: true,
       },
       {
         label: t("upgradePlan.compare.team"),
-        free: false,
         basic: t("upgradePlan.compare.basicValue"),
         pro: true,
+        proplus: true,
       },
       {
         label: t("upgradePlan.compare.support"),
-        free: false,
         basic: t("upgradePlan.compare.standard"),
         pro: t("upgradePlan.compare.priority"),
+        proplus: t("upgradePlan.compare.priority"),
       },
     ],
     [t],
@@ -250,15 +253,15 @@ export default function SubscriptionManagement() {
                     {row.label}
                   </TableCell>
                   <TableCell className="px-5 py-3.5 text-center">
-                    {renderValue(row.free)}
+                    {renderValue(row.basic)}
                   </TableCell>
                   <TableCell
                     className={`px-5 py-3.5 text-center ${colTint(plans[1])}`}
                   >
-                    {renderValue(row.basic)}
+                    {renderValue(row.pro)}
                   </TableCell>
                   <TableCell className="px-5 py-3.5 text-center">
-                    {renderValue(row.pro)}
+                    {renderValue(row.proplus)}
                   </TableCell>
                 </TableRow>
               ))}
