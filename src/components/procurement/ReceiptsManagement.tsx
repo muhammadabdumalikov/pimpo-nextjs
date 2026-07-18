@@ -5,9 +5,12 @@ import Link from "next/link";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import { PlusIcon, AccountSettingsIcon } from "@/icons/index";
+import { RiFileExcel2Line } from "react-icons/ri";
 import SelectField from "@/components/form/SelectField";
+import Checkbox from "@/components/form/input/Checkbox";
 import Pagination from "@/components/ui/pagination/Pagination";
 import CostingSettingsModal from "./CostingSettingsModal";
+import { exportReceiptsToExcel } from "@/lib/receiptsExcel";
 import {
   getReceipts,
   getSuppliers,
@@ -38,6 +41,9 @@ export default function ReceiptsManagement() {
   const [receipts, setReceipts] = useState<GoodsReceipt[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  // Filter option lists load independently of the table data. The filters stay
+  // rendered while this is true so they don't pop in after the fetch.
+  const [filtersLoading, setFiltersLoading] = useState(true);
   const [supplierFilter, setSupplierFilter] = useState("");
   const [branchFilter, setBranchFilter] = useState("");
   const [payFilter, setPayFilter] = useState("");
@@ -45,24 +51,25 @@ export default function ReceiptsManagement() {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [configOpen, setConfigOpen] = useState(false);
+  // Excel export: checkboxes are always visible; the "Excel" button exports the
+  // selected orders. Selection persists across pages.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
-  // Load suppliers + branches once for the filter dropdowns.
+  // Load suppliers + branches once for the filter dropdowns. Errors are
+  // non-fatal — the list still works; filters just show only the "all" option.
   useEffect(() => {
     let active = true;
-    getSuppliers(1, 1000)
-      .then((res) => {
-        if (active) setSuppliers(res.suppliers);
-      })
-      .catch(() => {
-        /* non-fatal: the list still works without the filter */
-      });
-    getBranches()
-      .then((res) => {
-        if (active) setBranches(res.branches);
-      })
-      .catch(() => {
-        /* non-fatal */
-      });
+    (async () => {
+      const [sup, br] = await Promise.allSettled([
+        getSuppliers(1, 1000),
+        getBranches(),
+      ]);
+      if (!active) return;
+      if (sup.status === "fulfilled") setSuppliers(sup.value.suppliers);
+      if (br.status === "fulfilled") setBranches(br.value.branches);
+      setFiltersLoading(false);
+    })();
     return () => {
       active = false;
     };
@@ -149,33 +156,88 @@ export default function ReceiptsManagement() {
     );
   };
 
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allPageSelected =
+    receipts.length > 0 && receipts.every((r) => selected.has(r.id));
+
+  const toggleAllPage = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) receipts.forEach((r) => next.delete(r.id));
+      else receipts.forEach((r) => next.add(r.id));
+      return next;
+    });
+  };
+
+  const doExport = async () => {
+    if (selected.size === 0) return;
+    setExporting(true);
+    try {
+      await exportReceiptsToExcel([...selected], t);
+      showToast("success", t("goodsReceipt.exportDone"), "Success");
+      setSelected(new Set());
+    } catch (err: unknown) {
+      showToast("error", (err as Error)?.message || "Export failed", "Error");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Zone 1 — identity + primary action */}
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="mb-2 text-lg font-semibold text-gray-800 dark:text-white/90">
+          <h3 className="mb-1 text-lg font-semibold text-gray-800 dark:text-white/90">
             {t("goodsReceipt.title")}
           </h3>
           <p className="text-theme-sm text-gray-500 dark:text-gray-400">
             {t("goodsReceipt.description")}
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {branches.length > 1 && (
+        <Link
+          href="/receipts/new"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
+        >
+          <PlusIcon />
+          {t("goodsReceipt.create")}
+        </Link>
+      </div>
+
+      {/* Toolbar: filters (left) · tools (right) */}
+      <div className="mb-4 flex flex-col gap-3 border-t border-gray-100 pt-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <SelectField
+            value={payFilter}
+            onChange={setPayFilter}
+            placeholder={t("goodsReceipt.allPayments")}
+            className="min-w-[170px]"
+            options={payTabs.map((tb) => ({ value: tb.key, label: tb.label }))}
+          />
+          {(filtersLoading || branches.length > 1) && (
             <SelectField
               value={branchFilter}
               onChange={setBranchFilter}
               placeholder={t("goodsReceipt.allBranches")}
               className="min-w-[180px]"
+              loading={filtersLoading}
               options={[
                 { value: "", label: t("goodsReceipt.allBranches") },
                 ...branches.map((b) => ({ value: b.id, label: b.name })),
               ]}
             />
           )}
-          {suppliers.length > 0 && (
+          {(filtersLoading || suppliers.length > 0) && (
             <SelectField
               value={supplierFilter}
               onChange={setSupplierFilter}
@@ -183,27 +245,37 @@ export default function ReceiptsManagement() {
               searchable
               searchPlaceholder={t("goodsReceipt.searchSupplier") || "Search supplier..."}
               className="min-w-[200px]"
+              loading={filtersLoading}
               options={[
                 { value: "", label: t("goodsReceipt.allSuppliers") },
                 ...suppliers.map((s) => ({ value: s.id, label: s.name })),
               ]}
             />
           )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={doExport}
+            disabled={exporting || selected.size === 0}
+            className="inline-flex h-[42px] items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+          >
+            <RiFileExcel2Line className="h-5 w-5 text-success-600 dark:text-success-500" />
+            {exporting
+              ? t("goodsReceipt.exporting")
+              : selected.size > 0
+                ? `Excel (${selected.size})`
+                : "Excel"}
+          </button>
           <button
             type="button"
             onClick={() => setConfigOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            title={t("inventory.costingConfig") || t("common.settings") || "Настройки"}
+            aria-label={t("inventory.costingConfig") || t("common.settings") || "Настройки"}
+            className="inline-flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
           >
             <AccountSettingsIcon className="h-5 w-5" />
-            {t("inventory.costingConfig") || t("common.settings") || "Настройки"}
           </button>
-          <Link
-            href="/receipts/new"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
-          >
-            <PlusIcon />
-            {t("goodsReceipt.create")}
-          </Link>
         </div>
       </div>
 
@@ -212,32 +284,18 @@ export default function ReceiptsManagement() {
         onClose={() => setConfigOpen(false)}
       />
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {payTabs.map((tb) => (
-          <button
-            key={tb.key || "all"}
-            type="button"
-            onClick={() => setPayFilter(tb.key)}
-            className={
-              payFilter === tb.key
-                ? "rounded-lg bg-brand-500 px-3 py-1.5 text-theme-sm font-medium text-white"
-                : "rounded-lg bg-gray-100 px-3 py-1.5 text-theme-sm font-medium text-gray-600 hover:bg-gray-200 dark:bg-white/[0.03] dark:text-gray-400 dark:hover:bg-white/[0.06]"
-            }
-          >
-            {tb.label}
-          </button>
-        ))}
-      </div>
-
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
         </div>
       ) : receipts.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="min-w-[720px] w-full text-left text-sm">
+            <table className="min-w-[760px] w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-theme-xs uppercase tracking-wide text-gray-400 dark:border-gray-800">
+                  <th className="w-10 px-3 py-3 font-medium">
+                    <Checkbox checked={allPageSelected} onChange={toggleAllPage} />
+                  </th>
                   <th className="px-3 py-3 font-medium">{t("goodsReceipt.date")}</th>
                   <th className="px-3 py-3 font-medium">{t("goodsReceipt.branch")}</th>
                   <th className="px-3 py-3 font-medium">{t("goodsReceipt.supplier")}</th>
@@ -254,6 +312,12 @@ export default function ReceiptsManagement() {
                     key={r.id}
                     className="border-b border-gray-100 transition-colors hover:bg-gray-50 dark:border-gray-800/60 dark:hover:bg-white/[0.02]"
                   >
+                    <td className="px-3 py-3">
+                      <Checkbox
+                        checked={selected.has(r.id)}
+                        onChange={() => toggleOne(r.id)}
+                      />
+                    </td>
                     <td className="px-3 py-3">
                       <Link
                         href={`/receipts/${r.id}`}

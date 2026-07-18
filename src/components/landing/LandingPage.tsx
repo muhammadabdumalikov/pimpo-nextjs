@@ -35,11 +35,27 @@ const SALE = [
 ];
 const SALE_TOTAL = "46 000";
 
-const PLANS = [
-  { id: "free", accent: false, popular: false },
-  { id: "basic", accent: true, popular: true },
-  { id: "pro", accent: false, popular: false },
-] as const;
+const PLANS: {
+  id: string;
+  accent: boolean;
+  popular: boolean;
+  freeFirstMonth?: boolean;
+}[] = [
+  { id: "basic", accent: false, popular: false, freeFirstMonth: true },
+  { id: "pro", accent: true, popular: true },
+  { id: "proplus", accent: false, popular: false },
+];
+
+// Operational layer shipped since launch — rendered as a framed hairline matrix
+// (deliberately not the bento card family used above).
+const OPS: { key: string; icon: keyof typeof featureIcons }[] = [
+  { key: "shift", icon: "shift" },
+  { key: "finance", icon: "wallet" },
+  { key: "stocktake", icon: "clipboard" },
+  { key: "offline", icon: "cloud" },
+  { key: "currency", icon: "exchange" },
+  { key: "returns", icon: "undo" },
+];
 
 const STATS = ["install", "credit", "trial"] as const;
 const FAQ_KEYS = ["free", "install", "credit", "branches", "data"] as const;
@@ -271,6 +287,47 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===== Operational layer (framed hairline matrix — not the bento) ===== */}
+      <section className="scroll-mt-20 border-t border-gray-100 py-20 dark:border-gray-800/60 sm:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Reveal className="max-w-2xl">
+            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-[2.6rem] sm:leading-[1.1]">
+              {t("landing.ops.title")}
+            </h2>
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
+              {t("landing.ops.subtitle")}
+            </p>
+          </Reveal>
+
+          <Reveal className="mt-12">
+            {/* One framed panel; 1px gap over a tinted bg draws the hairlines. */}
+            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-gray-200 bg-gray-200 sm:grid-cols-2 lg:grid-cols-3 dark:border-gray-800 dark:bg-gray-800">
+              {OPS.map((o) => {
+                const Icon = featureIcons[o.icon];
+                return (
+                  <div
+                    key={o.key}
+                    className="flex gap-4 bg-white p-7 dark:bg-gray-950"
+                  >
+                    <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                        {t(`landing.ops.${o.key}.title`)}
+                      </h3>
+                      <p className="mt-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+                        {t(`landing.ops.${o.key}.desc`)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ===== Differentiator (Nasiya ledger-block) ===== */}
       <section className="pb-20 sm:pb-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -402,30 +459,56 @@ export default function LandingPage() {
                     const monthly = Number(rawPrice.replace(/\D/g, ""));
                     const intro = Number(introRaw.replace(/\D/g, ""));
                     const paid = monthly > 0;
-                    // Launch offer applies to monthly billing only; yearly keeps
-                    // its own −20% treatment so the two discounts never stack.
+                    // First 2 months at the intro price (monthly billing only);
+                    // yearly keeps its own −20% treatment so they never stack.
                     const introActive = paid && intro > 0 && intro < monthly && !yearly;
                     const shown = introActive
                       ? intro
-                      : yearly
+                      : paid && yearly
                         ? Math.round(monthly * (1 - YEARLY_DISCOUNT))
                         : monthly;
+                    // First month free is a standing offer on the entry plan.
+                    const freeMonth = Boolean(plan.freeFirstMonth) && !yearly;
                     return (
                       <>
                         <div className="mt-6 flex items-end gap-1.5">
-                          <span className="text-4xl font-extrabold tabular-nums tracking-tight text-gray-900 dark:text-white">
-                            {paid ? nf(shown) : rawPrice}
+                          <span
+                            className={`text-4xl font-extrabold tabular-nums tracking-tight ${
+                              freeMonth
+                                ? "text-brand-600 dark:text-brand-400"
+                                : "text-gray-900 dark:text-white"
+                            }`}
+                          >
+                            {freeMonth
+                              ? t("landing.pricing.promo.free")
+                              : paid
+                                ? nf(shown)
+                                : rawPrice}
                           </span>
-                          <span className="mb-1 text-sm text-gray-500 dark:text-gray-400">
-                            {t(`landing.pricing.${plan.id}.period`)}
-                          </span>
+                          {!freeMonth && (
+                            <div className="mb-1 flex flex-col leading-tight">
+                              {introActive && (
+                                <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
+                                  {t("landing.pricing.promo.intro")}
+                                </span>
+                              )}
+                              <span className="text-sm text-gray-500 dark:text-gray-400">
+                                {t(`landing.pricing.${plan.id}.period`)}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        {introActive && (
+                        {freeMonth && (
                           <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
                             <span className="font-medium text-brand-600 dark:text-brand-400">
-                              {t("landing.pricing.promo.intro")}
+                              {t("landing.pricing.promo.fromMonth2")}
                             </span>{" "}
-                            · {t("landing.pricing.promo.then")} {nf(monthly)}{" "}
+                            · {nf(monthly)} {t("landing.pricing.promo.perMonth")}
+                          </p>
+                        )}
+                        {introActive && (
+                          <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+                            {t("landing.pricing.promo.then")} {nf(monthly)}{" "}
                             {t("landing.pricing.promo.perMonth")}
                           </p>
                         )}

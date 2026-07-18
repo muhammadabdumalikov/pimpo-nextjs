@@ -367,16 +367,28 @@ export default function AllSales() {
       const top = el.getBoundingClientRect().top + window.scrollY;
       setGridHeight(Math.max(420, window.innerHeight - top - 24));
     };
-    const raf = requestAnimationFrame(update);
+    // The header show/hide is an animated grid-row inside a `min-h-screen`
+    // layout, so the body never resizes and ResizeObserver misses the toggle.
+    // Re-measure every frame for the ~300ms animation (the effect re-runs on
+    // `headerOpen`) so the list reclaims the space a collapsed header leaves.
+    let rafId = 0;
+    const startedAt = Date.now();
+    const tick = () => {
+      update();
+      if (Date.now() - startedAt < 400) rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
     window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
     const ro = new ResizeObserver(update);
     ro.observe(document.body);
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(rafId);
       window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
       ro.disconnect();
     };
-  }, []);
+  }, [headerOpen]);
 
   return (
     <div
@@ -389,8 +401,8 @@ export default function AllSales() {
       className="grid grid-cols-1 gap-5 xl:h-[var(--sales-h,calc(100vh-220px))] xl:grid-cols-[minmax(0,1fr)_340px] xl:overflow-hidden"
     >
       {/* ── Left: fixed header + search, scrollable day-grouped sales list ── */}
-      <div className="flex min-h-0 flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 xl:shrink-0">
+      <div className="flex min-h-0 flex-col gap-4 max-xl:h-[var(--sales-h,calc(100vh-220px))]">
+        <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
               {t("sales.title") || "All sales"}
@@ -402,7 +414,7 @@ export default function AllSales() {
           <DateRangeFilter value={range} onChange={setRange} />
         </div>
 
-        <div className="flex items-center gap-2.5 xl:shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           <div className="relative flex-1">
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -426,8 +438,9 @@ export default function AllSales() {
           <SalesFilters value={filters} onChange={setFilters} />
         </div>
 
-        {/* Scrollable list region — the only part that scrolls on wide screens */}
-        <div className="min-h-0 flex-1 xl:overflow-y-auto xl:pr-1">
+        {/* Scrollable list region — fills the viewport and scrolls internally at
+            every width (fixed viewport height below xl, grid-managed at xl). */}
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />

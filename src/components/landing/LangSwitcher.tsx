@@ -6,12 +6,6 @@ import type { Locale } from "@/i18n/config";
 import { ChevronIcon, GlobeIcon } from "./icons";
 
 const SHORT: Record<string, string> = { uz: "UZ", ru: "RU", uzc: "ЎЗ", en: "EN" };
-const NATIVE: Record<string, string> = {
-  uz: "O'zbekcha",
-  ru: "Русский",
-  uzc: "Ўзбекча",
-  en: "English",
-};
 
 // Landing-specific language popup. Adapts to the header's transparent (onDark)
 // vs solid state, shows native language names, and marks the active locale.
@@ -43,7 +37,7 @@ export default function LangSwitcher({
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative w-fit">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -66,7 +60,7 @@ export default function LangSwitcher({
       {open && (
         <div
           role="listbox"
-          className="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-2xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-gray-800 dark:bg-gray-900"
+          className="absolute right-0 z-50 mt-2 w-full min-w-full origin-top-right rounded-2xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-gray-800 dark:bg-gray-900"
         >
           {allowed.map((loc) => {
             const active = loc === locale;
@@ -80,22 +74,13 @@ export default function LangSwitcher({
                   setLocale(loc);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition-colors ${
+                className={`flex w-full items-center justify-center rounded-xl px-3 py-2 text-center text-sm font-medium transition-colors ${
                   active
-                    ? "bg-brand-50 font-medium text-brand-700 dark:bg-brand-500/10 dark:text-brand-300"
+                    ? "bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300"
                     : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
                 }`}
               >
-                <span
-                  className={`flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-semibold ${
-                    active
-                      ? "bg-brand-500 text-white"
-                      : "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400"
-                  }`}
-                >
-                  {SHORT[loc] ?? loc.toUpperCase()}
-                </span>
-                {NATIVE[loc] ?? loc}
+                {SHORT[loc] ?? loc.toUpperCase()}
               </button>
             );
           })}

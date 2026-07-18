@@ -14,7 +14,7 @@
       "subtitle": "KPOS brings sales, credit (debt), inventory, supply and your team together in one simple system. Built for market and shop retail.",
       "ctaPrimary": "Start free",
       "ctaSecondary": "See pricing",
-      "note": "No credit card required · Starter plan free forever"
+      "note": "No credit card required · Standard — first month free"
     },
     "stats": {
       "install": {
@@ -59,6 +59,34 @@
         "desc": "Create separate accounts for staff and grant each the permissions they need."
       }
     },
+    "ops": {
+      "title": "More than a cash register",
+      "subtitle": "Close the shift, control the money, count the stock — even offline. The whole back office in one system.",
+      "shift": {
+        "title": "Cashier shifts",
+        "desc": "Open and close shifts. At day's end cash is reconciled against the system — Z-report and discrepancies."
+      },
+      "finance": {
+        "title": "Finance ledger",
+        "desc": "Income, expense and transfers in one ledger. Cash, card and currency accounts — balances in real time."
+      },
+      "stocktake": {
+        "title": "Stock-take",
+        "desc": "Count the real stock. Surplus and shortage are computed automatically and the balance is corrected."
+      },
+      "offline": {
+        "title": "Works offline",
+        "desc": "Keep selling when the internet drops. On reconnect, sales sync automatically with no duplicates."
+      },
+      "currency": {
+        "title": "Multi-currency",
+        "desc": "Work in som and dollars — across sales, cash and finance, at the day's rate."
+      },
+      "returns": {
+        "title": "Supplier returns",
+        "desc": "Return defective goods to the supplier — stock and debt are adjusted automatically."
+      }
+    },
     "diff": {
       "badge": "Why KPOS?",
       "title": "Credit — the problem we solved best",
@@ -76,31 +104,14 @@
       "subtitle": "From a small shop to a multi-branch network — growing with you.",
       "popular": "Popular",
       "annualNote": "−20% on annual billing · Free install and setup · Cancel anytime",
-      "free": {
-        "name": "Starter",
-        "desc": "For shops just getting going",
-        "price": "0 UZS",
-        "period": "/mo",
-        "cta": "Start free",
-        "features": [
-          "1 branch",
-          "Up to 150 products",
-          "1 user",
-          "Sales and checkout",
-          "Credit (up to 20 customers)",
-          "Basic inventory",
-          "Chat support"
-        ]
-      },
       "basic": {
         "name": "Standard",
-        "desc": "For growing shops",
+        "desc": "For new and growing shops",
         "price": "119,000",
-        "introPrice": "99,000",
         "period": "UZS/mo",
         "cta": "Choose Standard",
         "features": [
-          "−20% per new branch (up to 3)",
+          "+150,000 UZS per new branch (up to 3)",
           "Unlimited products",
           "4 users",
           "Full credit management",
@@ -119,12 +130,31 @@
         "period": "UZS/mo",
         "cta": "Choose Business",
         "features": [
-          "−50% per new branch (up to 5)",
+          "+150,000 UZS per new branch (up to 5)",
           "Unlimited products",
           "Up to 10 users",
           "Full credit management",
           "Bulk product import",
           "Advanced reports",
+          "Team and roles (full)",
+          "Priority support",
+          "Product image upload"
+        ]
+      },
+      "proplus": {
+        "name": "Business+",
+        "desc": "For large multi-branch networks",
+        "price": "499,000",
+        "introPrice": "449,000",
+        "period": "UZS/mo",
+        "cta": "Choose Business+",
+        "features": [
+          "Unlimited branches — +150,000 UZS each new one",
+          "Unlimited users",
+          "Unlimited products",
+          "Full credit management",
+          "Bulk product import",
+          "All reports",
           "Team and roles (full)",
           "Priority support",
           "Product image upload"
@@ -136,6 +166,8 @@
         "perYear": "billed yearly"
       },
       "promo": {
+        "free": "Free",
+        "fromMonth2": "from month 2",
         "intro": "First 2 months",
         "then": "then",
         "perMonth": "UZS/mo"
@@ -144,8 +176,8 @@
     "faq": {
       "title": "Frequently asked questions",
       "free": {
-        "q": "Is there really a free plan?",
-        "a": "Yes. The Starter plan is free forever — no card required. You can upgrade to Standard or Business anytime."
+        "q": "Can I try it for free?",
+        "a": "Yes. Standard's first month is free — no card required. If it's not for you, cancel anytime."
       },
       "install": {
         "q": "How much does setup cost?",
@@ -189,7 +221,7 @@
       },
       "rows": {
         "branches": "Branches",
-        "branchDiscount": "Discount per new branch",
+        "branchDiscount": "Price per new branch",
         "products": "Products",
         "users": "Users",
         "checkout": "Sales & checkout",
@@ -1235,7 +1267,14 @@
     "branch": "Store",
     "branchLabel": "Store",
     "selectBranch": "Select store",
-    "allBranches": "All stores"
+    "allBranches": "All stores",
+    "selected": "selected",
+    "exportExcel": "Export to Excel",
+    "exporting": "Exporting...",
+    "exportDone": "Excel report downloaded",
+    "selectToExport": "Select orders to export",
+    "filter": "Filter",
+    "clearFilters": "Clear"
   },
   "kassa": {
     "title": "Cash shifts",

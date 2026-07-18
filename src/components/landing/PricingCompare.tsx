@@ -19,62 +19,62 @@ const VALUE_TOKENS = new Set([
 ]);
 
 type Cell = boolean | string;
-type Row = { key: string; free: Cell; basic: Cell; pro: Cell };
+type Row = { key: string; basic: Cell; pro: Cell; proplus: Cell };
 
 const GROUPS: { key: string; rows: Row[] }[] = [
   {
     key: "core",
     rows: [
-      { key: "branches", free: "1", basic: "1 + 3", pro: "1 + 5" },
-      { key: "branchDiscount", free: false, basic: "−20%", pro: "−50%" },
-      { key: "products", free: "100", basic: "unlimited", pro: "unlimited" },
-      { key: "users", free: "1", basic: "4", pro: "10" },
+      { key: "branches", basic: "1 + 3", pro: "1 + 5", proplus: "unlimited" },
+      { key: "branchDiscount", basic: "+150 000", pro: "+150 000", proplus: "+150 000" },
+      { key: "products", basic: "unlimited", pro: "unlimited", proplus: "unlimited" },
+      { key: "users", basic: "4", pro: "10", proplus: "unlimited" },
     ],
   },
   {
     key: "pos",
     rows: [
-      { key: "checkout", free: true, basic: true, pro: true },
-      { key: "barcode", free: true, basic: true, pro: true },
-      { key: "payments", free: true, basic: true, pro: true },
-      { key: "discount", free: true, basic: true, pro: true },
-      { key: "receipt", free: true, basic: true, pro: true },
+      { key: "checkout", basic: true, pro: true, proplus: true },
+      { key: "barcode", basic: true, pro: true, proplus: true },
+      { key: "payments", basic: true, pro: true, proplus: true },
+      { key: "discount", basic: true, pro: true, proplus: true },
+      { key: "receipt", basic: true, pro: true, proplus: true },
     ],
   },
   {
     key: "credit",
     rows: [
-      { key: "creditSale", free: "credit20", basic: "full", pro: "full" },
-      { key: "ledger", free: true, basic: true, pro: true },
+      { key: "creditSale", basic: "full", pro: "full", proplus: "full" },
+      { key: "ledger", basic: true, pro: true, proplus: true },
     ],
   },
   {
     key: "inventory",
     rows: [
-      { key: "stock", free: "basic", basic: "full", pro: "full" },
-      { key: "bulk", free: false, basic: false, pro: true },
-      { key: "productImages", free: false, basic: false, pro: true },
+      { key: "stock", basic: "full", pro: "full", proplus: "full" },
+      { key: "bulk", basic: false, pro: true, proplus: true },
+      { key: "productImages", basic: false, pro: true, proplus: true },
     ],
   },
   {
     key: "procurement",
-    rows: [{ key: "suppliers", free: false, basic: true, pro: true }],
+    rows: [{ key: "suppliers", basic: true, pro: true, proplus: true }],
   },
   {
     key: "reports",
     rows: [
-      { key: "dashboard", free: true, basic: true, pro: true },
-      { key: "performance", free: "limited", basic: true, pro: "extended" },
-      { key: "staffSales", free: false, basic: true, pro: true },
+      { key: "dashboard", basic: true, pro: true, proplus: true },
+      { key: "performance", basic: true, pro: "extended", proplus: "extended" },
+      { key: "staffSales", basic: true, pro: true, proplus: true },
     ],
   },
   {
     key: "team",
-    rows: [{ key: "roles", free: false, basic: "basic", pro: "full" }],
+    rows: [{ key: "roles", basic: "basic", pro: "full", proplus: "full" }],
   },
   {
     key: "support",
-    rows: [{ key: "support", free: false, basic: "standard", pro: "priority" }],
+    rows: [{ key: "support", basic: "standard", pro: "priority", proplus: "priority" }],
   },
 ];
 
@@ -114,18 +114,18 @@ export default function PricingCompare() {
                 {t("landing.compare.feature")}
               </th>
               <th className="px-5 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
-                {t("landing.pricing.free.name")}
+                {t("landing.pricing.basic.name")}
               </th>
               <th className="bg-brand-50/60 px-5 py-4 text-center text-sm font-semibold text-brand-700 dark:bg-brand-500/[0.06] dark:text-brand-300">
                 <div className="flex flex-col items-center gap-1.5">
-                  <span>{t("landing.pricing.basic.name")}</span>
+                  <span>{t("landing.pricing.pro.name")}</span>
                   <span className="rounded-full bg-brand-500 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
                     {t("landing.pricing.popular")}
                   </span>
                 </div>
               </th>
               <th className="px-5 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
-                {t("landing.pricing.pro.name")}
+                {t("landing.pricing.proplus.name")}
               </th>
             </tr>
           </thead>
@@ -148,11 +148,11 @@ export default function PricingCompare() {
                     <td className="px-5 py-3 text-sm text-gray-700 dark:text-gray-300">
                       {t(`landing.compare.rows.${row.key}`)}
                     </td>
-                    <td className="px-5 py-3 text-center">{renderCell(row.free)}</td>
+                    <td className="px-5 py-3 text-center">{renderCell(row.basic)}</td>
                     <td className="bg-brand-50/40 px-5 py-3 text-center dark:bg-brand-500/[0.04]">
-                      {renderCell(row.basic)}
+                      {renderCell(row.pro)}
                     </td>
-                    <td className="px-5 py-3 text-center">{renderCell(row.pro)}</td>
+                    <td className="px-5 py-3 text-center">{renderCell(row.proplus)}</td>
                   </tr>
                 ))}
               </Fragment>

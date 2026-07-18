@@ -14,7 +14,7 @@
       "subtitle": "KPOS — sotuv, nasiya (qarz), inventar, ta'minot va jamoani bitta oddiy tizimda birlashtiradi. Bozor va do'kon savdosi uchun maxsus yaratilgan.",
       "ctaPrimary": "Bepul boshlash",
       "ctaSecondary": "Tariflarni ko'rish",
-      "note": "Kredit karta shart emas · Boshlang'ich tarif abadiy bepul"
+      "note": "Kredit karta shart emas · Standart tarif — birinchi oy bepul"
     },
     "stats": {
       "install": {
@@ -59,6 +59,34 @@
         "desc": "Xodimlar uchun alohida hisoblar oching, har biriga kerakli ruxsatlarni bering."
       }
     },
+    "ops": {
+      "title": "Bu shunchaki kassa emas",
+      "subtitle": "Smenani yoping, pulni nazorat qiling, qoldiqni sanang — hatto internetsiz ham. Butun operatsion ish bitta tizimda.",
+      "shift": {
+        "title": "Kassa smenasi",
+        "desc": "Smenani oching va yoping. Kun oxirida naqd pul tizim bilan solishtiriladi — Z-hisobot va farqlar ko'rinadi."
+      },
+      "finance": {
+        "title": "Moliya daftari",
+        "desc": "Kirim, chiqim va o'tkazmalar bitta daftarda. Naqd, karta va valyuta hisoblari — qoldiqlar real vaqtda."
+      },
+      "stocktake": {
+        "title": "Inventarizatsiya",
+        "desc": "Haqiqiy qoldiqni sanang. Ortiqcha va kamomad avtomatik hisoblanib, qoldiq tuzatiladi."
+      },
+      "offline": {
+        "title": "Offline rejim",
+        "desc": "Internet uzilsa ham soting. Ulanish tiklanganda sotuvlar avtomatik, takrorlanmasdan sinxronlanadi."
+      },
+      "currency": {
+        "title": "Ko'p valyuta",
+        "desc": "So'm va dollar bilan ishlang — sotuv, kassa va moliyada kurs bo'yicha."
+      },
+      "returns": {
+        "title": "Ta'minotchiga qaytarish",
+        "desc": "Sifatsiz tovarni ta'minotchiga qaytaring — qoldiq va qarz avtomatik tuzatiladi."
+      }
+    },
     "diff": {
       "badge": "Nega aynan KPOS?",
       "title": "Nasiya — biz eng yaxshi hal qilgan muammo",
@@ -76,30 +104,14 @@
       "subtitle": "Kichik do'kondan ko'p filialli tarmoqqacha — o'sishingiz bilan birga.",
       "popular": "Ommabop",
       "annualNote": "Yillik to'lovda −20% chegirma · Bepul o'rnatish va sozlash · Istalgan vaqtda bekor qilish",
-      "free": {
-        "name": "Boshlang'ich",
-        "desc": "Yangi boshlayotgan do'konlar uchun",
-        "price": "0 so'm",
-        "period": "/oy",
-        "cta": "Bepul boshlash",
-        "features": [
-          "1 filial",
-          "100 tagacha mahsulot",
-          "1 foydalanuvchi",
-          "Sotuv va kassa",
-          "Nasiya (20 tagacha)",
-          "Asosiy inventar"
-        ]
-      },
       "basic": {
         "name": "Standart",
-        "desc": "O'sib borayotgan do'konlar uchun",
+        "desc": "Yangi va o'sib borayotgan do'konlar uchun",
         "price": "119 000",
-        "introPrice": "99 000",
         "period": "so'm/oy",
         "cta": "Standartni tanlash",
         "features": [
-          "Har yangi filial uchun −20% (3 tagacha)",
+          "Har yangi filial uchun +150 000 so'm (3 tagacha)",
           "Cheksiz mahsulot",
           "4 foydalanuvchi",
           "To'liq nasiya boshqaruvi",
@@ -118,12 +130,31 @@
         "period": "so'm/oy",
         "cta": "Biznesni tanlash",
         "features": [
-          "Har yangi filial uchun −50% (5 tagacha)",
+          "Har yangi filial uchun +150 000 so'm (5 tagacha)",
           "Cheksiz mahsulot",
           "10 tagacha foydalanuvchi",
           "To'liq nasiya boshqaruvi",
           "Ommaviy mahsulot qo'shish",
           "Kengaytirilgan hisobotlar",
+          "Jamoa va rollar (to'liq)",
+          "Prioritet yordam",
+          "Mahsulot rasmini yuklash"
+        ]
+      },
+      "proplus": {
+        "name": "Biznes+",
+        "desc": "Yirik ko'p filialli tarmoqlar uchun",
+        "price": "499 000",
+        "introPrice": "449 000",
+        "period": "so'm/oy",
+        "cta": "Biznes+ tanlash",
+        "features": [
+          "Cheksiz filial — har yangisiga +150 000 so'm",
+          "Cheksiz foydalanuvchi",
+          "Cheksiz mahsulot",
+          "To'liq nasiya boshqaruvi",
+          "Ommaviy mahsulot qo'shish",
+          "Barcha hisobotlar",
           "Jamoa va rollar (to'liq)",
           "Prioritet yordam",
           "Mahsulot rasmini yuklash"
@@ -135,6 +166,8 @@
         "perYear": "yillik to'lovda"
       },
       "promo": {
+        "free": "Bepul",
+        "fromMonth2": "2-oydan",
         "intro": "Ilk 2 oy",
         "then": "keyin",
         "perMonth": "so'm/oy"
@@ -143,8 +176,8 @@
     "faq": {
       "title": "Ko'p beriladigan savollar",
       "free": {
-        "q": "Rostdan ham bepul tarif bormi?",
-        "a": "Ha. Boshlang'ich tarif abadiy bepul — kredit karta talab qilinmaydi. Xohlagan vaqtda Standart yoki Biznesga o'tishingiz mumkin."
+        "q": "Bepul sinab ko'rsam bo'ladimi?",
+        "a": "Ha. Standart tarifning birinchi oyi bepul — kredit karta talab qilinmaydi. Yoqmasa, istalgan vaqtda bekor qilasiz."
       },
       "install": {
         "q": "O'rnatish qancha turadi?",
@@ -188,7 +221,7 @@
       },
       "rows": {
         "branches": "Filiallar",
-        "branchDiscount": "Har yangi filialga chegirma",
+        "branchDiscount": "Har yangi filial narxi",
         "products": "Mahsulotlar",
         "users": "Foydalanuvchilar",
         "checkout": "Sotuv va kassa",
@@ -1261,7 +1294,14 @@
     "branch": "Do'kon",
     "branchLabel": "Do'kon",
     "selectBranch": "Do'konni tanlang",
-    "allBranches": "Barcha do'konlar"
+    "allBranches": "Barcha do'konlar",
+    "selected": "tanlandi",
+    "exportExcel": "Excel'ga yuklash",
+    "exporting": "Yuklanmoqda...",
+    "exportDone": "Excel hisobot yuklab olindi",
+    "selectToExport": "Eksport uchun buyurtmalarni tanlang",
+    "filter": "Filtr",
+    "clearFilters": "Tozalash"
   },
   "staffSales": {
     "title": "Xodimlar bo'yicha sotuv",

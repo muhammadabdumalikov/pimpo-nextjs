@@ -985,7 +985,14 @@
     "branch": "Дўкон",
     "branchLabel": "Дўкон",
     "selectBranch": "Дўконни танланг",
-    "allBranches": "Барча дўконлар"
+    "allBranches": "Барча дўконлар",
+    "selected": "танланди",
+    "exportExcel": "Excel'га юклаш",
+    "exporting": "Юкланмоқда...",
+    "exportDone": "Excel ҳисобот юклаб олинди",
+    "selectToExport": "Экспорт учун буюртмаларни танланг",
+    "filter": "Фильтр",
+    "clearFilters": "Тозалаш"
   },
   "staffSales": {
     "title": "Ходимлар бўйича сотув",
