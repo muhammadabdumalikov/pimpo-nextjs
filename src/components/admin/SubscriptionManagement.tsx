@@ -52,20 +52,26 @@ export default function SubscriptionManagement() {
       {
         label: t("upgradePlan.compare.branches"),
         free: "1",
-        basic: "1",
-        pro: t("upgradePlan.compare.unlimited"),
+        basic: "1 + 3",
+        pro: "1 + 5",
+      },
+      {
+        label: t("upgradePlan.compare.branchDiscount"),
+        free: false,
+        basic: "−20%",
+        pro: "−50%",
       },
       {
         label: t("upgradePlan.compare.products"),
         free: (100).toLocaleString("ru-RU"),
-        basic: (1500).toLocaleString("ru-RU"),
+        basic: t("upgradePlan.compare.unlimited"),
         pro: t("upgradePlan.compare.unlimited"),
       },
       {
         label: t("upgradePlan.compare.users"),
         free: "1",
         basic: "4",
-        pro: t("upgradePlan.compare.unlimited"),
+        pro: "10",
       },
       {
         label: t("upgradePlan.compare.debt"),

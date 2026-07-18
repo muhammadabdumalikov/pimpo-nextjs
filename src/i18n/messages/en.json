@@ -95,12 +95,13 @@
       "basic": {
         "name": "Standard",
         "desc": "For growing shops",
-        "price": "99,000",
+        "price": "119,000",
+        "introPrice": "95,000",
         "period": "UZS/mo",
         "cta": "Choose Standard",
         "features": [
-          "1 branch",
-          "Up to 3,000 products",
+          "−20% per new branch (up to 3 extra)",
+          "Unlimited products",
           "4 users",
           "Full credit management",
           "Full inventory",
@@ -113,13 +114,14 @@
       "pro": {
         "name": "Business",
         "desc": "For multi-branch networks",
-        "price": "249,000",
+        "price": "299,000",
+        "introPrice": "239,000",
         "period": "UZS/mo",
         "cta": "Choose Business",
         "features": [
-          "Unlimited branches",
+          "−50% per new branch (up to 5 extra)",
           "Unlimited products",
-          "Unlimited users",
+          "Up to 10 users",
           "Full credit management",
           "Bulk product import",
           "Advanced reports",
@@ -132,6 +134,11 @@
         "monthly": "Monthly",
         "yearly": "Yearly",
         "perYear": "billed yearly"
+      },
+      "promo": {
+        "intro": "First 2 months",
+        "then": "then",
+        "perMonth": "UZS/mo"
       }
     },
     "faq": {
@@ -150,7 +157,7 @@
       },
       "branches": {
         "q": "Can I manage several branches?",
-        "a": "Yes. The Business plan has unlimited branches, users and products."
+        "a": "Yes. Paid plans support multiple branches — 1 + 3 on Standard (−20% each new one) and 1 + 5 on Business (−50% each new one). All managed from one panel."
       },
       "data": {
         "q": "Is my data safe?",
@@ -182,6 +189,7 @@
       },
       "rows": {
         "branches": "Branches",
+        "branchDiscount": "Discount per new branch",
         "products": "Products",
         "users": "Users",
         "checkout": "Sales & checkout",
@@ -561,14 +569,14 @@
       },
       "basic": {
         "everythingInFree": "Everything in Free",
-        "addProducts": "Up to 3,000 products",
+        "addProducts": "Unlimited products",
         "formElements": "Up to 4 users",
         "imagesVideos": "Procurement (suppliers & receipts)",
         "emailSupport": "Full debt management + Email support"
       },
       "pro": {
         "everythingInBasic": "Everything in Basic",
-        "ecommerceDashboard": "Unlimited branches",
+        "ecommerceDashboard": "−50% per new branch (up to 5 extra)",
         "productsList": "Unlimited products",
         "addProduct": "Bulk product import",
         "userDebtManagement": "Full debt management",
@@ -582,6 +590,7 @@
     "compare": {
       "feature": "Feature",
       "branches": "Branches",
+      "branchDiscount": "Discount per new branch",
       "products": "Products",
       "users": "Users",
       "debt": "Debt (credit)",
@@ -649,7 +658,7 @@
     "staff": "Staff",
     "procurement": "Procurement",
     "suppliers": "Suppliers",
-    "goodsReceipts": "Goods Receipts",
+    "goodsReceipts": "Purchase Orders",
     "comingSoon": "Coming soon",
     "editProduct": "Edit Product",
     "receiptManagement": "Receipt Management",
@@ -1073,7 +1082,8 @@
     "to": "to",
     "of": "of",
     "results": "results",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "back": "Back"
   },
   "auth": {
     "backToDashboard": "Back to dashboard",
@@ -1145,12 +1155,12 @@
     "note": "The costing method and price behavior are set for the whole business in the receipts section (the \"Settings\" button)."
   },
   "goodsReceipt": {
-    "title": "Goods Receipts",
-    "description": "Incoming stock received from suppliers",
-    "create": "New receipt",
-    "createTitle": "New goods receipt",
+    "title": "Purchase Orders",
+    "description": "Purchase orders to suppliers — stock received into the warehouse",
+    "create": "New order",
+    "createTitle": "New purchase order",
     "createDescription": "Pick a supplier and add products — stock increases automatically",
-    "detailTitle": "Goods Receipt",
+    "detailTitle": "Purchase Order",
     "supplierLabel": "Supplier",
     "selectSupplier": "Select supplier",
     "searchSupplier": "Search supplier...",
@@ -1170,13 +1180,13 @@
     "date": "Date",
     "supplier": "Supplier",
     "itemCount": "Items",
-    "save": "Create receipt",
+    "save": "Save",
     "saving": "Saving...",
     "cancel": "Cancel",
-    "createSuccess": "Receipt created — stock updated",
-    "noReceipts": "No receipts found",
-    "notFound": "Receipt not found",
-    "backToList": "Back to receipts",
+    "createSuccess": "Order created — stock updated",
+    "noReceipts": "No purchase orders found",
+    "notFound": "Purchase order not found",
+    "backToList": "Back to purchase orders",
     "errors": {
       "noItems": "Add at least one product",
       "badQuantity": "Quantity must be at least 1",

@@ -398,23 +398,51 @@ export default function LandingPage() {
                   </p>
                   {(() => {
                     const rawPrice = String(t(`landing.pricing.${plan.id}.price`));
+                    const introRaw = String(t(`landing.pricing.${plan.id}.introPrice`));
                     const monthly = Number(rawPrice.replace(/\D/g, ""));
+                    const intro = Number(introRaw.replace(/\D/g, ""));
                     const paid = monthly > 0;
-                    const shown = yearly ? Math.round(monthly * (1 - YEARLY_DISCOUNT)) : monthly;
+                    // Launch offer applies to monthly billing only; yearly keeps
+                    // its own −20% treatment so the two discounts never stack.
+                    const introActive = paid && intro > 0 && intro < monthly && !yearly;
+                    // Real percent off the list price (both tiers land on −17%);
+                    // computed, so it stays honest if prices change in i18n.
+                    const pct = introActive
+                      ? Math.round((intro / monthly - 1) * 100)
+                      : 0;
+                    const shown = introActive
+                      ? intro
+                      : yearly
+                        ? Math.round(monthly * (1 - YEARLY_DISCOUNT))
+                        : monthly;
                     return (
                       <>
                         <div className="mt-6 flex items-end gap-1.5">
-                          <span className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                          <span className="text-4xl font-extrabold tabular-nums tracking-tight text-gray-900 dark:text-white">
                             {paid ? nf(shown) : rawPrice}
                           </span>
                           <span className="mb-1 text-sm text-gray-500 dark:text-gray-400">
                             {t(`landing.pricing.${plan.id}.period`)}
                           </span>
+                          {introActive && (
+                            <span className="ml-1 self-center rounded-full bg-brand-500 px-2 py-0.5 text-xs font-bold text-white">
+                              {pct}%
+                            </span>
+                          )}
                         </div>
+                        {introActive && (
+                          <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+                            <span className="font-medium text-brand-600 dark:text-brand-400">
+                              {t("landing.pricing.promo.intro")}
+                            </span>{" "}
+                            · {t("landing.pricing.promo.then")} {nf(monthly)}{" "}
+                            {t("landing.pricing.promo.perMonth")}
+                          </p>
+                        )}
                         {paid && yearly && (
                           <div className="mt-1.5 flex items-center gap-2 text-sm">
                             <span className="text-gray-400 line-through dark:text-gray-500">
-                              {nf(monthly)}
+                              {nf(monthly)} {t("landing.pricing.promo.perMonth")}
                             </span>
                             <span className="text-gray-500 dark:text-gray-400">
                               {t("landing.pricing.billing.perYear")}

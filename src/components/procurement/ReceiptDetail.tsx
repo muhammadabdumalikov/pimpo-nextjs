@@ -223,9 +223,22 @@ export default function ReceiptDetail({ id }: { id: string }) {
       <div className="rounded-2xl border border-gray-200 bg-white px-4 pb-5 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
         <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="mb-2 text-lg font-semibold text-gray-800 dark:text-white/90">
-              {t("goodsReceipt.detailTitle")}
-            </h3>
+            <div className="mb-2 flex items-center gap-2.5">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                {t("goodsReceipt.detailTitle")}
+              </h3>
+              <span
+                className={`rounded-full px-2.5 py-1 text-theme-xs font-medium ${
+                  receipt.status === "draft"
+                    ? "bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-400"
+                    : "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-400"
+                }`}
+              >
+                {receipt.status === "draft"
+                  ? t("goodsReceipt.statusDraft")
+                  : t("goodsReceipt.statusReceived")}
+              </span>
+            </div>
             <dl className="space-y-1 text-theme-sm text-gray-500 dark:text-gray-400">
               <div className="flex gap-2">
                 <dt>{t("goodsReceipt.date")}:</dt>
@@ -251,10 +264,23 @@ export default function ReceiptDetail({ id }: { id: string }) {
               )}
             </dl>
           </div>
-          <Link href="/receipts" className="text-theme-sm text-brand-500 hover:underline">
-            {t("goodsReceipt.backToList")}
-          </Link>
         </div>
+
+        {receipt.status === "draft" && (
+          <div className="mb-5 flex flex-col gap-3 rounded-xl border border-warning-200 bg-warning-50 p-4 dark:border-warning-500/30 dark:bg-warning-500/10 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-theme-sm text-warning-700 dark:text-warning-400">
+              {t("goodsReceipt.draftHint")}
+            </p>
+            <Button
+              size="sm"
+              onClick={doReceive}
+              disabled={receiving}
+              className="shrink-0"
+            >
+              {receiving ? t("goodsReceipt.saving") : t("goodsReceipt.receive")}
+            </Button>
+          </div>
+        )}
 
         {/* Payment summary */}
         <div className="mb-5 grid grid-cols-2 gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.02] sm:grid-cols-4">
@@ -276,27 +302,16 @@ export default function ReceiptDetail({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-          {receipt.status === "draft" ? (
-            <>
-              <span className="mr-auto text-theme-sm text-warning-600 dark:text-warning-400">
-                {t("goodsReceipt.draftHint")}
-              </span>
-              <Button size="sm" onClick={doReceive} disabled={receiving}>
-                {t("goodsReceipt.receive")}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button size="sm" variant="outline" onClick={openReturn}>
-                {t("goodsReceipt.returnGoods")}
-              </Button>
-              <Button size="sm" startIcon={<PlusIcon />} onClick={openPay}>
-                {t("goodsReceipt.addPayment")}
-              </Button>
-            </>
-          )}
-        </div>
+        {receipt.status !== "draft" && (
+          <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={openReturn}>
+              {t("goodsReceipt.returnGoods")}
+            </Button>
+            <Button size="sm" startIcon={<PlusIcon />} onClick={openPay}>
+              {t("goodsReceipt.addPayment")}
+            </Button>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="min-w-[680px] w-full text-left text-sm">
@@ -312,7 +327,7 @@ export default function ReceiptDetail({ id }: { id: string }) {
             </thead>
             <tbody>
               {(receipt.items ?? []).map((item) => (
-                <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800/60">
+                <tr key={item.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50 dark:border-gray-800/60 dark:hover:bg-white/[0.02]">
                   <td className="px-3 py-3 font-medium text-gray-800 dark:text-white/90">{item.productName}</td>
                   <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">{item.quantity}</td>
                   <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
@@ -362,7 +377,7 @@ export default function ReceiptDetail({ id }: { id: string }) {
               </thead>
               <tbody>
                 {payments.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-100 dark:border-gray-800/60">
+                  <tr key={p.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50 dark:border-gray-800/60 dark:hover:bg-white/[0.02]">
                     <td className="px-3 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">
                       {formatDateTime(p.paidAt ?? p.createdAt)}
                     </td>
@@ -403,7 +418,7 @@ export default function ReceiptDetail({ id }: { id: string }) {
               </thead>
               <tbody>
                 {returns.map((r) => (
-                  <tr key={r.id} className="border-b border-gray-100 dark:border-gray-800/60">
+                  <tr key={r.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50 dark:border-gray-800/60 dark:hover:bg-white/[0.02]">
                     <td className="px-3 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">
                       {formatDateTime(r.createdAt)}
                     </td>

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getTranslations, type Locale, defaultLocale } from '@/i18n';
-import { locales } from '@/i18n/config';
+import { selectableLocales } from '@/i18n/config';
 
 type LocaleContextType = {
   locale: Locale;
@@ -17,10 +17,13 @@ export const LocaleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Initialize locale from localStorage
+    // Initialize locale from localStorage. Uzbek Cyrillic (uzc) was retired from
+    // the switcher — fold any legacy choice to Latin Uzbek and re-persist.
     const savedLocale = localStorage.getItem('locale') as Locale | null;
-    if (savedLocale && locales.includes(savedLocale)) {
-      setLocaleState(savedLocale);
+    const normalized: Locale | null = savedLocale === 'uzc' ? 'uz' : savedLocale;
+    if (normalized && selectableLocales.includes(normalized)) {
+      setLocaleState(normalized);
+      if (normalized !== savedLocale) localStorage.setItem('locale', normalized);
     }
     setIsInitialized(true);
   }, []);

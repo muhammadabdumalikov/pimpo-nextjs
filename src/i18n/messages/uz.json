@@ -94,12 +94,13 @@
       "basic": {
         "name": "Standart",
         "desc": "O'sib borayotgan do'konlar uchun",
-        "price": "99 000",
+        "price": "119 000",
+        "introPrice": "95 000",
         "period": "so'm/oy",
         "cta": "Standartni tanlash",
         "features": [
-          "1 filial",
-          "1 500 tagacha mahsulot",
+          "Har yangi filial uchun −20% (3 qo'shimcha)",
+          "Cheksiz mahsulot",
           "4 foydalanuvchi",
           "To'liq nasiya boshqaruvi",
           "To'liq inventar",
@@ -112,13 +113,14 @@
       "pro": {
         "name": "Biznes",
         "desc": "Ko'p filialli tarmoqlar uchun",
-        "price": "249 000",
+        "price": "299 000",
+        "introPrice": "239 000",
         "period": "so'm/oy",
         "cta": "Biznesni tanlash",
         "features": [
-          "Cheksiz filial",
+          "Har yangi filial uchun −50% (5 qo'shimcha)",
           "Cheksiz mahsulot",
-          "Cheksiz foydalanuvchi",
+          "10 tagacha foydalanuvchi",
           "To'liq nasiya boshqaruvi",
           "Ommaviy mahsulot qo'shish",
           "Kengaytirilgan hisobotlar",
@@ -131,6 +133,11 @@
         "monthly": "Oylik",
         "yearly": "Yillik",
         "perYear": "yillik to'lovda"
+      },
+      "promo": {
+        "intro": "Ilk 2 oy",
+        "then": "keyin",
+        "perMonth": "so'm/oy"
       }
     },
     "faq": {
@@ -149,7 +156,7 @@
       },
       "branches": {
         "q": "Bir nechta filialni boshqara olamanmi?",
-        "a": "Ha. Biznes tarifida filiallar, foydalanuvchilar va mahsulotlar soni cheksiz."
+        "a": "Ha. To'lovli tariflarda bir nechta filial — Standartda 1 + 3 (har yangisi −20%), Biznesda 1 + 5 (har yangisi −50%). Hammasi bitta paneldan boshqariladi."
       },
       "data": {
         "q": "Ma'lumotlarim xavfsizmi?",
@@ -181,6 +188,7 @@
       },
       "rows": {
         "branches": "Filiallar",
+        "branchDiscount": "Har yangi filialga chegirma",
         "products": "Mahsulotlar",
         "users": "Foydalanuvchilar",
         "checkout": "Sotuv va kassa",
@@ -560,14 +568,14 @@
       },
       "basic": {
         "everythingInFree": "Bepul rejadagi hamma narsa",
-        "addProducts": "1 500 tagacha mahsulot",
+        "addProducts": "Cheksiz mahsulot",
         "formElements": "4 foydalanuvchigacha",
         "imagesVideos": "Ta'minot (ta'minotchi va qabul)",
         "emailSupport": "To'liq nasiya + Email yordam"
       },
       "pro": {
         "everythingInBasic": "Asosiy rejadagi hamma narsa",
-        "ecommerceDashboard": "Cheksiz filial",
+        "ecommerceDashboard": "Har yangi filial uchun −50% (5 qo'shimcha)",
         "productsList": "Cheksiz mahsulot",
         "addProduct": "Ommaviy mahsulot qo'shish",
         "userDebtManagement": "To'liq nasiya boshqaruvi",
@@ -581,6 +589,7 @@
     "compare": {
       "feature": "Imkoniyat",
       "branches": "Filiallar",
+      "branchDiscount": "Har yangi filialga chegirma",
       "products": "Mahsulotlar",
       "users": "Foydalanuvchilar",
       "debt": "Nasiya (qarz)",
@@ -646,9 +655,9 @@
     "team": "Jamoa",
     "roles": "Rollar",
     "staff": "Xodimlar",
-    "procurement": "Xaridlar",
+    "procurement": "Ta'minot",
     "suppliers": "Yetkazib beruvchilar",
-    "goodsReceipts": "Mahsulot kirimi",
+    "goodsReceipts": "Buyurtmalar",
     "comingSoon": "Tez kunda",
     "editProduct": "Mahsulotni tahrirlash",
     "receiptManagement": "Cheklarni boshqarish",
@@ -1074,7 +1083,8 @@
     "to": "–",
     "of": "dan",
     "results": "natija",
-    "dismiss": "Yopish"
+    "dismiss": "Yopish",
+    "back": "Orqaga"
   },
   "auth": {
     "backToDashboard": "Boshqaruv paneliga qaytish",
@@ -1171,12 +1181,12 @@
     "note": "Tannarx usuli va narx xatti-harakati butun biznes uchun kirimlar bo'limida («Sozlamalar» tugmasi) sozlanadi."
   },
   "goodsReceipt": {
-    "title": "Mohsulot kirimi",
-    "description": "Yetkazib beruvchilardan omborga mahsulot kirimi",
-    "create": "Yangi kirim",
-    "createTitle": "Yangi mahsulot kirimi",
+    "title": "Buyurtmalar",
+    "description": "Yetkazib beruvchilarga buyurtmalar — omborga qabul",
+    "create": "Yangi buyurtma",
+    "createTitle": "Yangi buyurtma",
     "createDescription": "Yetkazib beruvchini tanlang va tovarlarni qo'shing — qoldiq avtomatik oshadi",
-    "detailTitle": "Mahsulot kirimi",
+    "detailTitle": "Buyurtma",
     "supplierLabel": "Yetkazib beruvchi",
     "selectSupplier": "Yetkazib beruvchini tanlang",
     "searchSupplier": "Yetkazib beruvchini qidirish...",
@@ -1196,13 +1206,13 @@
     "date": "Sana",
     "supplier": "Yetkazib beruvchi",
     "itemCount": "Soni",
-    "save": "Kirimni yaratish",
+    "save": "Saqlash",
     "saving": "Saqlanmoqda...",
     "cancel": "Bekor qilish",
-    "createSuccess": "Kirim yaratildi — qoldiq yangilandi",
-    "noReceipts": "Kirimlar topilmadi",
-    "notFound": "Kirim topilmadi",
-    "backToList": "Kirimlar ro'yxatiga",
+    "createSuccess": "Buyurtma yaratildi — qoldiq yangilandi",
+    "noReceipts": "Buyurtmalar topilmadi",
+    "notFound": "Buyurtma topilmadi",
+    "backToList": "Buyurtmalar ro'yxatiga",
     "errors": {
       "noItems": "Kamida bitta tovar qo'shing",
       "badQuantity": "Miqdori kamida 1 bo'lishi kerak",

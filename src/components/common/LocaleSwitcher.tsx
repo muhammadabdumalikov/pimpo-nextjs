@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from '@/hooks/useTranslations';
-import { locales, localeLabels, type Locale } from '@/i18n/config';
+import { selectableLocales, localeLabels, type Locale } from '@/i18n/config';
 import { Dropdown } from '@/components/ui/dropdown/Dropdown';
 import { DropdownItem } from '@/components/ui/dropdown/DropdownItem';
 
@@ -11,8 +11,8 @@ export default function LocaleSwitcher({ allowed }: { allowed?: Locale[] } = {})
   const [open, setOpen] = useState(false);
 
   // Restrict the offered locales when `allowed` is passed (e.g. uz/ru only on
-  // the landing); defaults to every configured locale everywhere else.
-  const shown = allowed ?? [...locales];
+  // the landing); defaults to the selectable set (uzc retired) everywhere else.
+  const shown = allowed ?? selectableLocales;
 
   return (
     <div className="relative">

@@ -25,9 +25,10 @@ const GROUPS: { key: string; rows: Row[] }[] = [
   {
     key: "core",
     rows: [
-      { key: "branches", free: "1", basic: "1", pro: "unlimited" },
-      { key: "products", free: "100", basic: "1 500", pro: "unlimited" },
-      { key: "users", free: "1", basic: "4", pro: "unlimited" },
+      { key: "branches", free: "1", basic: "1 + 3", pro: "1 + 5" },
+      { key: "branchDiscount", free: false, basic: "−20%", pro: "−50%" },
+      { key: "products", free: "100", basic: "unlimited", pro: "unlimited" },
+      { key: "users", free: "1", basic: "4", pro: "10" },
     ],
   },
   {

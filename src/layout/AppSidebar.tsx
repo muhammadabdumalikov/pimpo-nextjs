@@ -4,15 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
-  AccountSettingsIcon,
-  BoxIcon,
   ChevronDownIcon,
-  GridIcon,
   HorizontaLDots,
-  PieChartIcon,
-  UserCircleIcon,
 } from "../icons/index";
-import { LuScanBarcode, LuTruck } from "react-icons/lu";
+import {
+  LuScanBarcode,
+  LuTruck,
+  LuLayoutDashboard,
+  LuSettings,
+  LuChartPie,
+  LuBox,
+} from "react-icons/lu";
+import { CgProfile } from "react-icons/cg";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useAuth } from "@/context/AuthContext";
@@ -72,12 +75,12 @@ const AppSidebar: React.FC = () => {
 
   const navItems: NavItem[] = filterMenuItems([
     {
-      icon: <GridIcon />,
+      icon: <LuLayoutDashboard size={24} />,
       name: t('sidebar.dashboard'),
       path: "/dashboard",
     },
     {
-      icon: <BoxIcon />,
+      icon: <LuBox size={24} />,
       name: t('sidebar.ecommerceMenu'),
       subItems: [
         { name: t('sidebar.categories'), path: "/categories", pro: false },
@@ -100,7 +103,7 @@ const AppSidebar: React.FC = () => {
       ],
     },
     {
-      icon: <PieChartIcon />,
+      icon: <LuChartPie size={24} />,
       name: t('sidebar.finance'),
       subItems: [
         { name: t('sidebar.financeTransactions'), path: "/finance/transactions", pro: false },
@@ -117,7 +120,7 @@ const AppSidebar: React.FC = () => {
       ],
     },
     {
-      icon: <UserCircleIcon />,
+      icon: <CgProfile size={24} />,
       name: t('sidebar.team'),
       subItems: [
         { name: t('sidebar.roles'), path: "/roles", pro: false },
@@ -126,7 +129,7 @@ const AppSidebar: React.FC = () => {
       ],
     },
     {
-      icon: <AccountSettingsIcon />,
+      icon: <LuSettings size={24} />,
       name: t('sidebar.settings'),
       subItems: [
         { name: t('sidebar.receipts'), path: "/settings/receipts", pro: false },

@@ -226,7 +226,7 @@ export default function ReceiptsManagement() {
                 {receipts.map((r) => (
                   <tr
                     key={r.id}
-                    className="border-b border-gray-100 dark:border-gray-800/60"
+                    className="border-b border-gray-100 transition-colors hover:bg-gray-50 dark:border-gray-800/60 dark:hover:bg-white/[0.02]"
                   >
                     <td className="px-3 py-3">
                       <Link
@@ -247,6 +247,7 @@ export default function ReceiptsManagement() {
                     </td>
                     <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
                       {formatMoney(Number(r.paidAmount))}
+                      {r.currency !== "UZS" ? ` ${r.currency}` : ""}
                     </td>
                     <td className="px-3 py-3">{statusBadge(r)}</td>
                   </tr>
@@ -255,10 +256,17 @@ export default function ReceiptsManagement() {
             </table>
           </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-12 dark:border-gray-800">
+        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-gray-200 py-14 dark:border-gray-800">
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
             {t("goodsReceipt.noReceipts")}
           </p>
+          <Link
+            href="/receipts/new"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
+          >
+            <PlusIcon />
+            {t("goodsReceipt.create")}
+          </Link>
         </div>
       )}
 

@@ -534,7 +534,7 @@ export default function CreateReceipt() {
             {t("goodsReceipt.saveDraft")}
           </Button>
           <Button type="submit" size="md" disabled={isSubmitting}>
-            {isSubmitting ? t("goodsReceipt.saving") : t("goodsReceipt.save")}
+            {isSubmitting ? t("goodsReceipt.saving") : t("goodsReceipt.receive")}
           </Button>
         </div>
       </div>

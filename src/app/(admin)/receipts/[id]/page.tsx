@@ -1,10 +1,11 @@
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import BackButton from "@/components/common/BackButton";
 import ReceiptDetail from "@/components/procurement/ReceiptDetail";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Goods Receipt | KPOS",
-  description: "Goods receipt details",
+  title: "Purchase Order | Pimpo",
+  description: "Purchase order details",
 };
 
 export default async function ReceiptDetailPage({
@@ -15,7 +16,8 @@ export default async function ReceiptDetailPage({
   const { id } = await params;
   return (
     <div>
-      <PageBreadcrumb pageTitle="Goods Receipt" titleKey="goodsReceipt.detailTitle" />
+      <PageBreadcrumb pageTitle="Purchase Order" titleKey="goodsReceipt.detailTitle" />
+      <BackButton href="/receipts" />
       <div className="space-y-6">
         <ReceiptDetail id={id} />
       </div>
