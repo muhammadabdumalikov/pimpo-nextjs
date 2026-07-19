@@ -28,6 +28,9 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'inventory', allowedTiers: ['free', 'basic', 'pro'] },
   { menuItem: 'productPerformance', allowedTiers: ['free', 'basic', 'pro'] },
 
+  // Reports (Hisobotlar) — available on every tier
+  { menuItem: 'reports', allowedTiers: ['free', 'basic', 'pro'] },
+
   // Procurement (suppliers + goods receipts) — not on the free plan.
   { menuItem: 'suppliers', allowedTiers: ['basic', 'pro'] },
   { menuItem: 'receipts', allowedTiers: ['basic', 'pro'] },
@@ -111,6 +114,9 @@ const routeMenuMap: Record<string, string> = {
   // screen at /stock-takes/:id inherits the 'inventory' permission.
   '/stock-takes': 'inventory',
   '/product-performance': 'productPerformance',
+  // Reports hub + all nested report routes (/reports/pnl, /reports/stock, …)
+  // inherit the 'reports' menu id via longest-prefix matching.
+  '/reports': 'reports',
   '/roles': 'team.roles',
   '/staff': 'team.staff',
   '/staff-sales': 'team.sales',

@@ -13,6 +13,7 @@ import {
   LuLayoutDashboard,
   LuSettings,
   LuChartPie,
+  LuChartColumnBig,
   LuBox,
 } from "react-icons/lu";
 import { CgProfile } from "react-icons/cg";
@@ -96,7 +97,6 @@ const AppSidebar: React.FC = () => {
       subItems: [
         { name: t('sidebar.checkout'), path: "/cart", pro: false },
         { name: t('sidebar.allSales'), path: "/sales", pro: false },
-        { name: t('sidebar.productPerformance'), path: "/product-performance", pro: false },
         { name: t('sidebar.userDebt'), path: "/user-debt", pro: false },
         { name: t('sidebar.kassaShifts'), path: "/kassa", pro: false },
         { name: t('sidebar.kassaOperations'), path: "/kassa/operations", pro: false },
@@ -110,6 +110,11 @@ const AppSidebar: React.FC = () => {
         { name: t('sidebar.financeCategories'), path: "/finance/categories", pro: false },
         { name: t('sidebar.financeState'), path: "/finance/state", pro: false },
       ],
+    },
+    {
+      icon: <LuChartColumnBig size={24} />,
+      name: t('sidebar.reports'),
+      path: "/reports",
     },
     {
       icon: <LuTruck size={24} />,

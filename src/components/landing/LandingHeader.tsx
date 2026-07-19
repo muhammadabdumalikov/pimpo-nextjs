@@ -116,7 +116,7 @@ export default function LandingHeader() {
             type="button"
             onClick={toggleTheme}
             aria-label="Theme"
-            className={`hidden h-11 w-11 items-center justify-center rounded-full border transition-colors sm:flex ${
+            className={`hidden h-11 w-11 items-center justify-center rounded-full border transition-colors md:flex ${
               onDark
                 ? "border-white/20 text-white/80 hover:bg-white/10"
                 : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
@@ -131,7 +131,7 @@ export default function LandingHeader() {
           <LangSwitcher allowed={["uz", "ru"]} onDark={onDark} />
           <Link
             href="/signin"
-            className={`hidden rounded-full px-4 py-2.5 text-sm font-medium transition-colors sm:inline-flex ${
+            className={`hidden h-11 items-center whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors md:inline-flex ${
               onDark
                 ? "text-white/80 hover:text-white"
                 : "text-gray-700 hover:text-brand-600 dark:text-gray-200 dark:hover:text-brand-400"
@@ -141,7 +141,7 @@ export default function LandingHeader() {
           </Link>
           <Link
             href="/signup"
-            className="inline-flex items-center rounded-full bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:translate-y-px"
+            className="hidden h-11 items-center whitespace-nowrap rounded-full bg-brand-500 px-5 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:translate-y-px md:inline-flex"
           >
             {t("landing.nav.start")}
           </Link>
@@ -161,7 +161,7 @@ export default function LandingHeader() {
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900 md:hidden">
+        <div className="border-t border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-gray-900 md:hidden">
           <nav className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <a
@@ -173,13 +173,23 @@ export default function LandingHeader() {
                 {t(link.key)}
               </a>
             ))}
+          </nav>
+          <div className="mt-3 flex flex-col gap-2 border-t border-gray-100 pt-4 dark:border-gray-800/70">
+            <Link
+              href="/signup"
+              onClick={() => setMobileOpen(false)}
+              className="inline-flex h-11 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600"
+            >
+              {t("landing.nav.start")}
+            </Link>
             <Link
               href="/signin"
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/5"
+              onClick={() => setMobileOpen(false)}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-gray-300 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/5"
             >
               {t("landing.nav.login")}
             </Link>
-          </nav>
+          </div>
         </div>
       )}
     </header>

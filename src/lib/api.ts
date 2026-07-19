@@ -1770,10 +1770,12 @@ export interface ProductPerformanceRow {
 export async function getProductPerformance(
   from?: string,
   to?: string,
+  branchId?: string,
 ): Promise<ProductPerformanceRow[]> {
   const params = new URLSearchParams();
   if (from) params.set('from', from);
   if (to) params.set('to', to);
+  if (branchId) params.set('branchId', branchId);
   const qs = params.toString();
   const response = await fetch(
     `${API_BASE_URL}/orders/product-performance${qs ? `?${qs}` : ''}`,
@@ -2827,3 +2829,209 @@ export async function completeStockTake(
   if (!response.ok) await parseError(response, 'Failed to complete stock-take');
   return (await response.json()).stockTake;
 }
+
+// ─── Reports (Hisobotlar) ───────────────────────────────────────────────────
+// Shared query-string builder for the from/to (+ optional branch) reports.
+function rangeQs(from?: string, to?: string, branchId?: string): string {
+  const p = new URLSearchParams();
+  if (from) p.set('from', from);
+  if (to) p.set('to', to);
+  if (branchId) p.set('branchId', branchId);
+  const qs = p.toString();
+  return qs ? `?${qs}` : '';
+}
+
+async function getReport<T>(path: string, fallback: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}/reports/${path}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, fallback);
+  return response.json();
+}
+
+// R1 — Profit & Loss
+export interface PnlReport {
+  from: string | null;
+  to: string | null;
+  orderCount: number;
+  revenue: { gross: number; discounts: number; returns: number; net: number };
+  totalIncome: number;
+  cogs: number;
+  grossProfit: number;
+  grossMargin: number;
+  expenses: { category: string; amount: number }[];
+  totalExpenses: number;
+  cashDifference: number;
+  netProfit: number;
+}
+export const getPnlReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<PnlReport>(`pnl${rangeQs(from, to, branchId)}`, 'Failed to fetch P&L report');
+
+// R2 — Stock valuation
+export interface StockReportItem {
+  productId: string;
+  name: string;
+  code: string | null;
+  image: string | null;
+  category: string | null;
+  quantity: number;
+  priceIn: number;
+  priceOut: number;
+  costValue: number;
+  saleValue: number;
+}
+export interface StockReport {
+  date: string | null;
+  items: StockReportItem[];
+  totals: { products: number; units: number; costValue: number; saleValue: number };
+}
+export const getStockReport = (date?: string) =>
+  getReport<StockReport>(
+    `stock${date ? `?date=${encodeURIComponent(date)}` : ''}`,
+    'Failed to fetch stock report',
+  );
+
+// R3 — Product movement
+export interface ProductMovementItem {
+  productId: string;
+  name: string;
+  code: string | null;
+  opening: number;
+  received: number;
+  sold: number;
+  returned: number;
+  writtenOff: number;
+  closing: number;
+}
+export interface ProductMovementReport {
+  from: string | null;
+  to: string | null;
+  items: ProductMovementItem[];
+}
+export const getProductMovementReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<ProductMovementReport>(
+    `product-movement${rangeQs(from, to, branchId)}`,
+    'Failed to fetch product movement report',
+  );
+
+// R5 — Sellers
+export interface SellerReportRow {
+  cashierId: string | null;
+  cashierName: string;
+  orderCount: number;
+  revenue: number;
+  units: number;
+  avgCheck: number;
+  avgItemsPerCheck: number;
+  returns: number;
+}
+export const getSellersReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<SellerReportRow[]>(
+    `sellers${rangeQs(from, to, branchId)}`,
+    'Failed to fetch sellers report',
+  );
+
+// R6 — Customers
+export interface CustomerReportRow {
+  userId: string | null;
+  name: string;
+  phone: string | null;
+  orderCount: number;
+  revenue: number;
+  avgCheck: number;
+  isNew: boolean;
+  // Date of this customer's most recent purchase within the period.
+  lastOrderAt: string;
+}
+export interface CustomersReport {
+  from: string | null;
+  to: string | null;
+  customers: CustomerReportRow[];
+  totals: {
+    customers: number;
+    newCustomers: number;
+    returningCustomers: number;
+    revenue: number;
+    avgCheck: number;
+  };
+}
+export const getCustomersReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<CustomersReport>(
+    `customers${rangeQs(from, to, branchId)}`,
+    'Failed to fetch customers report',
+  );
+
+// R7 — Imports (goods receipts)
+export interface ImportReportItem {
+  id: string;
+  supplierName: string;
+  status: string;
+  totalAmount: number;
+  paidAmount: number;
+  returnedAmount: number;
+  paymentStatus: string;
+  currency: string;
+  itemCount: number;
+  createdAt: string;
+}
+export interface ImportsReport {
+  from: string | null;
+  to: string | null;
+  items: ImportReportItem[];
+  totals: {
+    receipts: number;
+    totalAmount: number;
+    paidAmount: number;
+    returnedAmount: number;
+  };
+}
+export const getImportsReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<ImportsReport>(
+    `imports${rangeQs(from, to, branchId)}`,
+    'Failed to fetch imports report',
+  );
+
+// R7 — Supplier returns
+export interface SupplierReturnReportItem {
+  id: string;
+  supplierName: string;
+  totalAmount: number;
+  currency: string;
+  itemCount: number;
+  createdAt: string;
+}
+export interface SupplierReturnsReport {
+  from: string | null;
+  to: string | null;
+  items: SupplierReturnReportItem[];
+  totals: { returns: number; totalAmount: number };
+}
+export const getSupplierReturnsReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<SupplierReturnsReport>(
+    `supplier-returns${rangeQs(from, to, branchId)}`,
+    'Failed to fetch supplier returns report',
+  );
+
+// Inventarizatsiya natijalari — completed stock-takes
+export interface StockTakeReportItem {
+  id: string;
+  name: string;
+  type: string;
+  surplusQty: number;
+  shortageQty: number;
+  diffValue: number;
+  createdByCashierName: string;
+  completedAt: string;
+}
+export interface StockTakesReport {
+  from: string | null;
+  to: string | null;
+  items: StockTakeReportItem[];
+  totals: { stockTakes: number; diffValue: number };
+}
+export const getStockTakesReport = (from?: string, to?: string) =>
+  getReport<StockTakesReport>(
+    `stock-takes${rangeQs(from, to)}`,
+    'Failed to fetch stock-takes report',
+  );
