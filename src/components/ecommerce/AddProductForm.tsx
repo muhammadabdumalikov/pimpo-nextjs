@@ -11,7 +11,7 @@ import Button from "../ui/button/Button";
 // only. Keep the import so it can be re-enabled later.
 // import CameraScanner from "../checkout/CameraScanner";
 import { useTranslations } from "@/hooks/useTranslations";
-import { createProduct, updateProduct, generateProductCode, generateBarcode, getProduct, getCategories, getProductCount, lookupBarcode, createCategory, getBrands, createBrand, getSuppliers, type Product } from "@/lib/api";
+import { createProduct, updateProduct, generateProductCode, generateBarcode, getProduct, getCategories, getProductCount, lookupBarcode, createCategory, getBrands, createBrand, getSuppliers, getBranches, type Product, type Branch } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useSidebar } from "@/context/SidebarContext";
@@ -68,15 +68,22 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     quantityType: "",
     brandId: "",
     supplierId: "",
+    branchId: "",
     code: "",
     barcode: "",
   });
+
+  // Raw text backing the quantity input. Kept separate from formData.quantity
+  // (a number) so a weighed product's decimal can be typed digit-by-digit
+  // ("0.", "0.2", "0.25") without the controlled number clobbering it.
+  const [qtyText, setQtyText] = useState("0");
 
   const [image, setImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [isGeneratingBarcode, setIsGeneratingBarcode] = useState(false);
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
   // Inline "add brand" affordance — brands start empty, so let the user create one
   // without leaving the form.
@@ -125,6 +132,14 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     getSuppliers(1, 200)
       .then((res) => setSuppliers(res.suppliers.map((s) => ({ id: s.id, name: s.name }))))
       .catch(() => setSuppliers([]));
+    getBranches()
+      .then((res) => {
+        setBranches(res.branches);
+        // Create mode: preselect the default branch ("Asosiy do'kon").
+        const def = res.branches.find((b) => b.isDefault) ?? res.branches[0];
+        if (def) setFormData((prev) => (prev.branchId ? prev : { ...prev, branchId: def.id }));
+      })
+      .catch(() => setBranches([]));
   }, []);
 
   // Fetch the current product count so we can block before submit (create only).
@@ -158,9 +173,11 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         quantityType: product.quantityType || "",
         brandId: product.brandId || "",
         supplierId: product.supplierId || "",
+        branchId: product.branchId || "",
         code: product.code || "",
         barcode: product.barcode || "",
       });
+      setQtyText(String(product.quantity));
       setImage(product.image ?? null);
     } catch (error: any) {
       console.error('Failed to load product:', error);
@@ -184,10 +201,11 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   };
 
   const handleQuantityChange = (delta: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      quantity: Math.max(0, prev.quantity + delta),
-    }));
+    setFormData((prev) => {
+      const next = Math.max(0, prev.quantity + delta);
+      setQtyText(String(next));
+      return { ...prev, quantity: next };
+    });
   };
 
   // Price fields (priceIn / priceOut / priceBundle): digits only, stored raw and
@@ -207,9 +225,24 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   };
 
   // Quantity typed directly (still clamped at 0; +/- buttons keep working).
+  // Weighed goods (quantityType 'kg') accept a decimal; everything else stays
+  // digits-only. The raw text lives in qtyText so a decimal can be typed in
+  // steps; formData.quantity tracks the parsed number.
   const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const digits = digitsOnly(e.target.value);
-    setFormData((prev) => ({ ...prev, quantity: digits === "" ? 0 : Number(digits) }));
+    const isKg = formData.quantityType === "kg";
+    let text: string;
+    if (isKg) {
+      // Keep digits and a single decimal point.
+      text = e.target.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+    } else {
+      text = digitsOnly(e.target.value);
+    }
+    setQtyText(text);
+    const n = Number(text);
+    setFormData((prev) => ({
+      ...prev,
+      quantity: text === "" || text === "." || Number.isNaN(n) ? 0 : n,
+    }));
   };
 
   const handleSelectChange = (name: string) => (value: string) => {
@@ -553,13 +586,15 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         priceIn: priceIn,
         priceOut: priceOut,
         priceBundle: formData.priceBundle.trim() ? parsePrice(formData.priceBundle) : undefined,
-        quantity: formData.quantity,
+        // Round to whole grams (max 3 decimals) — matches the backend guard.
+        quantity: Math.round(formData.quantity * 1000) / 1000,
         lowStockThreshold: formData.lowStockThreshold.trim()
-          ? Number(formData.lowStockThreshold)
+          ? Math.round(Number(formData.lowStockThreshold) * 1000) / 1000
           : undefined,
         quantityType: formData.quantityType || undefined,
         brandId: formData.brandId || undefined,
         supplierId: formData.supplierId || undefined,
+        branchId: formData.branchId || undefined,
         code: formData.code.trim() || undefined,
         barcode: formData.barcode.trim() || undefined,
         image: image ?? undefined,
@@ -953,8 +988,8 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                     <input
                       className="h-full w-full border-0 bg-white text-center text-sm text-gray-700 outline-none focus:ring-0 dark:bg-gray-900 dark:text-gray-400"
                       type="text"
-                      inputMode="numeric"
-                      value={formData.quantity}
+                      inputMode={formData.quantityType === "kg" ? "decimal" : "numeric"}
+                      value={qtyText}
                       onChange={handleQuantityInput}
                     />
                   </div>
@@ -1088,6 +1123,24 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   searchPlaceholder={t('addProduct.supplierSearch') || 'Search supplier...'}
                 />
               </div>
+
+              {/* Branch ("do'kon") the product belongs to — a stock-take counts
+                  only its branch. Shown only when the business has >1 branch;
+                  otherwise it silently defaults to the single/default branch. */}
+              {branches.length > 1 && (
+                <div>
+                  <Label htmlFor="branch">{t('addProduct.branch') || "Do'kon"}</Label>
+                  <Select
+                    key={`branch-${branches.length}-${formData.branchId}`}
+                    options={branches.map((b) => ({ value: b.id, label: b.name }))}
+                    placeholder={t('addProduct.branchPlaceholder') || "Do'konni tanlang"}
+                    onChange={handleSelectChange("branchId")}
+                    defaultValue={formData.branchId}
+                    searchable
+                    searchPlaceholder={t('addProduct.branchSearch') || "Do'kon qidirish..."}
+                  />
+                </div>
+              )}
               </div>
             </div>
           </section>

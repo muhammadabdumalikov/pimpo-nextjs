@@ -23,6 +23,8 @@ import {
 interface Line {
   key: string;
   productId: string;
+  // Unit of the picked product; 'kg' → weighed goods, received in fractional kg.
+  quantityType?: string | null;
   quantity: string;
   priceIn: string;
   // Selling price for this batch. Blank → keep the product's current price.
@@ -179,6 +181,7 @@ export default function CreateReceipt() {
     // Prefill cost + selling tiers from the product's current values.
     updateLine(key, {
       productId,
+      quantityType: product?.quantityType ?? null,
       priceIn: product ? String(Math.round(Number(product.priceIn))) : "",
       priceOut: product ? String(Math.round(Number(product.priceOut))) : "",
       priceWholesale:
@@ -247,7 +250,12 @@ export default function CreateReceipt() {
       .filter((l) => l.productId)
       .map((l) => ({
         productId: l.productId,
-        quantity: Math.trunc(Number(l.quantity) || 0),
+        // Weighed goods keep a fractional kg (rounded to whole grams); piece
+        // products stay whole numbers.
+        quantity:
+          l.quantityType === "kg"
+            ? Math.round((Number(l.quantity) || 0) * 1000) / 1000
+            : Math.trunc(Number(l.quantity) || 0),
         priceIn: Number(l.priceIn) || 0,
         // Omit when blank so the backend keeps the product's current price/tier.
         priceOut: l.priceOut.trim() ? Number(l.priceOut) : undefined,
@@ -258,7 +266,7 @@ export default function CreateReceipt() {
     if (items.length === 0) {
       return setError(t("goodsReceipt.errors.noItems") || "Add at least one product");
     }
-    if (items.some((i) => i.quantity < 1)) {
+    if (items.some((i) => i.quantity <= 0)) {
       return setError(t("goodsReceipt.errors.badQuantity") || "Quantity must be at least 1");
     }
     const rate = Number(digitsOnly(usdRate)) || 0;
@@ -442,14 +450,15 @@ export default function CreateReceipt() {
                 <div>
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
                     {t("goodsReceipt.quantity")}
+                    {l.quantityType === "kg" ? " (kg)" : ""}
                   </span>
                   <Input
                     ref={(el) => {
                       qtyRefs.current.set(l.key, el);
                     }}
                     type="number"
-                    min="1"
-                    step={1}
+                    min={l.quantityType === "kg" ? "0" : "1"}
+                    step={l.quantityType === "kg" ? 0.001 : 1}
                     value={l.quantity}
                     onChange={(e) => updateLine(l.key, { quantity: e.target.value })}
                     onKeyDown={(e) => onQtyKeyDown(e, l.key)}

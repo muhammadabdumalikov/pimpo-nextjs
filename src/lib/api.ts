@@ -338,6 +338,8 @@ export interface Product {
   lowStockThreshold: number | null;
   brandId: string | null;
   supplierId: string | null;
+  /** Branch ("do'kon") this product belongs to; a stock-take counts its branch. */
+  branchId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -356,6 +358,7 @@ export interface CreateProductRequest {
   lowStockThreshold?: number;
   brandId?: string;
   supplierId?: string;
+  branchId?: string;
 }
 
 export interface UpdateProductRequest {
@@ -372,6 +375,7 @@ export interface UpdateProductRequest {
   lowStockThreshold?: number;
   brandId?: string;
   supplierId?: string;
+  branchId?: string;
 }
 
 export interface ProductsResponse {

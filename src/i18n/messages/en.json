@@ -613,7 +613,10 @@
     "sectionBasic": "Basic",
     "sectionPrices": "Prices",
     "sectionStock": "Stock",
-    "sectionAttributes": "Attributes"
+    "sectionAttributes": "Attributes",
+    "branch": "Store",
+    "branchPlaceholder": "Select a store",
+    "branchSearch": "Search store..."
   },
   "import": {
     "title": "Import products",
@@ -871,7 +874,10 @@
     "procMapping": "Mapping fields",
     "procValidating": "Validating data",
     "procFinalizing": "Finalizing import",
-    "procCompleted": "Import completed"
+    "procCompleted": "Import completed",
+    "store": "Store",
+    "selectStore": "Select a store",
+    "storeRequired": "A store must be selected"
   },
   "inventory": {
     "costingTitle": "Cost accounting",

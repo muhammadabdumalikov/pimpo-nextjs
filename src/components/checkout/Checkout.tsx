@@ -74,7 +74,24 @@ type CartLine = {
   priceWholesale: number | null; // ulgurji
   priceBundle: number | null; // to'plam
   priceTier: PriceTier; // which tier `price` currently reflects
+  // Product's unit of measure. "kg" → sold by weight: `quantity` holds the
+  // weight in KILOGRAMS (fractional) and the cashier enters grams. For any
+  // other type `quantity` is a whole piece count.
+  quantityType: string | null;
 };
+
+// A product is sold by weight when its quantity type is kilograms; then the
+// cart line's `quantity` is a fractional kg and the stepper edits it in grams.
+const isWeightLine = (quantityType?: string | null): boolean =>
+  quantityType === "kg";
+
+// Weight conversions + a trimmed kg label (0.5 → "0.5", 1 → "1", 0.25 → "0.25").
+const kgToGrams = (kg: number): number => Math.round(kg * 1000);
+const gramsToKg = (g: number): number => g / 1000;
+const formatKg = (kg: number): string => kg.toFixed(3).replace(/\.?0+$/, "");
+// The grams stepper nudges by 50 g; a weighted line can go as low as 1 g.
+const GRAM_STEP = 50;
+const MIN_KG = 0.001;
 
 // One line of the payment drawer: a method plus the amount applied via it.
 // A sale is paid by composing these (cash 30k + card 10k = split, etc.).
@@ -564,8 +581,14 @@ export default function Checkout() {
     return Math.max(0, Math.min(raw, subtotal));
   }, [discountType, discountValueNum, subtotal]);
   const total = Math.max(0, subtotal - discountAmount);
+  // "dona" badge: sum piece counts, but a weighted line counts as one item
+  // (its fractional kg isn't a piece count).
   const itemCount = useMemo(
-    () => cart.reduce((sum, line) => sum + line.quantity, 0),
+    () =>
+      cart.reduce(
+        (sum, line) => sum + (isWeightLine(line.quantityType) ? 1 : line.quantity),
+        0,
+      ),
     [cart],
   );
   // Any cart line offering more than one tier → show the price-tier legend.
@@ -593,7 +616,12 @@ export default function Checkout() {
       customer: customerName.trim() || undefined,
       customerPhone: phone.trim() || undefined,
       saleComment: note.trim() || undefined,
-      items: cart.map((l) => ({ name: l.name, qty: l.quantity, price: l.price })),
+      items: cart.map((l) => ({
+        name: l.name,
+        qty: l.quantity,
+        qtyLabel: isWeightLine(l.quantityType) ? `${formatKg(l.quantity)} kg` : undefined,
+        price: l.price,
+      })),
       subtotal,
       discount: discountAmount,
       total,
@@ -689,6 +717,7 @@ export default function Checkout() {
           priceBundle:
             product.priceBundle != null ? Number(product.priceBundle) : null,
           priceTier: "unit",
+          quantityType: product.quantityType,
         },
       ];
     });
@@ -802,13 +831,24 @@ export default function Checkout() {
 
   const changeQty = (productId: string, next: number) => {
     setCart((prev) =>
-      prev.map((l) =>
-        l.productId === productId
-          ? { ...l, quantity: Math.max(1, Math.min(next, l.stock || next)) }
-          : l,
-      ),
+      prev.map((l) => {
+        if (l.productId !== productId) return l;
+        const weight = isWeightLine(l.quantityType);
+        // Weighted lines can be a fraction of a kg (down to 1 g); piece lines
+        // stay whole numbers with a minimum of 1.
+        const min = weight ? MIN_KG : 1;
+        let capped = l.stock ? Math.min(next, l.stock) : next;
+        capped = Math.max(min, capped);
+        // Round weight to whole grams to keep float drift out of the total.
+        if (weight) capped = Math.round(capped * 1000) / 1000;
+        return { ...l, quantity: capped };
+      }),
     );
   };
+
+  // Set a weighted line's amount from a grams value (grams → kg).
+  const changeGrams = (productId: string, grams: number) =>
+    changeQty(productId, gramsToKg(grams));
 
   const removeLine = (productId: string) => {
     setCart((prev) => prev.filter((l) => l.productId !== productId));
@@ -845,11 +885,13 @@ export default function Checkout() {
     setSelectedId(cart[next].productId);
   };
 
-  // Bump the selected line's quantity by ±1 (changeQty clamps to 1..stock).
+  // Bump the selected line: ±1 piece, or ±100 g for a weighted line
+  // (changeQty clamps to the min..stock range).
   const changeSelectedQty = (delta: number) => {
     const line = cart.find((l) => l.productId === selectedId);
     if (!line) return;
-    changeQty(line.productId, line.quantity + delta);
+    const step = isWeightLine(line.quantityType) ? delta * 0.1 : delta;
+    changeQty(line.productId, line.quantity + step);
   };
 
   // Remove the selected line and move the highlight to a neighbour.
@@ -1131,20 +1173,24 @@ export default function Checkout() {
               : priceTier === "bundle" && priceBundle != null
                 ? priceBundle
                 : Number(p.priceOut);
+          // Weighted lines carry a fractional kg (down to 1 g); pieces stay
+          // whole with a minimum of 1. Cap to what's on hand either way.
+          const weight = isWeightLine(p.quantityType);
+          let quantity = Math.min(item.quantity, p.quantity || item.quantity);
+          quantity = Math.max(weight ? MIN_KG : 1, quantity);
+          if (weight) quantity = Math.round(quantity * 1000) / 1000;
           lines.push({
             productId: p.id,
             name: p.name,
             price,
-            quantity: Math.max(
-              1,
-              Math.min(item.quantity, p.quantity || item.quantity),
-            ),
+            quantity,
             stock: p.quantity,
             image: p.image,
             priceOut: Number(p.priceOut),
             priceWholesale,
             priceBundle,
             priceTier,
+            quantityType: p.quantityType,
           });
         } catch {
           missing.push(item.productName);
@@ -1225,6 +1271,8 @@ export default function Checkout() {
       items: cart.map((l) => ({
         name: l.name,
         qty: l.quantity,
+        // Weighed goods print as "0.5 kg"; pieces fall back to the number.
+        qtyLabel: isWeightLine(l.quantityType) ? `${formatKg(l.quantity)} kg` : undefined,
         price: l.price,
       })),
       subtotal,
@@ -1999,7 +2047,7 @@ export default function Checkout() {
                   key={line.productId}
                   data-cart-row={line.productId}
                   onClick={() => setSelectedId(line.productId)}
-                  className={`flex items-center gap-3 px-4 py-3 transition sm:px-5 ${
+                  className={`flex items-center gap-4 px-4 py-3 transition sm:gap-5 sm:px-5 ${
                     line.productId === selectedId
                       ? "bg-brand-50/70 ring-1 ring-inset ring-brand-300 dark:bg-brand-500/10 dark:ring-brand-500/40"
                       : "hover:bg-gray-50 dark:hover:bg-white/[0.02]"
@@ -2013,7 +2061,9 @@ export default function Checkout() {
                     </p>
                     {line.stock > 0 && (
                       <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                        {line.stock} {t("checkout.inStock")}
+                        {line.stock}
+                        {isWeightLine(line.quantityType) ? " kg" : ""}{" "}
+                        {t("checkout.inStock")}
                       </p>
                     )}
                   </div>
@@ -2059,74 +2109,155 @@ export default function Checkout() {
                     ) : (
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         {formatMoney(line.price)}
+                        {isWeightLine(line.quantityType) && (
+                          <span className="text-gray-400 dark:text-gray-500">/kg</span>
+                        )}
                       </span>
                     )}
                   </div>
 
-                  {/* Quantity stepper — large touch targets for fast use */}
-                  <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                    <button
-                      type="button"
-                      aria-label="-"
-                      onClick={() => changeQty(line.productId, line.quantity - 1)}
-                      className="flex h-10 w-10 items-center justify-center text-lg text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/[0.05]"
-                      disabled={line.quantity <= 1}
-                    >
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      min={1}
-                      max={line.stock || undefined}
-                      value={
-                        qtyDraft?.id === line.productId
-                          ? qtyDraft.value
-                          : line.quantity
-                      }
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        // Leave the field empty while the cashier is mid-edit
-                        // instead of forcing it to 1.
-                        if (v === "") {
-                          setQtyDraft({ id: line.productId, value: "" });
-                          return;
+                  {/* Quantity stepper — large touch targets for fast use.
+                      Weighted (kg) products enter grams; everything else counts
+                      pieces. */}
+                  {isWeightLine(line.quantityType) ? (
+                    // Weighed goods: the cashier types grams; the line total is
+                    // derived from the per-kg price (grams / 1000 × price).
+                    <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                      <button
+                        type="button"
+                        aria-label="-"
+                        onClick={() => changeQty(line.productId, line.quantity - 0.1)}
+                        className="flex h-10 w-9 items-center justify-center text-lg text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+                        disabled={line.quantity <= MIN_KG}
+                      >
+                        −
+                      </button>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={1}
+                          step={GRAM_STEP}
+                          max={line.stock ? kgToGrams(line.stock) : undefined}
+                          aria-label={`${line.name} — g`}
+                          value={
+                            qtyDraft?.id === line.productId
+                              ? qtyDraft.value
+                              : kgToGrams(line.quantity)
+                          }
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            // Keep the field empty while mid-edit rather than
+                            // snapping to a value.
+                            if (v === "") {
+                              setQtyDraft({ id: line.productId, value: "" });
+                              return;
+                            }
+                            let g = Number(v);
+                            if (Number.isNaN(g)) return;
+                            // Cap at the grams on hand; warn when trimmed.
+                            const maxG =
+                              line.stock > 0 ? kgToGrams(line.stock) : Infinity;
+                            if (g > maxG) {
+                              g = maxG;
+                              showToast(
+                                "warning",
+                                `${line.name} — ${t("checkout.onlyInStock") || "в наличии"}: ${line.stock} kg`,
+                              );
+                            }
+                            setQtyDraft({ id: line.productId, value: String(g) });
+                            changeGrams(line.productId, g);
+                          }}
+                          onBlur={() => {
+                            if (qtyDraft?.id === line.productId) {
+                              const g = Number(qtyDraft.value);
+                              changeGrams(
+                                line.productId,
+                                qtyDraft.value === "" || Number.isNaN(g) ? 1 : g,
+                              );
+                            }
+                            setQtyDraft(null);
+                          }}
+                          className="h-10 w-20 border-x border-gray-200 bg-white pr-6 text-center text-sm font-medium text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400 dark:text-gray-500">
+                          g
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label="+"
+                        onClick={() => changeQty(line.productId, line.quantity + 0.1)}
+                        className="flex h-10 w-9 items-center justify-center text-lg text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+                        disabled={!!line.stock && line.quantity >= line.stock}
+                      >
+                        +
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                      <button
+                        type="button"
+                        aria-label="-"
+                        onClick={() => changeQty(line.productId, line.quantity - 1)}
+                        className="flex h-10 w-10 items-center justify-center text-lg text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+                        disabled={line.quantity <= 1}
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={line.stock || undefined}
+                        value={
+                          qtyDraft?.id === line.productId
+                            ? qtyDraft.value
+                            : line.quantity
                         }
-                        let n = Number(v);
-                        if (Number.isNaN(n)) return;
-                        // Hard cap at the remaining stock — can't sell more than
-                        // is on hand. Warn when the entry is trimmed.
-                        if (line.stock > 0 && n > line.stock) {
-                          n = line.stock;
-                          showToast(
-                            "warning",
-                            `${line.name} — ${t("checkout.onlyInStock") || "в наличии"}: ${line.stock}`,
-                          );
-                        }
-                        setQtyDraft({ id: line.productId, value: String(n) });
-                        changeQty(line.productId, n);
-                      }}
-                      onBlur={() => {
-                        if (qtyDraft?.id === line.productId) {
-                          const n = Number(qtyDraft.value);
-                          changeQty(
-                            line.productId,
-                            qtyDraft.value === "" || Number.isNaN(n) ? 1 : n,
-                          );
-                        }
-                        setQtyDraft(null);
-                      }}
-                      className="h-10 w-12 border-x border-gray-200 bg-white text-center text-sm font-medium text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <button
-                      type="button"
-                      aria-label="+"
-                      onClick={() => changeQty(line.productId, line.quantity + 1)}
-                      className="flex h-10 w-10 items-center justify-center text-lg text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/[0.05]"
-                      disabled={!!line.stock && line.quantity >= line.stock}
-                    >
-                      +
-                    </button>
-                  </div>
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          // Leave the field empty while the cashier is mid-edit
+                          // instead of forcing it to 1.
+                          if (v === "") {
+                            setQtyDraft({ id: line.productId, value: "" });
+                            return;
+                          }
+                          let n = Number(v);
+                          if (Number.isNaN(n)) return;
+                          // Hard cap at the remaining stock — can't sell more than
+                          // is on hand. Warn when the entry is trimmed.
+                          if (line.stock > 0 && n > line.stock) {
+                            n = line.stock;
+                            showToast(
+                              "warning",
+                              `${line.name} — ${t("checkout.onlyInStock") || "в наличии"}: ${line.stock}`,
+                            );
+                          }
+                          setQtyDraft({ id: line.productId, value: String(n) });
+                          changeQty(line.productId, n);
+                        }}
+                        onBlur={() => {
+                          if (qtyDraft?.id === line.productId) {
+                            const n = Number(qtyDraft.value);
+                            changeQty(
+                              line.productId,
+                              qtyDraft.value === "" || Number.isNaN(n) ? 1 : n,
+                            );
+                          }
+                          setQtyDraft(null);
+                        }}
+                        className="h-10 w-12 border-x border-gray-200 bg-white text-center text-sm font-medium text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <button
+                        type="button"
+                        aria-label="+"
+                        onClick={() => changeQty(line.productId, line.quantity + 1)}
+                        className="flex h-10 w-10 items-center justify-center text-lg text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+                        disabled={!!line.stock && line.quantity >= line.stock}
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
 
                   <div className="w-32 shrink-0 whitespace-nowrap text-right text-sm font-semibold tabular-nums text-gray-800 dark:text-white/90">
                     {formatMoney(line.price * line.quantity)}
@@ -2612,7 +2743,11 @@ export default function Checkout() {
                     </p>
                     <div className="mt-1 flex items-baseline text-sm">
                       <span className="whitespace-nowrap text-gray-500 dark:text-gray-400">
-                        {l.quantity} × {new Intl.NumberFormat("uz-UZ").format(l.price)}
+                        {isWeightLine(l.quantityType)
+                          ? `${formatKg(l.quantity)} kg`
+                          : l.quantity}{" "}
+                        × {new Intl.NumberFormat("uz-UZ").format(l.price)}
+                        {isWeightLine(l.quantityType) ? "/kg" : ""}
                       </span>
                       <span className="mx-2 flex-1 border-t border-dashed border-gray-300 dark:border-gray-700" />
                       <span className="whitespace-nowrap font-semibold">

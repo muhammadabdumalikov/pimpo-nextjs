@@ -14,7 +14,9 @@ import {
   createStockTake,
   createWriteOff,
   getProducts,
+  getBranches,
   type StockTake,
+  type Branch,
 } from "@/lib/api";
 
 // A pending write-off line in the drawer.
@@ -67,6 +69,8 @@ export default function StockTakesManager() {
   const [name, setName] = useState("");
   const [type, setType] = useState<"full" | "partial">("full");
   const [saving, setSaving] = useState(false);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [storeId, setStoreId] = useState("");
 
   // Write-off drawer state.
   const [woOpen, setWoOpen] = useState(false);
@@ -91,20 +95,34 @@ export default function StockTakesManager() {
 
   useEffect(() => {
     load();
+    getBranches()
+      .then((res) => setBranches(res.branches))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Default branch to preselect (the "Asosiy do'kon", else the first one).
+  const defaultStoreId = (
+    branches.find((b) => b.isDefault) ?? branches[0]
+  )?.id;
 
   const openAdd = () => {
     setName("");
     setType("full");
+    setStoreId(defaultStoreId ?? "");
     setModalOpen(true);
   };
 
   const start = async () => {
+    if (!storeId) {
+      showToast("error", t("stockTakes.storeRequired"), "Error");
+      return;
+    }
     setSaving(true);
     try {
       const created = await createStockTake({
         type,
+        storeId,
         name: name.trim() || undefined,
       });
       showToast("success", t("stockTakes.start"), "Success");
@@ -121,6 +139,7 @@ export default function StockTakesManager() {
     { value: "full", label: t("stockTakes.full") },
     { value: "partial", label: t("stockTakes.partial") },
   ];
+  const storeOptions = branches.map((b) => ({ value: b.id, label: b.name }));
 
   const typeLabel = (v: StockTake["type"]) =>
     v === "full"
@@ -303,13 +322,25 @@ export default function StockTakesManager() {
             >
               {t("stockTakes.cancel")}
             </Button>
-            <Button onClick={start} disabled={saving}>
+            <Button onClick={start} disabled={saving || !storeId}>
               {t("stockTakes.start")}
             </Button>
           </div>
         }
       >
         <div className="space-y-4">
+          <div>
+            <Label>
+              {t("stockTakes.store")}{" "}
+              <span className="text-error-500">*</span>
+            </Label>
+            <SelectField
+              options={storeOptions}
+              value={storeId}
+              onChange={setStoreId}
+              placeholder={t("stockTakes.selectStore")}
+            />
+          </div>
           <div>
             <Label>{t("stockTakes.name")}</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />

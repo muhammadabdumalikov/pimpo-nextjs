@@ -200,7 +200,7 @@
     },
     "pricing": {
       "title": "Biznesingizga mos tarif",
-      "subtitle": "Kichik do'kondan ko'p filialli tarmoqqacha — o'sishingiz bilan birga.",
+      "subtitle": "Kichik do'kondan ko'p filialli tarmoqqacha — birga o'samiz.",
       "popular": "Ommabop",
       "annualNote": "Yillik to'lovda −20% chegirma · Bepul o'rnatish va sozlash · Istalgan vaqtda bekor qilish",
       "basic": {
@@ -212,7 +212,7 @@
         "features": [
           "Har yangi filial uchun +150 000 so'm (3 tagacha)",
           "Cheksiz mahsulot",
-          "4 foydalanuvchi",
+          "4 tagacha foydalanuvchi",
           "To'liq nasiya boshqaruvi",
           "To'liq inventar",
           "Ta'minotchilar va qabul",
@@ -613,7 +613,10 @@
     "sectionBasic": "Asosiy",
     "sectionPrices": "Narxlar",
     "sectionStock": "Qoldiqlar",
-    "sectionAttributes": "Xususiyatlar"
+    "sectionAttributes": "Xususiyatlar",
+    "branch": "Do'kon",
+    "branchPlaceholder": "Do'konni tanlang",
+    "branchSearch": "Do'kon qidirish..."
   },
   "import": {
     "title": "Mahsulotlarni import qilish",
@@ -872,7 +875,10 @@
     "procMapping": "Maydonlar moslashtirilmoqda",
     "procValidating": "Ma'lumot tekshirilmoqda",
     "procFinalizing": "Import yakunlanmoqda",
-    "procCompleted": "Import yakunlandi"
+    "procCompleted": "Import yakunlandi",
+    "store": "Do'kon",
+    "selectStore": "Do'konni tanlang",
+    "storeRequired": "Do'kon tanlanishi shart"
   },
   "inventory": {
     "costingTitle": "Tannarx hisobi",

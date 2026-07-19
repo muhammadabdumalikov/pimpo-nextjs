@@ -231,7 +231,10 @@
     "sectionBasic": "Асосий",
     "sectionPrices": "Нархлар",
     "sectionStock": "Қолдиқлар",
-    "sectionAttributes": "Хусусиятлар"
+    "sectionAttributes": "Хусусиятлар",
+    "branch": "Дўкон",
+    "branchPlaceholder": "Дўконни танланг",
+    "branchSearch": "Дўкон қидириш..."
   },
   "import": {
     "title": "Маҳсулотларни импорт қилиш",
@@ -487,7 +490,10 @@
     "procMapping": "Майдонлар мослаштирилмоқда",
     "procValidating": "Маълумот текширилмоқда",
     "procFinalizing": "Импорт якунланмоқда",
-    "procCompleted": "Импорт якунланди"
+    "procCompleted": "Импорт якунланди",
+    "store": "Дўкон",
+    "selectStore": "Дўконни танланг",
+    "storeRequired": "Дўкон танланиши шарт"
   },
   "inventory": {
     "costingTitle": "Таннарх ҳисоби",

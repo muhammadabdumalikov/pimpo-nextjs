@@ -39,7 +39,6 @@ type Mapping = Record<string, number>; // field key -> column index (-1 = skip)
 
 // Keep only digits and a dot (strips spaces / thousands separators, e.g. "65 000").
 const cleanNum = (v: unknown) => String(v ?? "").replace(/[^\d.]/g, "");
-const cleanInt = (v: unknown) => String(v ?? "").replace(/[^\d]/g, "");
 
 // Small green pill toggle used in the field-picker menu.
 function Toggle({ on }: { on: boolean }) {
@@ -188,10 +187,11 @@ export default function ImportProductsWizard() {
       const priceOut = cleanNum(cellValue("priceOut", row));
       const code = String(cellValue("code", row)).trim();
       const barcode = String(cellValue("barcode", row)).trim();
-      const quantity = cleanInt(cellValue("quantity", row));
+      // Decimals allowed: weighed goods (kg) import fractional stock.
+      const quantity = cleanNum(cellValue("quantity", row));
       const quantityType = String(cellValue("quantityType", row)).trim();
       const priceBundle = cleanNum(cellValue("priceBundle", row));
-      const lowStock = cleanInt(cellValue("lowStockThreshold", row));
+      const lowStock = cleanNum(cellValue("lowStockThreshold", row));
 
       // Skip fully-blank rows.
       if (!name && !priceIn && !priceOut && !code && !barcode) continue;

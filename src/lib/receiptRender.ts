@@ -8,6 +8,9 @@ import type {
 export interface ReceiptItem {
   name: string;
   qty: number;
+  /** Display label for the amount (e.g. "0.5 kg"). Falls back to `qty` when
+   *  unset — used for weighed goods so the receipt reads "0.5 kg" not "0.5". */
+  qtyLabel?: string;
   price: number;
   discount?: number;
   attributes?: string;
@@ -228,7 +231,7 @@ export function buildReceiptHtml(
       if (template.showProductAttributes && it.attributes) {
         block += `<div class="rc-muted">${esc(it.attributes)}</div>`;
       }
-      block += `<div class="rc-row"><span>${it.qty} × ${money(it.price, cur)}</span>`;
+      block += `<div class="rc-row"><span>${esc(String(it.qtyLabel ?? it.qty))} × ${money(it.price, cur)}</span>`;
       block += showItemSums ? `<span>${money(lineSum, cur)}</span>` : `<span></span>`;
       block += `</div>`;
       if (showItemDiscounts && (it.discount ?? 0) > 0) {

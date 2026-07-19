@@ -324,7 +324,9 @@ export default function StockTakeCount({ id }: { id: string }) {
         const productId = String(row["ID"] ?? "").trim();
         const counted = Number(row["Sanalgan"]);
         if (!productId || !Number.isFinite(counted) || counted < 0) continue;
-        items.push({ productId, countedQty: Math.floor(counted) });
+        // Round to whole grams — weighed goods are counted in fractional kg,
+        // so don't floor a decimal count (0.5 → 0) from the sheet.
+        items.push({ productId, countedQty: Math.round(counted * 1000) / 1000 });
       }
       await sleep(300);
       if (items.length === 0) {
