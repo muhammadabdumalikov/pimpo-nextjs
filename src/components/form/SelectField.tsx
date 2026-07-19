@@ -1,6 +1,14 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDownIcon, CheckLineIcon } from "@/icons/index";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+import { ChevronDownIcon } from "@/icons/index";
 import { useTranslations } from "@/hooks/useTranslations";
 
 interface Option {
@@ -9,6 +17,8 @@ interface Option {
   disabled?: boolean;
   /** Extra text matched by the search box but not shown (e.g. barcode/SKU). */
   keywords?: string;
+  /** Optional leading color dot (any CSS color) — e.g. a price-tier legend. */
+  dotColor?: string;
 }
 
 interface SelectFieldProps {
@@ -40,6 +50,12 @@ interface SelectFieldProps {
   autoFocus?: boolean;
   /** Called when the menu opens — use to lazy-load options on first open. */
   onOpen?: () => void;
+  /**
+   * Render the open menu in a portal (fixed-positioned on document.body) so it
+   * escapes `overflow` ancestors that would otherwise clip it — e.g. a scrolling
+   * cart/table row. Off by default (menu is absolutely positioned inline).
+   */
+  portal?: boolean;
 }
 
 /**
@@ -65,12 +81,21 @@ export default function SelectField({
   buttonClassName = "",
   autoFocus = false,
   onOpen,
+  portal = false,
 }: SelectFieldProps) {
   const { t } = useTranslations();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // Portal menu position (fixed coords derived from the trigger). Null until the
+  // trigger has been measured; only used when `portal` is on.
+  const [menuPos, setMenuPos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the latest onOpen without re-running the mount effect.
@@ -110,11 +135,16 @@ export default function SelectField({
     if (debounceRef.current) clearTimeout(debounceRef.current);
   }, []);
 
-  // Close on outside click or Escape.
+  // Close on outside click or Escape. The portaled menu lives outside `ref`, so
+  // clicks inside it are checked against `menuRef` too (else picking an option
+  // would count as "outside" and close before onClick fires).
   useEffect(() => {
     if (!open) return;
     const onClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -126,6 +156,32 @@ export default function SelectField({
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  // Portal mode: measure the trigger and pin the menu under it with fixed coords.
+  // Recomputed before paint (no flicker) and kept in sync on scroll/resize — the
+  // `true` capture flag catches scrolls in inner overflow containers too.
+  const updateMenuPos = useCallback(() => {
+    const el = buttonRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setMenuPos({ top: r.bottom + 6, left: r.left, width: r.width });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (open && portal) updateMenuPos();
+    else if (!open) setMenuPos(null);
+  }, [open, portal, updateMenuPos]);
+
+  useEffect(() => {
+    if (!open || !portal) return;
+    const onReflow = () => updateMenuPos();
+    window.addEventListener("scroll", onReflow, true);
+    window.addEventListener("resize", onReflow);
+    return () => {
+      window.removeEventListener("scroll", onReflow, true);
+      window.removeEventListener("resize", onReflow);
+    };
+  }, [open, portal, updateMenuPos]);
 
   // Focus the search box when the dropdown opens.
   useEffect(() => {
@@ -219,7 +275,15 @@ export default function SelectField({
           selected ? "text-gray-700 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
         } ${buttonClassName}`}
       >
-        <span className="truncate">{selected ? selected.label : placeholder}</span>
+        <span className="flex items-center gap-2 truncate">
+          {selected?.dotColor && (
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: selected.dotColor }}
+            />
+          )}
+          <span className="truncate">{selected ? selected.label : placeholder}</span>
+        </span>
         <ChevronDownIcon
           className={`shrink-0 text-gray-400 transition-transform duration-150 ${
             open ? "rotate-180" : ""
@@ -227,11 +291,26 @@ export default function SelectField({
         />
       </button>
 
-      {open && (
-        <div
-          role="listbox"
-          className="absolute left-0 right-0 z-40 mt-1.5 rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark"
-        >
+      {open &&
+        (() => {
+          const menu = (
+            <div
+              ref={menuRef}
+              role="listbox"
+              style={
+                portal && menuPos
+                  ? {
+                      position: "fixed",
+                      top: menuPos.top,
+                      left: menuPos.left,
+                      width: menuPos.width,
+                    }
+                  : undefined
+              }
+              className={`${
+                portal ? "z-[70]" : "absolute left-0 right-0 z-40 mt-1.5"
+              } rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark`}
+            >
           {showSearch && (
             <div className="relative mb-1.5">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -289,15 +368,27 @@ export default function SelectField({
                           : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/[0.05]"
                     }`}
                   >
-                    <span className="truncate">{option.label}</span>
-                    {isSelected && !option.disabled && <CheckLineIcon className="shrink-0" />}
+                    <span className="flex items-center gap-2 truncate">
+                      {option.dotColor && (
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: option.dotColor }}
+                        />
+                      )}
+                      <span className="truncate">{option.label}</span>
+                    </span>
                   </button>
                 );
               })
             )}
           </div>
-        </div>
-      )}
+            </div>
+          );
+          if (portal) {
+            return menuPos ? createPortal(menu, document.body) : null;
+          }
+          return menu;
+        })()}
     </div>
   );
 }

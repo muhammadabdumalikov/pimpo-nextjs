@@ -14,6 +14,7 @@ import { useTranslations } from "@/hooks/useTranslations";
 import { createProduct, updateProduct, generateProductCode, generateBarcode, getProduct, getCategories, getProductCount, lookupBarcode, createCategory, getBrands, createBrand, getSuppliers, type Product } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useSubscription } from "@/context/SubscriptionContext";
+import { useSidebar } from "@/context/SidebarContext";
 import { formatNumberInput, digitsOnly } from "@/lib/number";
 
 interface AddProductFormProps {
@@ -48,6 +49,9 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const { getLimit, isLimitReached, currentTier } = useSubscription();
+  // Header can be hidden from the sidebar; the sticky section-nav offset follows
+  // it so the nav doesn't hang 96px down (leaving a gap) when the header is closed.
+  const { headerOpen } = useSidebar();
   const isEditMode = !!productId;
   // Product images are a Business (pro) plan feature.
   const canUseImages = currentTier === "pro";
@@ -56,10 +60,8 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     categoryId: "",
     priceIn: "",
     priceOut: "",
-    // Markup over cost as a percent string (e.g. "22.5"). Two-way bound with
-    // priceIn/priceOut: editing markup recomputes priceOut, editing either price
-    // recomputes markup.
-    markupPercent: "",
+    // Optional bundle/set ("to'plam") selling price. "" = no bundle tier.
+    priceBundle: "",
     quantity: 0,
     // Reorder point (kept as a string for the input; "" = no threshold).
     lowStockThreshold: "",
@@ -149,7 +151,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         categoryId: product.categoryId || "",
         priceIn: product.priceIn,
         priceOut: product.priceOut,
-        markupPercent: product.markupPercent ?? "",
+        priceBundle: product.priceBundle ?? "",
         quantity: product.quantity,
         lowStockThreshold:
           product.lowStockThreshold != null ? String(product.lowStockThreshold) : "",
@@ -188,46 +190,15 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     }));
   };
 
-  // Price fields: digits only, stored raw and shown grouped ("65 000"). Editing a
-  // price recomputes the markup (the derived side of the priceIn↔priceOut↔markup
-  // relationship).
+  // Price fields (priceIn / priceOut / priceBundle): digits only, stored raw and
+  // shown grouped ("65 000"). Each tier is entered independently.
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const digits = digitsOnly(value);
     if ((name === 'priceIn' || name === 'priceOut') && parseFloat(digits) > 0) {
       setErrors((prev) => ({ ...prev, [name]: false }));
     }
-    setFormData((prev) => {
-      const next = { ...prev, [name]: digits };
-      const inN = parseFloat(next.priceIn) || 0;
-      const outN = parseFloat(next.priceOut) || 0;
-      next.markupPercent =
-        inN > 0 && next.priceOut !== ""
-          ? String(Math.round(((outN - inN) / inN) * 10000) / 100)
-          : "";
-      return next;
-    });
-  };
-
-  // Markup drives the selling price: sotuv = kelish × (1 + ustama/100), rounded to
-  // whole soʻm. Accepts digits and a single dot with up to 2 decimals.
-  const handleMarkupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let v = e.target.value.replace(/[^\d.]/g, "");
-    const parts = v.split(".");
-    if (parts.length > 2) v = `${parts[0]}.${parts.slice(1).join("")}`;
-    const [intPart, decPart] = v.split(".");
-    if (decPart !== undefined) v = `${intPart}.${decPart.slice(0, 2)}`;
-
-    setFormData((prev) => {
-      const inN = parseFloat(prev.priceIn) || 0;
-      const mN = parseFloat(v) || 0;
-      const priceOut =
-        inN > 0 && v !== "" ? String(Math.round(inN * (1 + mN / 100))) : prev.priceOut;
-      return { ...prev, markupPercent: v, priceOut };
-    });
-    if (parseFloat(v) >= 0) {
-      setErrors((prev) => ({ ...prev, priceOut: false }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: digits }));
   };
 
   // Reorder point: digits only ("" = no threshold).
@@ -458,7 +429,9 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     if (isLoadingProduct) return;
     const ids = sectionNav.map((s) => s.id);
 
-    const HEADER_OFFSET = 130; // sticky header + a little breathing room
+    // Sticky offset the section nav sits at: below the header when it's shown,
+    // near the top of the content when it's hidden (keeps scroll-spy aligned).
+    const HEADER_OFFSET = headerOpen ? 130 : 40;
     const HYSTERESIS = 64; // px a rival must lead by before the highlight moves
 
     // Visible height of a section below the sticky header (0 when off-screen).
@@ -525,7 +498,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
       window.removeEventListener("resize", onScrollThrottled);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoadingProduct]);
+  }, [isLoadingProduct, headerOpen]);
 
   // Helper function to parse price (remove $ and commas)
   const parsePrice = (price: string): string => {
@@ -579,7 +552,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         categoryId: formData.categoryId.trim() || undefined,
         priceIn: priceIn,
         priceOut: priceOut,
-        markupPercent: formData.markupPercent.trim() || undefined,
+        priceBundle: formData.priceBundle.trim() ? parsePrice(formData.priceBundle) : undefined,
         quantity: formData.quantity,
         lowStockThreshold: formData.lowStockThreshold.trim()
           ? Number(formData.lowStockThreshold)
@@ -648,7 +621,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
       )}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
         {/* Sticky section navigation (BiLLZ-style) */}
-        <nav className="lg:sticky lg:top-24 lg:self-start">
+        <nav className={`lg:sticky lg:self-start ${headerOpen ? "lg:top-24" : "lg:top-6"}`}>
           <div className="flex gap-1 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-white/[0.03] lg:flex-col lg:overflow-visible">
             {sectionNav.map((s) => (
               <button
@@ -897,25 +870,6 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
               </div>
 
               <div>
-                <Label htmlFor="markupPercent">{t('addProduct.markup') || 'Markup (%)'}</Label>
-                <div className="relative">
-                  <Input
-                    id="markupPercent"
-                    name="markupPercent"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={formData.markupPercent}
-                    onChange={handleMarkupChange}
-                    className="pr-8"
-                  />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500">
-                    %
-                  </span>
-                </div>
-              </div>
-
-              <div>
                 <Label htmlFor="priceOut" required>{t('addProduct.priceOut')}</Label>
                 <Input
                   ref={priceOutRef}
@@ -929,6 +883,19 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   required
                   error={errors.priceOut}
                   hint={errors.priceOut ? (t('addProduct.errors.priceOutRequired') || 'Price out is required and must be greater than 0') : undefined}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="priceBundle">{t('addProduct.priceBundle') || 'Bundle price'}</Label>
+                <Input
+                  id="priceBundle"
+                  name="priceBundle"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={formatNumberInput(formData.priceBundle)}
+                  onChange={handlePriceChange}
                 />
               </div>
 

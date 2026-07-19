@@ -30,6 +30,7 @@ import {
   type Order,
   type CashRegister,
   type ReceiptTemplate,
+  type PriceTier,
 } from "@/lib/api";
 import {
   buildReceiptHtml,
@@ -56,16 +57,42 @@ const VAT_RATE = 12;
 type CartLine = {
   productId: string;
   name: string;
+  // Effective unit price = the selected tier's price. Totals/receipt use this.
   price: number;
   quantity: number;
   stock: number;
   image: string | null;
+  // Available price tiers captured when the item was added. Wholesale/bundle are
+  // null when the product has no such tier (then only "Dona" is offered).
+  priceOut: number; // unit ("dona") price
+  priceWholesale: number | null; // ulgurji
+  priceBundle: number | null; // to'plam
+  priceTier: PriceTier; // which tier `price` currently reflects
 };
 
 // One line of the payment drawer: a method plus the amount applied via it.
 // A sale is paid by composing these (cash 30k + card 10k = split, etc.).
 type PayMethod = "cash" | "card" | "debt";
 type PayEntry = { method: PayMethod; amount: string };
+
+// Colour dot per price tier — shared by the cart-header legend and the tier
+// dropdown options (so a colour maps to the same tier in both places).
+const TIER_COLOR: Record<PriceTier, string> = {
+  unit: "#3b82f6", // blue — Dona
+  wholesale: "#10b981", // green — Ulgurji
+  bundle: "#f59e0b", // amber — To'plam
+};
+const TIER_ORDER: PriceTier[] = ["unit", "bundle", "wholesale"];
+const TIER_LABEL_KEY: Record<PriceTier, string> = {
+  unit: "checkout.tierUnit",
+  wholesale: "checkout.tierWholesale",
+  bundle: "checkout.tierBundle",
+};
+const TIER_FALLBACK: Record<PriceTier, string> = {
+  unit: "Dona",
+  wholesale: "Ulgurji",
+  bundle: "To'plam",
+};
 
 const DeleteIcon = () => (
   <svg
@@ -475,6 +502,11 @@ export default function Checkout() {
     () => cart.reduce((sum, line) => sum + line.quantity, 0),
     [cart],
   );
+  // Any cart line offering more than one tier → show the price-tier legend.
+  const anyMultiTier = useMemo(
+    () => cart.some((l) => l.priceWholesale != null || l.priceBundle != null),
+    [cart],
+  );
 
   // Live receipt HTML for the payment-drawer preview, rendered from the
   // resolved template + current sale so it mirrors the printout. Null until a
@@ -585,6 +617,12 @@ export default function Checkout() {
           quantity: Math.min(addQty, product.quantity || addQty),
           stock: product.quantity,
           image: product.image,
+          priceOut: Number(product.priceOut),
+          priceWholesale:
+            product.priceWholesale != null ? Number(product.priceWholesale) : null,
+          priceBundle:
+            product.priceBundle != null ? Number(product.priceBundle) : null,
+          priceTier: "unit",
         },
       ];
     });
@@ -708,6 +746,27 @@ export default function Checkout() {
 
   const removeLine = (productId: string) => {
     setCart((prev) => prev.filter((l) => l.productId !== productId));
+  };
+
+  // Switch a line to a different price tier (dona / ulgurji / to'plam). The
+  // effective `price` follows the tier; a tier the product hasn't priced keeps
+  // the unit price. The backend re-resolves the tier, so this is display-safe.
+  const priceForTier = (l: CartLine, tier: PriceTier): number =>
+    tier === "wholesale" && l.priceWholesale != null
+      ? l.priceWholesale
+      : tier === "bundle" && l.priceBundle != null
+        ? l.priceBundle
+        : l.priceOut;
+
+  const setLineTier = (productId: string, tier: PriceTier) => {
+    setSelectedId(productId);
+    setCart((prev) =>
+      prev.map((l) =>
+        l.productId === productId
+          ? { ...l, priceTier: tier, price: priceForTier(l, tier) }
+          : l,
+      ),
+    );
   };
 
   // ── Keyboard selection helpers ──────────────────────────────────────────
@@ -851,7 +910,11 @@ export default function Checkout() {
     setIsHolding(true);
     try {
       await holdOrder({
-        items: cart.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+        items: cart.map((l) => ({
+          productId: l.productId,
+          quantity: l.quantity,
+          priceTier: l.priceTier !== "unit" ? l.priceTier : undefined,
+        })),
         customerName: customerName.trim() || undefined,
         userId: customerUserId ?? undefined,
         note: note.trim() || undefined,
@@ -902,16 +965,39 @@ export default function Checkout() {
         }
         try {
           const p = await getProduct(item.productId);
+          const priceWholesale =
+            p.priceWholesale != null ? Number(p.priceWholesale) : null;
+          const priceBundle =
+            p.priceBundle != null ? Number(p.priceBundle) : null;
+          // Restore the tier the sale was parked at; drop back to unit if that
+          // tier is no longer priced on the product.
+          const reqTier: PriceTier = item.priceType ?? "unit";
+          const priceTier: PriceTier =
+            reqTier === "wholesale" && priceWholesale != null
+              ? "wholesale"
+              : reqTier === "bundle" && priceBundle != null
+                ? "bundle"
+                : "unit";
+          const price =
+            priceTier === "wholesale" && priceWholesale != null
+              ? priceWholesale
+              : priceTier === "bundle" && priceBundle != null
+                ? priceBundle
+                : Number(p.priceOut);
           lines.push({
             productId: p.id,
             name: p.name,
-            price: Number(p.priceOut),
+            price,
             quantity: Math.max(
               1,
               Math.min(item.quantity, p.quantity || item.quantity),
             ),
             stock: p.quantity,
             image: p.image,
+            priceOut: Number(p.priceOut),
+            priceWholesale,
+            priceBundle,
+            priceTier,
           });
         } catch {
           missing.push(item.productName);
@@ -1032,7 +1118,11 @@ export default function Checkout() {
 
     try {
       const order = await createOrder({
-        items: cart.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+        items: cart.map((l) => ({
+          productId: l.productId,
+          quantity: l.quantity,
+          priceTier: l.priceTier !== "unit" ? l.priceTier : undefined,
+        })),
         customerName: customerName.trim() || undefined,
         userId: customerUserId ?? undefined,
         paymentMethod,
@@ -1661,7 +1751,25 @@ export default function Checkout() {
                   {t("checkout.resumedBadge") || "Resumed"}
                 </span>
               )}
+
+              {/* Price-tier legend — colour dots map to the dropdown options.
+                  Left-aligned next to the title. Shown only when some line
+                  offers more than one tier. */}
+              {anyMultiTier && (
+                <div className="ml-1 hidden items-center gap-3 text-xs text-gray-500 dark:text-gray-400 sm:flex">
+                  {TIER_ORDER.map((tier) => (
+                    <span key={tier} className="flex items-center gap-1.5">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: TIER_COLOR[tier] }}
+                      />
+                      {t(TIER_LABEL_KEY[tier]) || TIER_FALLBACK[tier]}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
+
             {cart.length > 0 && (
               <button
                 type="button"
@@ -1711,15 +1819,56 @@ export default function Checkout() {
                     <p className="truncate text-sm font-semibold text-gray-800 dark:text-white/90">
                       {line.name}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatMoney(line.price)}
-                      {line.stock > 0 && (
-                        <span className="text-gray-400 dark:text-gray-500">
-                          {" · "}
-                          {line.stock} {t("checkout.inStock")}
-                        </span>
-                      )}
-                    </p>
+                    {line.stock > 0 && (
+                      <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                        {line.stock} {t("checkout.inStock")}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Price / tier — its own column. When the product has a
+                      wholesale/bundle tier it's a compact dropdown (only the price
+                      shows); otherwise plain text. */}
+                  <div className="shrink-0">
+                    {line.priceWholesale != null || line.priceBundle != null ? (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <SelectField
+                          value={line.priceTier}
+                          onChange={(v) => setLineTier(line.productId, v as PriceTier)}
+                          portal
+                          buttonClassName="!h-9 !w-auto !gap-1.5 !rounded-lg !border-gray-200 !bg-gray-50 !px-3 !text-sm !font-medium !text-gray-700 !shadow-none dark:!border-gray-700 dark:!bg-gray-800 dark:!text-white/90"
+                          options={[
+                            {
+                              value: "unit",
+                              label: formatNumberInput(line.priceOut),
+                              dotColor: TIER_COLOR.unit,
+                            },
+                            ...(line.priceBundle != null
+                              ? [
+                                  {
+                                    value: "bundle",
+                                    label: formatNumberInput(line.priceBundle),
+                                    dotColor: TIER_COLOR.bundle,
+                                  },
+                                ]
+                              : []),
+                            ...(line.priceWholesale != null
+                              ? [
+                                  {
+                                    value: "wholesale",
+                                    label: formatNumberInput(line.priceWholesale),
+                                    dotColor: TIER_COLOR.wholesale,
+                                  },
+                                ]
+                              : []),
+                          ]}
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {formatMoney(line.price)}
+                      </span>
+                    )}
                   </div>
 
                   {/* Quantity stepper — large touch targets for fast use */}

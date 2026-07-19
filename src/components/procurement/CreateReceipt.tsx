@@ -27,10 +27,16 @@ interface Line {
   priceIn: string;
   // Selling price for this batch. Blank → keep the product's current price.
   priceOut: string;
+  // Optional wholesale ("ulgurji") + bundle ("to'plam") tiers. Blank → keep the
+  // product's current tier.
+  priceWholesale: string;
+  priceBundle: string;
 }
 
 function formatMoney(n: number): string {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
+  // Same locale as the price inputs (formatNumberInput) so the Summa/Total
+  // grouping matches the fields exactly.
+  return new Intl.NumberFormat("uz-UZ").format(Math.round(n));
 }
 
 /** Small keyboard-key chip for the shortcuts legend. */
@@ -49,6 +55,8 @@ const newLine = (): Line => ({
   quantity: "1",
   priceIn: "",
   priceOut: "",
+  priceWholesale: "",
+  priceBundle: "",
 });
 
 export default function CreateReceipt() {
@@ -168,11 +176,19 @@ export default function CreateReceipt() {
 
   const onPickProduct = (key: string, productId: string) => {
     const product = productCache.current.get(productId);
-    // Prefill cost and selling price from the product's current values.
+    // Prefill cost + selling tiers from the product's current values.
     updateLine(key, {
       productId,
       priceIn: product ? String(Math.round(Number(product.priceIn))) : "",
       priceOut: product ? String(Math.round(Number(product.priceOut))) : "",
+      priceWholesale:
+        product?.priceWholesale != null
+          ? String(Math.round(Number(product.priceWholesale)))
+          : "",
+      priceBundle:
+        product?.priceBundle != null
+          ? String(Math.round(Number(product.priceBundle)))
+          : "",
     });
     // Move straight to the quantity field so the row fills with the keyboard.
     requestAnimationFrame(() => qtyRefs.current.get(key)?.focus());
@@ -233,8 +249,10 @@ export default function CreateReceipt() {
         productId: l.productId,
         quantity: Math.trunc(Number(l.quantity) || 0),
         priceIn: Number(l.priceIn) || 0,
-        // Omit when blank so the backend keeps the product's current price.
+        // Omit when blank so the backend keeps the product's current price/tier.
         priceOut: l.priceOut.trim() ? Number(l.priceOut) : undefined,
+        priceWholesale: l.priceWholesale.trim() ? Number(l.priceWholesale) : undefined,
+        priceBundle: l.priceBundle.trim() ? Number(l.priceBundle) : undefined,
       }));
 
     if (items.length === 0) {
@@ -387,11 +405,13 @@ export default function CreateReceipt() {
           product dropdown can overlay freely without being clipped. */}
       <div className="mb-3">
         {/* Column headers (desktop only) */}
-        <div className="hidden grid-cols-[minmax(0,420px)_88px_120px_120px_120px_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
+        <div className="hidden grid-cols-[minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,2fr)_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
           <div>{t("goodsReceipt.product")}</div>
           <div>{t("goodsReceipt.quantity")}</div>
           <div>{t("goodsReceipt.priceIn")}</div>
           <div>{t("goodsReceipt.priceOut") || "Цена продажи"}</div>
+          <div>{t("goodsReceipt.priceBundle") || "To'plam"}</div>
+          <div>{t("goodsReceipt.priceWholesale") || "Ulgurji"}</div>
           <div className="text-right">{t("goodsReceipt.lineTotal")}</div>
           <div />
         </div>
@@ -402,7 +422,7 @@ export default function CreateReceipt() {
             return (
               <div
                 key={l.key}
-                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,420px)_88px_120px_120px_120px_44px] sm:items-center"
+                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,2fr)_44px] sm:items-center"
               >
                 <div className="min-w-0">
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
@@ -463,6 +483,30 @@ export default function CreateReceipt() {
                     value={formatNumberInput(l.priceOut)}
                     onChange={(e) => updateLine(l.key, { priceOut: digitsOnly(e.target.value) })}
                     onKeyDown={(e) => onPriceOutKeyDown(e, index)}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
+                    {t("goodsReceipt.priceBundle") || "To'plam"}
+                  </span>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={formatNumberInput(l.priceBundle)}
+                    onChange={(e) => updateLine(l.key, { priceBundle: digitsOnly(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
+                    {t("goodsReceipt.priceWholesale") || "Ulgurji"}
+                  </span>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={formatNumberInput(l.priceWholesale)}
+                    onChange={(e) => updateLine(l.key, { priceWholesale: digitsOnly(e.target.value) })}
                   />
                 </div>
                 <div className="text-sm font-medium text-gray-800 dark:text-white/90 sm:text-right">

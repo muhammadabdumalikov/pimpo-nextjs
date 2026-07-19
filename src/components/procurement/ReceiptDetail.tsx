@@ -22,7 +22,8 @@ import {
 } from "@/lib/api";
 
 function formatMoney(n: number): string {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
+  // uz-UZ grouping, consistent with the rest of the receipt UI.
+  return new Intl.NumberFormat("uz-UZ").format(Math.round(n));
 }
 
 function formatDateTime(iso: string): string {
@@ -320,13 +321,15 @@ export default function ReceiptDetail({ id }: { id: string }) {
         )}
 
         <div className="overflow-x-auto">
-          <table className="min-w-[680px] w-full text-left text-sm">
+          <table className="min-w-[860px] w-full text-left text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-theme-xs uppercase tracking-wide text-gray-400 dark:border-gray-800">
                 <th className="px-3 py-3 font-medium">{t("goodsReceipt.product")}</th>
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.quantity")}</th>
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceIn")}</th>
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceOut")}</th>
+                <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceBundle") || "To'plam"}</th>
+                <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceWholesale") || "Ulgurji"}</th>
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.lineTotal")}</th>
               </tr>
             </thead>
@@ -341,6 +344,12 @@ export default function ReceiptDetail({ id }: { id: string }) {
                   <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
                     {item.priceOut ? formatMoney(Number(item.priceOut)) : "—"}
                   </td>
+                  <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
+                    {item.priceBundle ? formatMoney(Number(item.priceBundle)) : "—"}
+                  </td>
+                  <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
+                    {item.priceWholesale ? formatMoney(Number(item.priceWholesale)) : "—"}
+                  </td>
                   <td className="px-3 py-3 text-right font-medium text-gray-800 dark:text-white/90">
                     {formatMoney(Number(item.lineTotal))}
                   </td>
@@ -349,7 +358,7 @@ export default function ReceiptDetail({ id }: { id: string }) {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={4} className="px-3 py-3 text-right font-semibold text-gray-800 dark:text-white/90">
+                <td colSpan={6} className="px-3 py-3 text-right font-semibold text-gray-800 dark:text-white/90">
                   {t("goodsReceipt.total")}
                 </td>
                 <td className="px-3 py-3 text-right font-semibold text-gray-800 dark:text-white/90">

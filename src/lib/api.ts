@@ -1,3 +1,5 @@
+import {makeApiError} from './errorMessages';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 export interface LoginRequest {
@@ -43,7 +45,7 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Login failed' }));
-    throw new Error(error.message || 'Login failed');
+    throw makeApiError(error, 'Login failed');
   }
 
   return response.json();
@@ -73,11 +75,8 @@ export async function register(data: RegisterRequest): Promise<void> {
     const error = await response
       .json()
       .catch(() => ({ message: 'Registration failed' }));
-    // class-validator returns `message` as an array of strings.
-    const message = Array.isArray(error.message)
-      ? error.message.join(', ')
-      : error.message;
-    throw new Error(message || 'Registration failed');
+    // makeApiError localizes by `code` and handles class-validator arrays.
+    throw makeApiError(error, 'Registration failed');
   }
 }
 
@@ -197,7 +196,7 @@ export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to fetch subscription plans' }));
-    throw new Error(error.message || 'Failed to fetch subscription plans');
+    throw makeApiError(error, 'Failed to fetch subscription plans');
   }
 
   return response.json();
@@ -265,7 +264,7 @@ export async function subscribeToPlan(tier: string): Promise<CurrentSubscription
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to subscribe' }));
-    throw new Error(error.message || 'Failed to subscribe');
+    throw makeApiError(error, 'Failed to subscribe');
   }
 
   const data = await response.json();
@@ -290,7 +289,7 @@ export async function changeSubscription(tier: string): Promise<CurrentSubscript
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to change subscription' }));
-    throw new Error(error.message || 'Failed to change subscription');
+    throw makeApiError(error, 'Failed to change subscription');
   }
 
   const data = await response.json();
@@ -314,7 +313,7 @@ export async function cancelSubscription(): Promise<void> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to cancel subscription' }));
-    throw new Error(error.message || 'Failed to cancel subscription');
+    throw makeApiError(error, 'Failed to cancel subscription');
   }
 }
 
@@ -328,13 +327,13 @@ export interface Product {
   priceIn: string;
   priceOut: string;
   priceWholesale: string | null;
+  /** Bundle/set ("to'plam") selling price; null when unset. */
+  priceBundle: string | null;
   quantity: number;
   quantityType: string | null;
   image: string | null;
   isActive: boolean;
   categoryId: string | null;
-  /** Markup over cost as a percent string (e.g. "22.50"); null when unset. */
-  markupPercent: string | null;
   /** Reorder point — product is "low stock" when quantity <= this. Null = off. */
   lowStockThreshold: number | null;
   brandId: string | null;
@@ -353,7 +352,7 @@ export interface CreateProductRequest {
   quantityType?: string;
   image?: string;
   categoryId?: string;
-  markupPercent?: string;
+  priceBundle?: string;
   lowStockThreshold?: number;
   brandId?: string;
   supplierId?: string;
@@ -369,7 +368,7 @@ export interface UpdateProductRequest {
   quantityType?: string;
   image?: string;
   categoryId?: string;
-  markupPercent?: string;
+  priceBundle?: string;
   lowStockThreshold?: number;
   brandId?: string;
   supplierId?: string;
@@ -488,7 +487,7 @@ export async function createProduct(data: CreateProductRequest): Promise<Product
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to create product' }));
-    throw new Error(error.message || 'Failed to create product');
+    throw makeApiError(error, 'Failed to create product');
   }
 
   const result = await response.json();
@@ -513,7 +512,7 @@ export async function updateProduct(productId: string, data: UpdateProductReques
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to update product' }));
-    throw new Error(error.message || 'Failed to update product');
+    throw makeApiError(error, 'Failed to update product');
   }
 
   const result = await response.json();
@@ -537,7 +536,7 @@ export async function deleteProduct(productId: string): Promise<void> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to delete product' }));
-    throw new Error(error.message || 'Failed to delete product');
+    throw makeApiError(error, 'Failed to delete product');
   }
 }
 
@@ -581,7 +580,7 @@ export async function generateProductCode(): Promise<string> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to generate product code' }));
-    throw new Error(error.message || 'Failed to generate product code');
+    throw makeApiError(error, 'Failed to generate product code');
   }
 
   const result = await response.json();
@@ -605,7 +604,7 @@ export async function generateBarcode(): Promise<string> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to generate barcode' }));
-    throw new Error(error.message || 'Failed to generate barcode');
+    throw makeApiError(error, 'Failed to generate barcode');
   }
 
   const result = await response.json();
@@ -622,7 +621,7 @@ export interface BulkImportItem {
   priceOut?: string;
   quantity?: number;
   quantityType?: string;
-  markupPercent?: string;
+  priceBundle?: string;
   lowStockThreshold?: number;
 }
 
@@ -655,7 +654,7 @@ export async function bulkCreateProducts(
     const error = await response
       .json()
       .catch(() => ({ message: 'Failed to import products' }));
-    throw new Error(error.message || 'Failed to import products');
+    throw makeApiError(error, 'Failed to import products');
   }
 
   return response.json();
@@ -717,7 +716,7 @@ export async function createCategory(data: CreateCategoryDto): Promise<Category>
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to create category' }));
-    throw new Error(error.message || 'Failed to create category');
+    throw makeApiError(error, 'Failed to create category');
   }
   return response.json();
 }
@@ -738,7 +737,7 @@ export async function updateCategory(id: string, data: UpdateCategoryDto): Promi
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to update category' }));
-    throw new Error(error.message || 'Failed to update category');
+    throw makeApiError(error, 'Failed to update category');
   }
   return response.json();
 }
@@ -758,7 +757,7 @@ export async function deleteCategory(id: string): Promise<void> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to delete category' }));
-    throw new Error(error.message || 'Failed to delete category');
+    throw makeApiError(error, 'Failed to delete category');
   }
 }
 
@@ -791,7 +790,7 @@ export async function uploadStorageFile(
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to upload file' }));
-    throw new Error(error.message || 'Failed to upload file');
+    throw makeApiError(error, 'Failed to upload file');
   }
   return response.json();
 }
@@ -925,7 +924,7 @@ export async function getDebts(
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to fetch debts' }));
-    throw new Error(error.message || 'Failed to fetch debts');
+    throw makeApiError(error, 'Failed to fetch debts');
   }
 
   return response.json();
@@ -996,7 +995,7 @@ export async function getDebt(id: string): Promise<UserDebt> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to fetch debt' }));
-    throw new Error(error.message || 'Failed to fetch debt');
+    throw makeApiError(error, 'Failed to fetch debt');
   }
 
   return response.json();
@@ -1019,7 +1018,7 @@ export async function getDebtsByUser(userId: string): Promise<UserDebt[]> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to fetch user debts' }));
-    throw new Error(error.message || 'Failed to fetch user debts');
+    throw makeApiError(error, 'Failed to fetch user debts');
   }
 
   const result = await response.json();
@@ -1044,7 +1043,7 @@ export async function createDebt(data: CreateDebtDto): Promise<UserDebt> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to create debt' }));
-    throw new Error(error.message || 'Failed to create debt');
+    throw makeApiError(error, 'Failed to create debt');
   }
 
   const result = await response.json();
@@ -1069,7 +1068,7 @@ export async function updateDebt(id: string, data: UpdateDebtDto): Promise<UserD
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to update debt' }));
-    throw new Error(error.message || 'Failed to update debt');
+    throw makeApiError(error, 'Failed to update debt');
   }
 
   const result = await response.json();
@@ -1093,7 +1092,7 @@ export async function deleteDebt(id: string): Promise<void> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     const error = await response.json().catch(() => ({ message: 'Failed to delete debt' }));
-    throw new Error(error.message || 'Failed to delete debt');
+    throw makeApiError(error, 'Failed to delete debt');
   }
 }
 
@@ -1205,7 +1204,7 @@ async function parseError(response: Response, fallback: string): Promise<never> 
     handleUnauthorized();
   }
   const error = await response.json().catch(() => ({ message: fallback }));
-  throw new Error(error.message || fallback);
+  throw makeApiError(error, fallback);
 }
 
 export interface Role {
@@ -1342,12 +1341,18 @@ export async function deleteStaff(id: string): Promise<void> {
 // Orders API
 // ---------------------------------------------------------------------------
 
+/** Selling price tier for a line: 'unit' (per-piece / "dona"), 'wholesale'
+ *  (ulgurji), or 'bundle' (to'plam). */
+export type PriceTier = "unit" | "wholesale" | "bundle";
+
 export interface OrderItem {
   id: string;
   orderId: string;
   productId: string | null;
   productName: string;
   priceOut: string;
+  /** Which tier this line was sold at. Defaults to "unit" on older rows. */
+  priceType?: PriceTier;
   quantity: number;
   lineTotal: string;
   // COGS snapshot at sale time (0 for orders made before batch costing).
@@ -1390,7 +1395,7 @@ export interface Order {
 }
 
 export interface CreateOrderDto {
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; quantity: number; priceTier?: PriceTier }[];
   userId?: string;
   customerName?: string;
   status?: string;
@@ -1413,7 +1418,7 @@ export interface CreateOrderDto {
 
 /** Park the current cart as a held sale (no payment yet, stock untouched). */
 export interface HoldOrderDto {
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; quantity: number; priceTier?: PriceTier }[];
   userId?: string;
   customerName?: string;
   discountType?: "amount" | "percent";
@@ -2018,6 +2023,7 @@ export interface GoodsReceiptItem {
   currency: string;
   priceOut: string | null;
   priceWholesale: string | null;
+  priceBundle: string | null;
   quantity: number;
   lineTotal: string;
 }
@@ -2088,6 +2094,8 @@ export interface CreateReceiptDto {
     priceOut?: number;
     // Optional wholesale price; when given, updates the product wholesale price.
     priceWholesale?: number;
+    // Optional bundle ("to'plam") price; when given, updates the product bundle price.
+    priceBundle?: number;
     // When the new selling price is higher, reprice existing stock too.
     repriceExisting?: boolean;
   }[];

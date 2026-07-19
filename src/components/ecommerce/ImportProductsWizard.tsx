@@ -18,7 +18,7 @@ const FIELDS: { key: keyof BulkImportItem; labelKey: string; required: boolean }
   { key: "barcode", labelKey: "addProduct.barcode", required: false },
   { key: "quantity", labelKey: "addProduct.quantity", required: false },
   { key: "quantityType", labelKey: "addProduct.quantityType", required: false },
-  { key: "markupPercent", labelKey: "addProduct.markup", required: false },
+  { key: "priceBundle", labelKey: "addProduct.priceBundle", required: false },
   { key: "lowStockThreshold", labelKey: "addProduct.lowStockThreshold", required: false },
 ];
 
@@ -31,7 +31,7 @@ const KEYWORDS: Record<string, string[]> = {
   priceOut: ["priceout", "price out", "sotuv", "sotish", "narx", "price", "продаж", "цена"],
   quantity: ["quantity", "qty", "miqdor", "soni", "qoldiq", "stock", "количество", "остаток", "кол-во"],
   quantityType: ["unit", "birlik", "olchov", "o'lchov", "единиц", "ед."],
-  markupPercent: ["markup", "ustama", "наценка"],
+  priceBundle: ["bundle", "to'plam", "toplam", "тўплам", "комплект", "набор"],
   lowStockThreshold: ["lowstock", "low stock", "kam qoldiq", "minimal", "reorder", "мин", "порог"],
 };
 
@@ -190,7 +190,7 @@ export default function ImportProductsWizard() {
       const barcode = String(cellValue("barcode", row)).trim();
       const quantity = cleanInt(cellValue("quantity", row));
       const quantityType = String(cellValue("quantityType", row)).trim();
-      const markup = cleanNum(cellValue("markupPercent", row));
+      const priceBundle = cleanNum(cellValue("priceBundle", row));
       const lowStock = cleanInt(cellValue("lowStockThreshold", row));
 
       // Skip fully-blank rows.
@@ -204,7 +204,7 @@ export default function ImportProductsWizard() {
         priceOut: priceOut || undefined,
         quantity: quantity ? Number(quantity) : undefined,
         quantityType: quantityType || undefined,
-        markupPercent: markup || undefined,
+        priceBundle: priceBundle || undefined,
         lowStockThreshold: lowStock ? Number(lowStock) : undefined,
       });
     }

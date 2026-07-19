@@ -1,6 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { useTranslations } from '@/hooks/useTranslations';
+
+// The English default headings that call sites pass (e.g. showToast('error', msg, 'Error')).
+// These are replaced by the localized, variant-based heading; genuinely custom
+// titles are left untouched.
+const DEFAULT_TITLES = new Set(['Error', 'Success', 'Warning', 'Info']);
 
 export type ToastVariant = 'success' | 'error' | 'warning' | 'info';
 
@@ -137,7 +143,15 @@ const ToastItem: React.FC<{ toast: Toast; onClose: () => void }> = ({ toast, onC
     ),
   };
 
+  const { t } = useTranslations();
   const variant = variantClasses[toast.variant];
+
+  // Localize the heading from the variant. A custom title (not one of the English
+  // defaults call sites pass) overrides it; otherwise show e.g. "Xatolik".
+  const title =
+    toast.title && !DEFAULT_TITLES.has(toast.title)
+      ? toast.title
+      : t(`toast.${toast.variant}`);
 
   // Errors and warnings carry a message the user needs to read, so show the text
   // beside the icon. Success/info stay as compact, icon-only confirmation badges.
@@ -149,7 +163,7 @@ const ToastItem: React.FC<{ toast: Toast; onClose: () => void }> = ({ toast, onC
       <button
         type="button"
         onClick={onClose}
-        aria-label={toast.title || toast.message}
+        aria-label={title || toast.message}
         className={`animate-toast-in pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full text-white shadow-theme-lg transition active:scale-95 ${variant.iconBg}`}
       >
         {icons[toast.variant]}
@@ -161,7 +175,7 @@ const ToastItem: React.FC<{ toast: Toast; onClose: () => void }> = ({ toast, onC
     <button
       type="button"
       onClick={onClose}
-      aria-label={toast.title || toast.message}
+      aria-label={title || toast.message}
       className="animate-toast-in pointer-events-auto flex max-w-sm items-start gap-3 rounded-xl bg-white px-4 py-3 text-left shadow-theme-lg transition active:scale-[0.99] dark:bg-gray-800"
     >
       <span
@@ -170,9 +184,9 @@ const ToastItem: React.FC<{ toast: Toast; onClose: () => void }> = ({ toast, onC
         {icons[toast.variant]}
       </span>
       <span className="min-w-0">
-        {toast.title && (
+        {title && (
           <span className="block text-sm font-semibold text-gray-900 dark:text-white">
-            {toast.title}
+            {title}
           </span>
         )}
         <span className="block break-words text-sm text-gray-600 dark:text-gray-300">

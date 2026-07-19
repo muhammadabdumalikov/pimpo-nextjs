@@ -9,7 +9,8 @@ import {
   TableRow,
 } from "../ui/table";
 import Image from "next/image";
-import { PlusIcon, DownloadIcon, ChevronLeftIcon, PencilIcon, TrashBinIcon } from "@/icons/index";
+import { PlusIcon, ChevronLeftIcon, PencilIcon, TrashBinIcon } from "@/icons/index";
+import { RiFileExcel2Line } from "react-icons/ri";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { getProducts, getProductCount, deleteProduct, type Product } from "@/lib/api";
@@ -17,10 +18,13 @@ import { useToast } from "@/context/ToastContext";
 import { useRouter } from "next/navigation";
 import Pagination from "@/components/ui/pagination/Pagination";
 
-// Helper function to format price
-const formatPrice = (price: string): string => {
+// Format a UZS price string as grouped so'm (matches the rest of the dashboard).
+// Returns "—" for empty/unset optional tiers (wholesale, bundle).
+const formatPrice = (price: string | null | undefined): string => {
+  if (price == null || price === '') return '—';
   const numPrice = parseFloat(price);
-  return `$${numPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  if (Number.isNaN(numPrice)) return '—';
+  return `${new Intl.NumberFormat('uz-UZ').format(Math.round(numPrice))} so'm`;
 };
 
 export default function ProductsList() {
@@ -141,7 +145,7 @@ export default function ProductsList() {
 
         <div className="flex items-center gap-3">
           <button disabled className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-            <DownloadIcon />
+            <RiFileExcel2Line className="h-5 w-5 text-success-600 dark:text-success-500" />
             {t('products.export')}
           </button>
           <Link
@@ -246,7 +250,7 @@ export default function ProductsList() {
 
       {/* Products Table */}
       <div className="w-full overflow-x-auto -mx-4 sm:-mx-6" style={{ scrollbarGutter: 'stable' }}>
-        <Table className="w-full min-w-[760px]! [table-layout:fixed]">
+        <Table className="w-full min-w-[1140px]! whitespace-nowrap">
           {/* Table Header */}
           <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
             <TableRow>
@@ -274,7 +278,7 @@ export default function ProductsList() {
               </TableCell>
               <TableCell
                 isHeader
-                className="py-3 pr-4 sm:pl-2 sm:pr-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[30%]"
+                className="py-3 pr-4 sm:pl-2 sm:pr-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[20%]"
               >
                 <div className="flex items-center gap-2">
                   {t('products.products')}
@@ -326,6 +330,48 @@ export default function ProductsList() {
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                     >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                    />
+                  </svg>
+                </div>
+              </TableCell>
+              <TableCell
+                isHeader
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
+              >
+                <div className="flex items-center gap-2">
+                  {t('products.priceBundle')}
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                    />
+                  </svg>
+                </div>
+              </TableCell>
+              <TableCell
+                isHeader
+                className="py-3 px-4 sm:px-6 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[15%]"
+              >
+                <div className="flex items-center gap-2">
+                  {t('products.priceWholesale')}
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -411,7 +457,7 @@ export default function ProductsList() {
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-12 text-center">
+                <TableCell colSpan={10} className="py-12 text-center">
                   <div className="flex flex-col items-center justify-center gap-3">
                     <div className="h-8 w-8 animate-spin rounded-full border-3 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400"></div>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -422,7 +468,7 @@ export default function ProductsList() {
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                <TableCell colSpan={10} className="py-8 text-center text-gray-500 dark:text-gray-400">
                   {t('products.noProducts') || 'No products found'}
                 </TableCell>
               </TableRow>
@@ -488,6 +534,12 @@ export default function ProductsList() {
                   </TableCell>
                   <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
                     {formatPrice(product.priceOut)}
+                  </TableCell>
+                  <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
+                    {formatPrice(product.priceBundle)}
+                  </TableCell>
+                  <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
+                    {formatPrice(product.priceWholesale)}
                   </TableCell>
                   <TableCell className="py-3 px-4 sm:px-6 w-[15%] text-gray-500 text-theme-sm dark:text-gray-400">
                     {product.code || '-'}
