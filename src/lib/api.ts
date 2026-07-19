@@ -1416,8 +1416,10 @@ export interface CreateOrderDto {
   heldOrderId?: string;
 }
 
-/** Park the current cart as a held sale (no payment yet, stock untouched). */
+/** Park the current cart as a held/draft sale (no payment yet, stock untouched). */
 export interface HoldOrderDto {
+  /** Existing draft id to update in place (auto-save). Omit to create a new one. */
+  id?: string;
   items: { productId: string; quantity: number; priceTier?: PriceTier }[];
   userId?: string;
   customerName?: string;
@@ -2641,7 +2643,14 @@ export async function getCurrentShift(registerId: string): Promise<Shift | null>
   return text ? (JSON.parse(text) as Shift) : null;
 }
 
-export async function getOpenShifts(): Promise<Shift[]> {
+export interface OpenShiftsResponse {
+  shifts: Shift[];
+  /** True while a stock-take freezes the till (folded in so the checkout needn't
+   *  make a separate stock-takes request for the freeze overlay). */
+  stockTakeActive: boolean;
+}
+
+export async function getOpenShifts(): Promise<OpenShiftsResponse> {
   const response = await fetch(`${API_BASE_URL}/shifts/open`, {
     method: 'GET',
     headers: authHeaders(),
@@ -2734,8 +2743,8 @@ export interface StockTake {
   businessId: string;
   name: string;
   storeId: string | null;
-  type: 'full' | 'partial';
-  status: 'in_progress' | 'completed';
+  type: 'full' | 'partial' | 'writeoff';
+  status: 'in_progress' | 'completed' | 'cancelled';
   // Decimals are returned as strings.
   surplusQty: string | null;
   shortageQty: string | null;
@@ -2759,6 +2768,7 @@ export interface StockTakeItem {
   diffQty: number;
   unitCost: string | null;
   diffValue: string | null;
+  reason: string | null;
   createdAt: string;
 }
 
@@ -2814,7 +2824,7 @@ export async function createStockTake(
 
 export async function countStockTake(
   id: string,
-  items: { productId: string; countedQty: number }[],
+  items: { productId: string; countedQty: number; reason?: string }[],
 ): Promise<{ updated: number }> {
   const response = await fetch(`${API_BASE_URL}/stock-takes/${id}/count`, {
     method: 'PATCH',
@@ -2835,6 +2845,38 @@ export async function completeStockTake(
     body: JSON.stringify(data ?? {}),
   });
   if (!response.ok) await parseError(response, 'Failed to complete stock-take');
+  return (await response.json()).stockTake;
+}
+
+// Cancel an in-progress count: drops its rows and releases the sales/receipt
+// freeze without adjusting any stock.
+export async function cancelStockTake(id: string): Promise<StockTake> {
+  const response = await fetch(`${API_BASE_URL}/stock-takes/${id}/cancel`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to cancel stock-take');
+  return (await response.json()).stockTake;
+}
+
+export interface CreateWriteOffDto {
+  items: { productId: string; qty: number; reason?: string }[];
+  name?: string;
+  reason?: string;
+  note?: string;
+}
+
+// Immediate stock write-off ("hisobdan chiqarish"): reduces stock now (FIFO) and
+// posts an expense. Recorded as a completed stock-take of type 'writeoff'.
+export async function createWriteOff(
+  data: CreateWriteOffDto,
+): Promise<StockTake & { items: StockTakeItem[] }> {
+  const response = await fetch(`${API_BASE_URL}/write-offs`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to record write-off');
   return (await response.json()).stockTake;
 }
 

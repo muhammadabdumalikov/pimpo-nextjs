@@ -31,6 +31,7 @@ import {
   type CashRegister,
   type ReceiptTemplate,
   type PriceTier,
+  type HoldOrderDto,
 } from "@/lib/api";
 import {
   buildReceiptHtml,
@@ -48,6 +49,11 @@ import Toggle from "@/components/settings/receipt-template/Toggle";
 const PRINT_WIDTH_MM = 80;
 // Persisted cashier preference: print a receipt after each completed sale.
 const PRINT_RECEIPT_KEY = "printReceiptEnabled";
+
+// Idle before the working cart is auto-saved as a draft. blur has no meaning on a
+// cart, so this timer is the primary trigger (plus a flush on tab-hide/unmount);
+// long enough that fast scanning doesn't spray the API.
+const DRAFT_DEBOUNCE_MS = 2000;
 
 // Static VAT (QQS) config for now. Flip VAT_ENABLED to false to hide the line.
 // TODO: wire back to the business's receipt settings API.
@@ -239,8 +245,9 @@ export default function Checkout() {
   const [openFloat, setOpenFloat] = useState("");
   const [openNote, setOpenNote] = useState("");
   const [openingShift, setOpeningShift] = useState(false);
-  // Held ("kechiktirilgan") sales: the cashier parks the current cart to serve
-  // someone else and resumes it later. Stock is untouched while a sale is held.
+  // Draft ("qoralama") sales: the working cart is auto-saved as a draft so a
+  // closed tab / dropped network can't lose it, and the cashier can park it to
+  // serve someone else. Stock is untouched until a draft is completed.
   const [heldOrders, setHeldOrders] = useState<Order[]>([]);
   const [showHeld, setShowHeld] = useState(false);
   const [heldSearch, setHeldSearch] = useState("");
@@ -252,9 +259,29 @@ export default function Checkout() {
   // open, so the page behind it doesn't scroll.
   useBodyScrollLock(showPayment || showHeld);
   const [resumingId, setResumingId] = useState<string | null>(null);
-  // The held order the current cart was resumed from. Completing the sale sends
-  // it as `heldOrderId` so the backend retires it in the same transaction.
-  const [resumedHoldId, setResumedHoldId] = useState<string | null>(null);
+  // The draft backing the current cart. A ref so the debounced auto-saver always
+  // reads the latest id without re-subscribing. Completing the sale sends it as
+  // `heldOrderId` so the backend retires the draft in the same transaction.
+  const draftIdRef = useRef<string | null>(null);
+  // Whether the current cart was explicitly resumed from a saved draft (badge).
+  const [resumedFrom, setResumedFrom] = useState(false);
+  // Auto-save plumbing: latest cart snapshot to persist, the debounce timer, an
+  // in-flight guard, and a one-shot flag to skip the save the effect would fire
+  // right after we programmatically load/clear the cart (resume / reset).
+  const draftPayloadRef = useRef<HoldOrderDto | null>(null);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savingDraftRef = useRef(false);
+  const skipDraftRef = useRef(false);
+
+  // Sales are frozen while a stock-take (inventarizatsiya) is in progress — the
+  // backend rejects the sale, so surface it up front and lock the till. A ref
+  // mirror lets the global key handler and auto-saver read it without re-binding.
+  const [stockTakeActive, setStockTakeActive] = useState(false);
+  const frozenRef = useRef(false);
+  // In-flight guards so overlapping calls (React StrictMode's dev double-invoke,
+  // rapid visibility events) collapse to a single request.
+  const shiftInFlightRef = useRef(false);
+  const heldInFlightRef = useRef(false);
   const vatEnabled = VAT_ENABLED;
   const vatRate = VAT_RATE;
   const searchRef = useRef<HTMLInputElement>(null);
@@ -270,11 +297,22 @@ export default function Checkout() {
   useEffect(() => {
     const el = cartRef.current;
     if (!el) return;
+    let raf = 0;
+    // rAF-batch the measure so a ResizeObserver callback never sets state
+    // synchronously (that trips the "ResizeObserver loop" thrash), and ignore
+    // sub-2px changes so a scrollbar toggling on/off can't oscillate the height
+    // — which showed up as the screen scrolling/shaking.
     const update = () => {
-      const top = el.getBoundingClientRect().top + window.scrollY;
-      setCartHeight(Math.max(480, window.innerHeight - top - 24));
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const top = el.getBoundingClientRect().top + window.scrollY;
+        const next = Math.max(480, window.innerHeight - top - 24);
+        setCartHeight((prev) =>
+          prev != null && Math.abs(prev - next) < 2 ? prev : next,
+        );
+      });
     };
-    const raf = requestAnimationFrame(update);
+    update();
     window.addEventListener("resize", update);
     const ro = new ResizeObserver(update);
     ro.observe(document.body);
@@ -293,18 +331,36 @@ export default function Checkout() {
   }, []);
 
   // Load the active cash shift so the till knows whether selling is allowed.
+  // One request answers both "is a shift open?" and "is the till frozen by a
+  // stock-take?" — the backend folds the freeze flag into /shifts/open, so the
+  // checkout needs no separate stock-takes request.
   const refreshShift = useCallback(async () => {
+    if (shiftInFlightRef.current) return;
+    shiftInFlightRef.current = true;
     try {
-      const open = await getOpenShifts();
-      setActiveShift(open[0] ?? null);
+      const res = await getOpenShifts();
+      setActiveShift(res.shifts[0] ?? null);
+      frozenRef.current = res.stockTakeActive;
+      setStockTakeActive(res.stockTakeActive);
     } catch {
       setActiveShift(null);
+      frozenRef.current = false;
+      setStockTakeActive(false);
     } finally {
       setShiftChecked(true);
+      shiftInFlightRef.current = false;
     }
   }, []);
+  // Refresh on load and whenever the tab becomes visible again, so a shift that
+  // closes — or a stock-take that starts/ends — mid-shift is picked up without a
+  // manual reload. No constant poll.
   useEffect(() => {
     refreshShift();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshShift();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [refreshShift]);
 
   // With no shift open, load the registers + recent shifts that power the
@@ -368,16 +424,26 @@ export default function Checkout() {
 
   // Load the parked (held) sales so the toolbar badge and list stay current.
   const refreshHeld = useCallback(async () => {
+    if (heldInFlightRef.current) return;
+    heldInFlightRef.current = true;
     try {
       const res = await getOrders(1, 50, undefined, "Held");
       setHeldOrders(res.orders);
     } catch {
       /* non-fatal */
+    } finally {
+      heldInFlightRef.current = false;
     }
   }, []);
+  // Load the drafts list lazily — only when its drawer is opened (and a shift is
+  // open). No fetch on mount or on auto-save, so `orders?status=Held` isn't hit
+  // just to sit idle behind a closed drawer.
   useEffect(() => {
-    refreshHeld();
-  }, [refreshHeld]);
+    if (showHeld && activeShift) refreshHeld();
+  }, [showHeld, activeShift, refreshHeld]);
+
+  // The freeze flag comes from refreshShift (/shifts/open) above — no separate
+  // stock-takes request.
 
   // The held drawer, shortcuts sheet and payment drawer close on Escape.
   useEffect(() => {
@@ -839,7 +905,7 @@ export default function Checkout() {
   // "To'lash" opens the drawer. `prefillCash` (Ctrl/Cmd+Enter fast path) seeds
   // a cash entry covering the whole total so a second Ctrl+Enter completes.
   const openPayment = (prefillCash = false) => {
-    if (cart.length === 0 || hasOversell) return;
+    if (cart.length === 0 || hasOversell || frozenRef.current) return;
     if (!activeShift) {
       showToast(
         "error",
@@ -884,8 +950,16 @@ export default function Checkout() {
   const removePayEntry = (method: PayMethod) =>
     setPayEntries((prev) => prev.filter((e) => e.method !== method));
 
-  // Reset the till to a fresh sale (cart, customer, payment, discount).
+  // Reset the till to a fresh sale (cart, customer, payment, discount). Clears
+  // the draft ref and skips the auto-save the emptied cart would otherwise fire
+  // (the draft was already retired on complete, or kept on purpose by New sale).
   const resetSale = () => {
+    draftIdRef.current = null;
+    skipDraftRef.current = true;
+    if (draftTimerRef.current) {
+      clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = null;
+    }
     setCart([]);
     setCustomerName("");
     setNote("");
@@ -899,35 +973,108 @@ export default function Checkout() {
     setCustomerResults([]);
     setCustomerFocused(false);
     setShowMore(false);
-    setResumedHoldId(null);
+    setResumedFrom(false);
     searchRef.current?.focus();
   };
 
-  // Park the current cart as a held sale and free the till for the next
-  // customer. Stock stays untouched until the sale is resumed and completed.
-  const handleHold = async () => {
+  // ── Auto-save the working cart as a draft ("qoralama") ──────────────────────
+  // Persist the cart so a closed tab / dropped network can't lose it. One stable
+  // draft is upserted (draftIdRef); emptying the cart deletes it (no empty
+  // drafts). Best-effort: a failed save just retries on the next change/flush.
+  const flushDraft = useCallback(async () => {
+    if (draftTimerRef.current) {
+      clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = null;
+    }
+    // Paused while a stock-take freezes the till (everything is locked anyway).
+    if (frozenRef.current || savingDraftRef.current) return;
+    const payload = draftPayloadRef.current;
+    const id = draftIdRef.current;
+    // Cart went empty: drop the draft it was backing, if any.
+    if (!payload || payload.items.length === 0) {
+      if (id) {
+        draftIdRef.current = null;
+        await deleteOrder(id).catch(() => {});
+      }
+      return;
+    }
+    savingDraftRef.current = true;
+    try {
+      const saved = await holdOrder({ ...payload, id: id ?? undefined });
+      draftIdRef.current = saved.id;
+    } catch {
+      // Swallow — the cart is still in memory; the next change/flush retries.
+    } finally {
+      savingDraftRef.current = false;
+    }
+    // Note: we deliberately DON'T refresh the drafts list here — auto-save runs
+    // on every cart change, and the list is refreshed lazily when its drawer is
+    // opened (plus after explicit actions: complete / new sale / delete).
+  }, []);
+
+  // Rebuild the pending draft snapshot and (re)arm the debounce on any cart or
+  // meta change. Skipped for the one render right after a programmatic load/clear
+  // (resume / reset) so we don't re-save what we just set or delete a kept draft.
+  useEffect(() => {
+    if (skipDraftRef.current) {
+      skipDraftRef.current = false;
+      return;
+    }
+    draftPayloadRef.current =
+      cart.length === 0
+        ? null
+        : {
+            items: cart.map((l) => ({
+              productId: l.productId,
+              quantity: l.quantity,
+              priceTier: l.priceTier !== "unit" ? l.priceTier : undefined,
+            })),
+            customerName: customerName.trim() || undefined,
+            userId: customerUserId ?? undefined,
+            note: note.trim() || undefined,
+            discountType: discountAmount > 0 ? discountType : undefined,
+            discountValue: discountAmount > 0 ? discountValueNum : undefined,
+          };
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      void flushDraft();
+    }, DRAFT_DEBOUNCE_MS);
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
+  }, [
+    cart,
+    customerName,
+    customerUserId,
+    note,
+    discountType,
+    discountValueNum,
+    discountAmount,
+    flushDraft,
+  ]);
+
+  // Flush the draft when the tab is hidden/closed (reliable, unlike beforeunload)
+  // and on unmount — so an in-progress cart still lands even without the debounce.
+  useEffect(() => {
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") void flushDraft();
+    };
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      document.removeEventListener("visibilitychange", onHidden);
+      void flushDraft();
+    };
+  }, [flushDraft]);
+
+  // Start a fresh sale: the current cart stays parked as a draft in "Qoralamalar"
+  // (auto-saved), and the workspace is cleared for the next customer.
+  const newSale = async () => {
     if (cart.length === 0 || isHolding || isSubmitting) return;
     setIsHolding(true);
     try {
-      await holdOrder({
-        items: cart.map((l) => ({
-          productId: l.productId,
-          quantity: l.quantity,
-          priceTier: l.priceTier !== "unit" ? l.priceTier : undefined,
-        })),
-        customerName: customerName.trim() || undefined,
-        userId: customerUserId ?? undefined,
-        note: note.trim() || undefined,
-        discountType: discountAmount > 0 ? discountType : undefined,
-        discountValue: discountAmount > 0 ? discountValueNum : undefined,
-      });
-      // Re-holding a resumed sale: retire the old parked copy (best-effort —
-      // a leftover just stays visible in the list and can be deleted there).
-      if (resumedHoldId) {
-        await deleteOrder(resumedHoldId).catch(() => {});
-      }
-      showToast("success", t("checkout.holdSuccess") || "Sale parked");
-      resetSale();
+      await flushDraft(); // make sure the current cart is persisted as a draft
+      showToast("success", t("checkout.holdSuccess") || "Saved to drafts");
+      resetSale(); // clears the ref WITHOUT deleting the just-parked draft
       refreshHeld();
     } catch (err: unknown) {
       showToast(
@@ -948,7 +1095,7 @@ export default function Checkout() {
       cart.length > 0 &&
       !window.confirm(
         t("checkout.resumeReplaceConfirm") ||
-          "Replace the current cart with the held sale?",
+          "Replace the current cart with the draft?",
       )
     ) {
       return;
@@ -1020,7 +1167,12 @@ export default function Checkout() {
       } else {
         clearDiscount();
       }
-      setResumedHoldId(order.id);
+      // This cart is now backed by the resumed draft: edits update it in place,
+      // and completing retires it. Skip the auto-save the setCart above will
+      // trigger (we just loaded these exact lines).
+      draftIdRef.current = order.id;
+      skipDraftRef.current = true;
+      setResumedFrom(true);
       setShowHeld(false);
       searchRef.current?.focus();
     } catch (err: unknown) {
@@ -1037,7 +1189,10 @@ export default function Checkout() {
   const deleteHeld = async (id: string) => {
     try {
       await deleteOrder(id);
-      if (resumedHoldId === id) setResumedHoldId(null);
+      if (draftIdRef.current === id) {
+        draftIdRef.current = null;
+        setResumedFrom(false);
+      }
       refreshHeld();
     } catch (err: unknown) {
       showToast(
@@ -1090,6 +1245,16 @@ export default function Checkout() {
 
   const handleComplete = async () => {
     if (cart.length === 0 || !paymentValid) return;
+    // Frozen by a stock-take — the backend would reject it anyway.
+    if (frozenRef.current) {
+      showToast(
+        "error",
+        t("checkout.stockTakeFrozenBody") ||
+          "A stock-take is in progress. Sales are frozen.",
+        "Inventarizatsiya",
+      );
+      return;
+    }
     // A sale must be rung up against an open cash shift.
     if (!activeShift) {
       showToast(
@@ -1137,7 +1302,8 @@ export default function Checkout() {
         shiftId: activeShift.id,
         discountType: discountAmount > 0 ? discountType : undefined,
         discountValue: discountAmount > 0 ? discountValueNum : undefined,
-        heldOrderId: resumedHoldId ?? undefined,
+        // Retire the draft this cart was auto-saved as (if any) in the same tx.
+        heldOrderId: draftIdRef.current ?? undefined,
       });
 
       // Print the receipt using the register's resolved template — only when
@@ -1154,9 +1320,8 @@ export default function Checkout() {
             change > 0 ? ` — ${t("checkout.change") || "Change"}: ${formatMoney(change)}` : ""
           }`;
       showToast("success", successMsg, "Success");
-      const resumed = resumedHoldId !== null;
       resetSale();
-      if (resumed) refreshHeld();
+      refreshHeld(); // the backing draft (if any) was just retired — refresh the list
     } catch (err: unknown) {
       showToast("error", (err as Error)?.message || t("checkout.orderError") || "Failed", "Error");
     } finally {
@@ -1214,11 +1379,12 @@ export default function Checkout() {
   const kbdRef = useRef({
     cartLen: 0,
     paymentOpen: false,
+    frozen: false,
     selectRelative,
     changeSelectedQty,
     removeSelected,
     handleComplete,
-    handleHold,
+    newSale,
     openCustomer,
     openDiscount,
     openPayment,
@@ -1228,11 +1394,12 @@ export default function Checkout() {
   kbdRef.current = {
     cartLen: cart.length,
     paymentOpen: showPayment,
+    frozen: stockTakeActive,
     selectRelative,
     changeSelectedQty,
     removeSelected,
     handleComplete,
-    handleHold,
+    newSale,
     openCustomer,
     openDiscount,
     openPayment,
@@ -1246,6 +1413,8 @@ export default function Checkout() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const k = kbdRef.current;
+      // Till frozen by a stock-take: swallow every checkout shortcut/scan.
+      if (k.frozen) return;
       const ae = document.activeElement as HTMLElement | null;
       const tag = ae?.tagName;
       const isField =
@@ -1312,7 +1481,7 @@ export default function Checkout() {
             return;
           case "o":
             e.preventDefault();
-            k.handleHold();
+            k.newSale();
             return;
         }
       }
@@ -1492,7 +1661,29 @@ export default function Checkout() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="relative space-y-5">
+      {/* Stock-take freeze: a scoped overlay locks the whole till (the sidebar
+          stays usable so the cashier can go finish the count). The backend is the
+          real guard; this is the up-front warning + interaction block. */}
+      {stockTakeActive && (
+        <div className="pointer-events-auto absolute inset-0 z-40 flex items-start justify-center overflow-hidden rounded-2xl bg-white/85 p-6 dark:bg-gray-900/85">
+          <div className="mt-10 w-full max-w-md rounded-2xl border border-warning-300 bg-warning-50 p-6 text-center shadow-theme-lg dark:border-warning-500/40 dark:bg-warning-500/10">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-warning-100 text-warning-600 dark:bg-warning-500/20 dark:text-warning-400">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-warning-700 dark:text-warning-400">
+              {t("checkout.stockTakeFrozenTitle") || "Inventarizatsiya ketmoqda"}
+            </h3>
+            <p className="mt-1 text-sm text-warning-700/80 dark:text-warning-400/80">
+              {t("checkout.stockTakeFrozenBody") ||
+                "A stock-take is in progress. Sales are frozen until it is completed."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Top toolbar: one search box (scan + search) + held sales ───────── */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <form onSubmit={handleSearchSubmit} className="relative flex-1">
@@ -1514,6 +1705,7 @@ export default function Checkout() {
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
             autoComplete="off"
+            disabled={stockTakeActive}
             placeholder={t("checkout.searchAddPlaceholder") || "Search by name, barcode or SKU"}
             className="h-14 w-full rounded-xl border border-gray-300 bg-white pl-12 pr-4 text-base text-gray-800 placeholder:text-gray-400 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden sm:pr-28 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
           />
@@ -1588,7 +1780,7 @@ export default function Checkout() {
             <circle cx="12" cy="12" r="8.5" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5V12l3 2" />
           </svg>
-          {t("checkout.held") || "Held"}
+          {t("checkout.held") || "Drafts"}
           {heldOrders.length > 0 && (
             <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1 text-xs font-semibold text-white">
               {heldOrders.length}
@@ -1746,7 +1938,7 @@ export default function Checkout() {
                   {itemCount} {t("checkout.pieces")}
                 </span>
               )}
-              {resumedHoldId && (
+              {resumedFrom && (
                 <span className="rounded-full bg-warning-50 px-2.5 py-0.5 text-xs font-semibold text-warning-600 dark:bg-warning-500/10 dark:text-warning-400">
                   {t("checkout.resumedBadge") || "Resumed"}
                 </span>
@@ -2346,21 +2538,21 @@ export default function Checkout() {
               </span>
             </button>
 
-            {/* Park the sale for later (BiLLZ "Kechiktirish", hotkey O). */}
+            {/* Start a fresh sale — the current cart stays auto-saved as a draft
+                in "Qoralamalar" (hotkey O). Replaces the old manual hold. */}
             <button
               type="button"
-              onClick={handleHold}
+              onClick={newSale}
               disabled={cart.length === 0 || isHolding || isSubmitting}
               className="mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03]"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <circle cx="12" cy="12" r="8.5" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5V12l3 2" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
               </svg>
               <span>
                 {isHolding
                   ? t("checkout.holding") || "..."
-                  : t("checkout.hold") || "Hold"}
+                  : t("checkout.newSale") || "New sale"}
               </span>
             </button>
           </div>
