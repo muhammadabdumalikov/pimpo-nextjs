@@ -5,9 +5,9 @@ import { Metadata } from "next";
 import React from "react";
 
 export const metadata: Metadata = {
-  title: "Next.js Badge | Pimpo - Next.js Dashboard Template",
+  title: "Next.js Badge | KPOS - Next.js Dashboard Template",
   description:
-    "This is Next.js Badge page for Pimpo - Next.js Tailwind CSS Admin Dashboard Template",
+    "This is Next.js Badge page for KPOS - Next.js Tailwind CSS Admin Dashboard Template",
   // other metadata
 };
 

@@ -5,11 +5,12 @@ import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
 import RecentProducts from "@/components/ecommerce/RecentProducts";
 
 export const metadata: Metadata = {
-  title: "Boshqaruv paneli | KPOS",
-  description: "KPOS POS boshqaruv paneli — sotuv, nasiya va inventar bir joyda.",
+  title:
+    "Next.js Product Dashboard | KPOS - Next.js Dashboard Template",
+  description: "This is Next.js Product Dashboard for KPOS Dashboard Template",
 };
 
-export default function Dashboard() {
+export default function Ecommerce() {
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
       <div className="col-span-12">

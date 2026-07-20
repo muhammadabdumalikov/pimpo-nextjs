@@ -3,7 +3,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Roles | Pimpo",
+  title: "Roles | KPOS",
   description: "Manage roles and which sidebar menus each role can see",
 };
 

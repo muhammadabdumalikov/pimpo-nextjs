@@ -4,7 +4,7 @@ import { Metadata } from "next";
 import React from "react";
 
 export const metadata: Metadata = {
-  title: "Upgrade Plan | Pimpo - Next.js Dashboard Template",
+  title: "Upgrade Plan | KPOS - Next.js Dashboard Template",
   description: "Upgrade your subscription plan to unlock more features",
 };
 

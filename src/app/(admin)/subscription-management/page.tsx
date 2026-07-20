@@ -3,7 +3,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Subscription Management | Pimpo - Next.js Dashboard Template",
+  title: "Subscription Management | KPOS - Next.js Dashboard Template",
   description: "Manage menu permissions for subscription tiers",
 };
 

@@ -4,9 +4,9 @@ import { Metadata } from "next";
 import React from "react";
 
 export const metadata: Metadata = {
-  title: "Next.js Products | Pimpo - Next.js Dashboard Template",
+  title: "Next.js Products | KPOS - Next.js Dashboard Template",
   description:
-    "This is Next.js Products page for Pimpo Tailwind CSS Admin Dashboard Template",
+    "This is Next.js Products page for KPOS Tailwind CSS Admin Dashboard Template",
 };
 
 export default function Products() {

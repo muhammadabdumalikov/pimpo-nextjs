@@ -4,7 +4,7 @@ import { Metadata } from "next";
 import React from "react";
 
 export const metadata: Metadata = {
-  title: "Suppliers | Pimpo",
+  title: "Suppliers | KPOS",
   description: "Manage suppliers for goods receipts",
 };
 
