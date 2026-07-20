@@ -1,8 +1,12 @@
 "use client";
 
-import { Fragment } from "react";
+import { useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
-import { CheckIcon } from "./icons";
+import { CheckIcon, ChevronIcon } from "./icons";
+
+// Shared column template: the header and every feature row use it so the
+// columns stay aligned even though each group is its own collapsible block.
+const COLS = "grid grid-cols-[minmax(200px,1.7fr)_repeat(3,minmax(96px,1fr))]";
 
 // Detailed feature matrix (BILLZ-style). Each cell is one of:
 //   true  → ✓ · false → — · numeric/literal string → shown as-is
@@ -80,6 +84,14 @@ const GROUPS: { key: string; rows: Row[] }[] = [
 
 export default function PricingCompare() {
   const { t } = useTranslations();
+  // Groups fold independently (FAQ-style) so the matrix stays scannable.
+  // "core" starts open as the entry point.
+  const [openGroups, setOpenGroups] = useState<string[]>(["core"]);
+
+  const toggle = (key: string) =>
+    setOpenGroups((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
 
   const renderCell = (value: Cell) => {
     if (value === true) {
@@ -107,58 +119,83 @@ export default function PricingCompare() {
       </h3>
 
       <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-800">
-        <table className="w-full min-w-[640px] border-collapse text-left">
-          <thead>
-            <tr className="border-b border-gray-200 bg-gray-50/60 dark:border-gray-800 dark:bg-white/[0.03]">
-              <th className="px-5 py-4 text-sm font-semibold text-gray-700 dark:text-gray-200">
-                {t("landing.compare.feature")}
-              </th>
-              <th className="px-5 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
-                {t("landing.pricing.basic.name")}
-              </th>
-              <th className="bg-brand-50/60 px-5 py-4 text-center text-sm font-semibold text-brand-700 dark:bg-brand-500/[0.06] dark:text-brand-300">
-                <div className="flex flex-col items-center gap-1.5">
-                  <span>{t("landing.pricing.pro.name")}</span>
-                  <span className="rounded-full bg-brand-500 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                    {t("landing.pricing.popular")}
-                  </span>
-                </div>
-              </th>
-              <th className="px-5 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
-                {t("landing.pricing.proplus.name")}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {GROUPS.map((group) => (
-              <Fragment key={group.key}>
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="bg-brand-50 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-brand-700 dark:bg-brand-500/10 dark:text-brand-300"
-                  >
+        <div className="min-w-[640px]">
+          {/* Column header — shared by every group below */}
+          <div
+            className={`${COLS} border-b border-gray-200 bg-gray-50/60 dark:border-gray-800 dark:bg-white/[0.03]`}
+          >
+            <div className="px-5 py-4 text-sm font-semibold text-gray-700 dark:text-gray-200">
+              {t("landing.compare.feature")}
+            </div>
+            <div className="px-5 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
+              {t("landing.pricing.basic.name")}
+            </div>
+            <div className="flex flex-col items-center gap-1.5 bg-brand-50/60 px-5 py-4 text-sm font-semibold text-brand-700 dark:bg-brand-500/[0.06] dark:text-brand-300">
+              <span>{t("landing.pricing.pro.name")}</span>
+              <span className="rounded-full bg-brand-500 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                {t("landing.pricing.popular")}
+              </span>
+            </div>
+            <div className="px-5 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
+              {t("landing.pricing.proplus.name")}
+            </div>
+          </div>
+
+          {GROUPS.map((group) => {
+            const isOpen = openGroups.includes(group.key);
+            return (
+              <div key={group.key}>
+                <button
+                  type="button"
+                  onClick={() => toggle(group.key)}
+                  aria-expanded={isOpen}
+                  aria-controls={`compare-group-${group.key}`}
+                  className="flex w-full items-center gap-2 bg-brand-50 px-5 py-3 text-left transition-colors hover:bg-brand-100/70 dark:bg-brand-500/10 dark:hover:bg-brand-500/[0.16]"
+                >
+                  {/* Closed points right, open points down — chevron sits next
+                      to the label so the two read as one control. */}
+                  <ChevronIcon
+                    className={`h-4 w-4 flex-none text-brand-600 transition-transform dark:text-brand-300 ${
+                      isOpen ? "" : "-rotate-90"
+                    }`}
+                  />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
                     {t(`landing.compare.groups.${group.key}`)}
-                  </td>
-                </tr>
-                {group.rows.map((row) => (
-                  <tr
-                    key={`${group.key}.${row.key}`}
-                    className="border-t border-gray-100 dark:border-gray-800/70"
-                  >
-                    <td className="px-5 py-3 text-sm text-gray-700 dark:text-gray-300">
-                      {t(`landing.compare.rows.${row.key}`)}
-                    </td>
-                    <td className="px-5 py-3 text-center">{renderCell(row.basic)}</td>
-                    <td className="bg-brand-50/40 px-5 py-3 text-center dark:bg-brand-500/[0.04]">
-                      {renderCell(row.pro)}
-                    </td>
-                    <td className="px-5 py-3 text-center">{renderCell(row.proplus)}</td>
-                  </tr>
-                ))}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
+                  </span>
+                </button>
+
+                <div
+                  id={`compare-group-${group.key}`}
+                  className={`grid transition-all duration-300 ease-out ${
+                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    {group.rows.map((row) => (
+                      <div
+                        key={`${group.key}.${row.key}`}
+                        className={`${COLS} border-t border-gray-100 dark:border-gray-800/70`}
+                      >
+                        <div className="px-5 py-3 text-sm text-gray-700 dark:text-gray-300">
+                          {t(`landing.compare.rows.${row.key}`)}
+                        </div>
+                        <div className="px-5 py-3 text-center">
+                          {renderCell(row.basic)}
+                        </div>
+                        <div className="bg-brand-50/40 px-5 py-3 text-center dark:bg-brand-500/[0.04]">
+                          {renderCell(row.pro)}
+                        </div>
+                        <div className="px-5 py-3 text-center">
+                          {renderCell(row.proplus)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
