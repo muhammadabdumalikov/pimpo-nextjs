@@ -96,7 +96,11 @@
     "RECEIPT_FROZEN_STOCK_TAKE": "Inventarizatsiya ketmoqda. U tugaguncha kirim (qabul) to'xtatilgan.",
     "STOCK_TAKE_NOT_IN_PROGRESS": "Faqat davom etayotgan inventarizatsiyani bekor qilish mumkin.",
     "WRITE_OFF_EMPTY": "Hisobdan chiqarishda kamida bitta mahsulot bo'lishi kerak.",
-    "WRITE_OFF_EXCEEDS_STOCK": "\"{name}\" dan {qty} ta chiqarib bo'lmaydi; omborda faqat {available} ta bor."
+    "WRITE_OFF_EXCEEDS_STOCK": "\"{name}\" dan {qty} ta chiqarib bo'lmaydi; omborda faqat {available} ta bor.",
+    "TRANSFER_EMPTY": "Ko'chirishda kamida bitta mahsulot bo'lishi kerak.",
+    "TRANSFER_SAME_BRANCH": "Manba va qabul qiluvchi do'kon bir xil bo'lmasligi kerak.",
+    "TRANSFER_EXCEEDS_STOCK": "\"{name}\" dan {qty} ta ko'chirib bo'lmaydi; manba do'konda faqat {available} ta bor.",
+    "TRANSFER_NOT_FOUND": "Ko'chirish topilmadi."
   },
   "landing": {
     "nav": {
@@ -807,6 +811,7 @@
     "kassaOperations": "Kassa operatsiyalari",
     "allSales": "Barcha sotuvlar",
     "stockTakes": "Inventarizatsiya",
+    "stockTransfers": "Filiallararo ko'chirish",
     "finance": "Moliya",
     "financeCategories": "Moliyaviy toifalar",
     "financeTransactions": "Tranzaksiyalar",
@@ -879,6 +884,32 @@
     "store": "Do'kon",
     "selectStore": "Do'konni tanlang",
     "storeRequired": "Do'kon tanlanishi shart"
+  },
+  "transfers": {
+    "title": "Filiallararo ko'chirish",
+    "new": "Yangi ko'chirish",
+    "from": "Qayerdan",
+    "to": "Qayerga",
+    "selectFrom": "Manba do'kon",
+    "selectTo": "Qabul qiluvchi do'kon",
+    "selectFromFirst": "Avval manba do'konni tanlang",
+    "product": "Mahsulot",
+    "searchProduct": "Mahsulot qidirish",
+    "qty": "Miqdor",
+    "available": "Mavjud",
+    "cancel": "Bekor qilish",
+    "confirm": "Ko'chirish",
+    "empty": "Hozircha ko'chirish yo'q",
+    "noLines": "Mahsulot qo'shilmagan",
+    "done": "Ko'chirildi",
+    "sameBranch": "Manba va qabul qiluvchi do'kon bir xil bo'lmasligi kerak",
+    "needTwoBranches": "Ko'chirish uchun kamida ikkita do'kon kerak",
+    "route": "Yo'nalish",
+    "itemCount": "Mahsulotlar",
+    "totalQty": "Jami miqdor",
+    "totalValue": "Jami qiymat",
+    "detailTitle": "Ko'chirish tafsilotlari",
+    "lineValue": "Qiymat"
   },
   "inventory": {
     "costingTitle": "Tannarx hisobi",
@@ -968,7 +999,8 @@
     "lowStock": "Kam qoldi",
     "outOfStock": "Tugagan",
     "stock": "Qoldiq",
-    "noItems": "Mahsulotlar topilmadi"
+    "noItems": "Mahsulotlar topilmadi",
+    "allBranches": "Barcha do'konlar"
   },
   "productPerformance": {
     "title": "Mahsulotlar samaradorligi",
@@ -1534,7 +1566,9 @@
     "registerContains": "Sizning kassangizda mavjud:",
     "enterAmount": "Summani kiriting",
     "enterNote": "Izoh kiriting",
-    "openRegister": "Kassani ochish"
+    "openRegister": "Kassani ochish",
+    "branch": "Do'kon",
+    "selectBranch": "Do'konni tanlang"
   },
   "sales": {
     "title": "Barcha sotuvlar",

@@ -295,6 +295,9 @@ export default function Checkout() {
   // mirror lets the global key handler and auto-saver read it without re-binding.
   const [stockTakeActive, setStockTakeActive] = useState(false);
   const frozenRef = useRef(false);
+  // Branch the open shift's register sells from — the till shows/deducts this
+  // store's stock. A ref so the product searches read it without re-subscribing.
+  const activeBranchRef = useRef<string | null>(null);
   // In-flight guards so overlapping calls (React StrictMode's dev double-invoke,
   // rapid visibility events) collapse to a single request.
   const shiftInFlightRef = useRef(false);
@@ -357,6 +360,7 @@ export default function Checkout() {
     try {
       const res = await getOpenShifts();
       setActiveShift(res.shifts[0] ?? null);
+      activeBranchRef.current = res.shifts[0]?.branchId ?? null;
       frozenRef.current = res.stockTakeActive;
       setStockTakeActive(res.stockTakeActive);
     } catch {
@@ -744,7 +748,12 @@ export default function Checkout() {
       const term = raw.trim();
       if (!term) return;
       try {
-        const res = await getProducts(1, 5, term);
+        const res = await getProducts(
+          1,
+          5,
+          term,
+          activeBranchRef.current ?? undefined,
+        );
         const lc = term.toLowerCase();
         const product = res.products.find(
           (p) =>
@@ -791,7 +800,12 @@ export default function Checkout() {
     setSearchLoading(true);
     searchDebounceRef.current = setTimeout(async () => {
       try {
-        const res = await getProducts(1, 10, term);
+        const res = await getProducts(
+          1,
+          10,
+          term,
+          activeBranchRef.current ?? undefined,
+        );
         const lc = term.toLowerCase();
         const exact = res.products.find(
           (p) =>

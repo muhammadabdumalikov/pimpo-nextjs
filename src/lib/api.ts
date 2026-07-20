@@ -385,7 +385,7 @@ export interface ProductsResponse {
   limit: number;
 }
 
-export async function getProducts(page?: number, limit?: number, search?: string): Promise<ProductsResponse> {
+export async function getProducts(page?: number, limit?: number, search?: string, branchId?: string): Promise<ProductsResponse> {
   const token = getAuthToken();
   if (!token) {
     throw new Error('Not authenticated');
@@ -395,6 +395,7 @@ export async function getProducts(page?: number, limit?: number, search?: string
   if (page) params.append('page', page.toString());
   if (limit) params.append('limit', limit.toString());
   if (search) params.append('search', search);
+  if (branchId) params.append('branchId', branchId);
 
   const response = await fetch(`${API_BASE_URL}/products?${params.toString()}`, {
     method: 'GET',
@@ -2242,6 +2243,8 @@ export interface CashRegister {
   businessId: string;
   name: string;
   storeId: string | null;
+  /** Branch ("do'kon") this register sells from. */
+  branchId: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -2272,6 +2275,8 @@ export interface Shift {
   businessId: string;
   registerId: string;
   registerName: string | null;
+  /** Branch the shift's register sells from (from /shifts/open). */
+  branchId?: string | null;
   status: 'open' | 'closed';
   openingFloat: string;
   usdRate: string | null;
@@ -2348,7 +2353,7 @@ export async function getRegisters(): Promise<CashRegister[]> {
   return response.json();
 }
 
-export async function createRegister(data: { name: string; storeId?: string }): Promise<CashRegister> {
+export async function createRegister(data: { name: string; storeId?: string; branchId?: string }): Promise<CashRegister> {
   const response = await fetch(`${API_BASE_URL}/registers`, {
     method: 'POST',
     headers: authHeaders(),
@@ -2360,7 +2365,7 @@ export async function createRegister(data: { name: string; storeId?: string }): 
 
 export async function updateRegister(
   id: string,
-  data: { name?: string; isActive?: boolean },
+  data: { name?: string; isActive?: boolean; branchId?: string },
 ): Promise<CashRegister> {
   const response = await fetch(`${API_BASE_URL}/registers/${id}`, {
     method: 'PATCH',
@@ -2882,6 +2887,89 @@ export async function createWriteOff(
   });
   if (!response.ok) await parseError(response, 'Failed to record write-off');
   return (await response.json()).stockTake;
+}
+
+// ─── Stock transfers (Filiallararo ko'chirish) ──────────────────────────────
+export interface StockTransfer {
+  id: string;
+  businessId: string;
+  fromBranchId: string;
+  fromBranchName: string | null;
+  toBranchId: string;
+  toBranchName: string | null;
+  status: 'completed';
+  itemCount: number;
+  // Decimals are returned as strings.
+  totalQty: string;
+  totalValue: string;
+  createdByCashierId: string | null;
+  createdByCashierName: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface StockTransferItem {
+  id: string;
+  transferId: string;
+  businessId: string;
+  productId: string | null;
+  productName: string;
+  quantity: number;
+  unitCost: string | null;
+  lineTotal: string;
+  createdAt: string;
+}
+
+export interface StockTransfersResponse {
+  items: StockTransfer[];
+  total: number;
+}
+
+export interface CreateStockTransferDto {
+  fromBranchId: string;
+  toBranchId: string;
+  items: { productId: string; quantity: number }[];
+  note?: string;
+}
+
+export async function getStockTransfers(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<StockTransfersResponse> {
+  const qs = new URLSearchParams();
+  if (params?.page) qs.set('page', String(params.page));
+  if (params?.limit) qs.set('limit', String(params.limit));
+  const response = await fetch(`${API_BASE_URL}/stock-transfers?${qs}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch transfers');
+  return response.json();
+}
+
+export async function getStockTransfer(
+  id: string,
+): Promise<StockTransfer & { items: StockTransferItem[] }> {
+  const response = await fetch(`${API_BASE_URL}/stock-transfers/${id}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch transfer');
+  return response.json();
+}
+
+// Move stock (and its FIFO batches) from one branch to another. The total
+// on-hand is unchanged — it only shifts between branches.
+export async function createStockTransfer(
+  data: CreateStockTransferDto,
+): Promise<StockTransfer & { items: StockTransferItem[] }> {
+  const response = await fetch(`${API_BASE_URL}/stock-transfers`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to record transfer');
+  return (await response.json()).transfer;
 }
 
 // ─── Reports (Hisobotlar) ───────────────────────────────────────────────────

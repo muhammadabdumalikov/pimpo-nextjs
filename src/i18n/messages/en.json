@@ -96,7 +96,11 @@
     "RECEIPT_FROZEN_STOCK_TAKE": "A stock-take is in progress. Goods receipts are frozen until it is completed.",
     "STOCK_TAKE_NOT_IN_PROGRESS": "Only an in-progress stock-take can be cancelled.",
     "WRITE_OFF_EMPTY": "A write-off must contain at least one item.",
-    "WRITE_OFF_EXCEEDS_STOCK": "Cannot write off {qty} of \"{name}\"; only {available} in stock."
+    "WRITE_OFF_EXCEEDS_STOCK": "Cannot write off {qty} of \"{name}\"; only {available} in stock.",
+    "TRANSFER_EMPTY": "A transfer must contain at least one item.",
+    "TRANSFER_SAME_BRANCH": "Source and destination store must differ.",
+    "TRANSFER_EXCEEDS_STOCK": "Cannot transfer {qty} of \"{name}\"; only {available} in the source store.",
+    "TRANSFER_NOT_FOUND": "Transfer not found."
   },
   "landing": {
     "nav": {
@@ -806,6 +810,7 @@
     "kassaOperations": "Cash operations",
     "allSales": "All sales",
     "stockTakes": "Stock-takes",
+    "stockTransfers": "Branch transfers",
     "finance": "Finance",
     "financeCategories": "Finance categories",
     "financeTransactions": "Transactions",
@@ -878,6 +883,32 @@
     "store": "Store",
     "selectStore": "Select a store",
     "storeRequired": "A store must be selected"
+  },
+  "transfers": {
+    "title": "Branch transfers",
+    "new": "New transfer",
+    "from": "From",
+    "to": "To",
+    "selectFrom": "Source store",
+    "selectTo": "Destination store",
+    "selectFromFirst": "Select the source store first",
+    "product": "Product",
+    "searchProduct": "Search product",
+    "qty": "Quantity",
+    "available": "Available",
+    "cancel": "Cancel",
+    "confirm": "Transfer",
+    "empty": "No transfers yet",
+    "noLines": "No products added",
+    "done": "Transferred",
+    "sameBranch": "Source and destination store must differ",
+    "needTwoBranches": "At least two stores are needed for a transfer",
+    "route": "Route",
+    "itemCount": "Items",
+    "totalQty": "Total quantity",
+    "totalValue": "Total value",
+    "detailTitle": "Transfer details",
+    "lineValue": "Value"
   },
   "inventory": {
     "costingTitle": "Cost accounting",
@@ -967,7 +998,8 @@
     "lowStock": "Low stock",
     "outOfStock": "Out of stock",
     "stock": "Stock",
-    "noItems": "No products found"
+    "noItems": "No products found",
+    "allBranches": "All stores"
   },
   "productPerformance": {
     "title": "Product Performance",
@@ -1496,7 +1528,9 @@
     "registerContains": "Currently in your register:",
     "enterAmount": "Enter the amount",
     "enterNote": "Enter a note",
-    "openRegister": "Open the register"
+    "openRegister": "Open the register",
+    "branch": "Store",
+    "selectBranch": "Select a store"
   },
   "sales": {
     "title": "All sales",

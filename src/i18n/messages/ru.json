@@ -96,7 +96,11 @@
     "RECEIPT_FROZEN_STOCK_TAKE": "Идёт инвентаризация. Приход товаров заморожен до её завершения.",
     "STOCK_TAKE_NOT_IN_PROGRESS": "Отменить можно только активную инвентаризацию.",
     "WRITE_OFF_EMPTY": "В списании должен быть хотя бы один товар.",
-    "WRITE_OFF_EXCEEDS_STOCK": "Нельзя списать {qty} шт. \"{name}\"; на складе только {available} шт."
+    "WRITE_OFF_EXCEEDS_STOCK": "Нельзя списать {qty} шт. \"{name}\"; на складе только {available} шт.",
+    "TRANSFER_EMPTY": "В перемещении должен быть хотя бы один товар.",
+    "TRANSFER_SAME_BRANCH": "Магазин-источник и магазин-получатель должны различаться.",
+    "TRANSFER_EXCEEDS_STOCK": "Нельзя переместить {qty} шт. \"{name}\"; в магазине-источнике только {available} шт.",
+    "TRANSFER_NOT_FOUND": "Перемещение не найдено."
   },
   "landing": {
     "nav": {
@@ -807,6 +811,7 @@
     "kassaOperations": "Кассовые операции",
     "allSales": "Все продажи",
     "stockTakes": "Инвентаризация",
+    "stockTransfers": "Перемещение между магазинами",
     "finance": "Финансы",
     "financeCategories": "Финансовые категории",
     "financeTransactions": "Транзакции",
@@ -879,6 +884,32 @@
     "store": "Магазин",
     "selectStore": "Выберите магазин",
     "storeRequired": "Необходимо выбрать магазин"
+  },
+  "transfers": {
+    "title": "Перемещение между магазинами",
+    "new": "Новое перемещение",
+    "from": "Откуда",
+    "to": "Куда",
+    "selectFrom": "Магазин-источник",
+    "selectTo": "Магазин-получатель",
+    "selectFromFirst": "Сначала выберите магазин-источник",
+    "product": "Товар",
+    "searchProduct": "Поиск товара",
+    "qty": "Количество",
+    "available": "Доступно",
+    "cancel": "Отмена",
+    "confirm": "Переместить",
+    "empty": "Пока нет перемещений",
+    "noLines": "Товары не добавлены",
+    "done": "Перемещено",
+    "sameBranch": "Магазин-источник и магазин-получатель должны различаться",
+    "needTwoBranches": "Для перемещения нужно минимум два магазина",
+    "route": "Направление",
+    "itemCount": "Товары",
+    "totalQty": "Всего количество",
+    "totalValue": "Всего стоимость",
+    "detailTitle": "Детали перемещения",
+    "lineValue": "Стоимость"
   },
   "inventory": {
     "costingTitle": "Учёт себестоимости",
@@ -968,7 +999,8 @@
     "lowStock": "Мало",
     "outOfStock": "Нет в наличии",
     "stock": "Остаток",
-    "noItems": "Товары не найдены"
+    "noItems": "Товары не найдены",
+    "allBranches": "Все магазины"
   },
   "productPerformance": {
     "title": "Производительность товаров",
@@ -1534,7 +1566,9 @@
     "registerContains": "В вашей кассе сейчас:",
     "enterAmount": "Введите сумму",
     "enterNote": "Введите комментарий",
-    "openRegister": "Открыть кассу"
+    "openRegister": "Открыть кассу",
+    "branch": "Магазин",
+    "selectBranch": "Выберите магазин"
   },
   "sales": {
     "title": "Все продажи",

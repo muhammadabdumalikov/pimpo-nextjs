@@ -422,6 +422,7 @@
     "kassaOperations": "Касса операциялари",
     "allSales": "Барча сотувлар",
     "stockTakes": "Инвентаризация",
+    "stockTransfers": "Филиаллараро кўчириш",
     "finance": "Молия",
     "financeCategories": "Молиявий тоифалар",
     "financeTransactions": "Транзаксиялар",
@@ -494,6 +495,32 @@
     "store": "Дўкон",
     "selectStore": "Дўконни танланг",
     "storeRequired": "Дўкон танланиши шарт"
+  },
+  "transfers": {
+    "title": "Филиаллараро кўчириш",
+    "new": "Янги кўчириш",
+    "from": "Қаердан",
+    "to": "Қаерга",
+    "selectFrom": "Манба дўкон",
+    "selectTo": "Қабул қилувчи дўкон",
+    "selectFromFirst": "Аввал манба дўконни танланг",
+    "product": "Маҳсулот",
+    "searchProduct": "Маҳсулот қидириш",
+    "qty": "Миқдор",
+    "available": "Мавжуд",
+    "cancel": "Бекор қилиш",
+    "confirm": "Кўчириш",
+    "empty": "Ҳозирча кўчириш йўқ",
+    "noLines": "Маҳсулот қўшилмаган",
+    "done": "Кўчирилди",
+    "sameBranch": "Манба ва қабул қилувчи дўкон бир хил бўлмаслиги керак",
+    "needTwoBranches": "Кўчириш учун камида иккита дўкон керак",
+    "route": "Йўналиш",
+    "itemCount": "Маҳсулотлар",
+    "totalQty": "Жами миқдор",
+    "totalValue": "Жами қиймат",
+    "detailTitle": "Кўчириш тафсилотлари",
+    "lineValue": "Қиймат"
   },
   "inventory": {
     "costingTitle": "Таннарх ҳисоби",
@@ -583,7 +610,8 @@
     "lowStock": "Кам қолди",
     "outOfStock": "Тугаган",
     "stock": "Қолдиқ",
-    "noItems": "Маҳсулотлар топилмади"
+    "noItems": "Маҳсулотлар топилмади",
+    "allBranches": "Барча дўконлар"
   },
   "productPerformance": {
     "title": "Маҳсулотлар самарадорлиги",
@@ -1124,7 +1152,9 @@
     "registerContains": "Sizning kassangizda mavjud:",
     "enterAmount": "Summani kiriting",
     "enterNote": "Izoh kiriting",
-    "openRegister": "Kassani ochish"
+    "openRegister": "Kassani ochish",
+    "branch": "Дўкон",
+    "selectBranch": "Дўконни танланг"
   },
   "sales": {
     "title": "Барча сотувлар",

@@ -113,6 +113,8 @@ const routeMenuMap: Record<string, string> = {
   // Stock-takes is merged into the Inventory (Ombor) page; the detail/count
   // screen at /stock-takes/:id inherits the 'inventory' permission.
   '/stock-takes': 'inventory',
+  // Branch-to-branch transfers live under the same Inventory permission.
+  '/stock-transfers': 'inventory',
   '/product-performance': 'productPerformance',
   // Reports hub + all nested report routes (/reports/pnl, /reports/stock, …)
   // inherit the 'reports' menu id via longest-prefix matching.

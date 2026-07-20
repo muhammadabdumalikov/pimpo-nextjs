@@ -13,7 +13,13 @@ import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import Badge from "../ui/badge/Badge";
 import Pagination from "../ui/pagination/Pagination";
-import { getProducts, type Product } from "@/lib/api";
+import SelectField from "@/components/form/SelectField";
+import {
+  getProducts,
+  getBranches,
+  type Product,
+  type Branch,
+} from "@/lib/api";
 
 const LOW_STOCK_THRESHOLD = 10;
 const ITEMS_PER_PAGE = 10;
@@ -37,6 +43,16 @@ export default function InventoryManagement() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  // "" = all branches (shows the cross-branch total); a branch id shows that
+  // store's own stock.
+  const [branchId, setBranchId] = useState("");
+
+  useEffect(() => {
+    getBranches()
+      .then((res) => setBranches(res.branches))
+      .catch(() => setBranches([]));
+  }, []);
 
   // Debounce the search box, and reset to the first page when the query changes.
   useEffect(() => {
@@ -47,7 +63,8 @@ export default function InventoryManagement() {
     return () => clearTimeout(id);
   }, [searchQuery]);
 
-  // Fetch the current page from the backend (server filters by name/code/barcode).
+  // Fetch the current page from the backend (server filters by name/code/barcode
+  // and, when a branch is picked, reports that branch's stock as `quantity`).
   useEffect(() => {
     let active = true;
     (async () => {
@@ -57,6 +74,7 @@ export default function InventoryManagement() {
           currentPage,
           ITEMS_PER_PAGE,
           debouncedSearch || undefined,
+          branchId || undefined,
         );
         if (active) {
           setProducts(res.products);
@@ -72,7 +90,7 @@ export default function InventoryManagement() {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearch]);
+  }, [currentPage, debouncedSearch, branchId]);
 
   // Stock-status counts for the current page (Total reflects all matching rows).
   const stats = useMemo(() => {
@@ -93,10 +111,16 @@ export default function InventoryManagement() {
   const paginated = products;
 
   const handleExport = async () => {
-    // Export every matching row, not just the current page.
+    // Export every matching row, not just the current page. Respect the branch
+    // filter so the quantities match what's on screen (that branch's on-hand).
     setIsExporting(true);
     try {
-      const res = await getProducts(1, Math.max(total, 1), debouncedSearch || undefined);
+      const res = await getProducts(
+        1,
+        Math.max(total, 1),
+        debouncedSearch || undefined,
+        branchId || undefined,
+      );
       const header = ["Name", "Code", "Barcode", "Quantity"];
       const rows = res.products.map((p) => [
         p.name,
@@ -171,15 +195,33 @@ export default function InventoryManagement() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="mb-4 max-w-md">
-        <input
-          type="text"
-          placeholder={t("inventory.search")}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-        />
+      {/* Search + per-branch filter */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="max-w-md flex-1">
+          <input
+            type="text"
+            placeholder={t("inventory.search")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+          />
+        </div>
+        {branches.length > 1 && (
+          <div className="w-full sm:w-56">
+            <SelectField
+              value={branchId}
+              onChange={(v) => {
+                setBranchId(v);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: "", label: t("inventory.allBranches") || "Barcha do'konlar" },
+                ...branches.map((b) => ({ value: b.id, label: b.name })),
+              ]}
+              placeholder={t("inventory.allBranches") || "Barcha do'konlar"}
+            />
+          </div>
+        )}
       </div>
 
       {/* Table */}

@@ -50,6 +50,7 @@ const MENU_ENTRIES: NavEntry[] = [
   { id: "add-product", path: "/add-product", nameKey: "sidebar.addProduct", groupKey: "sidebar.ecommerceMenu", icon: LuPackagePlus },
   { id: "inventory", path: "/inventory", nameKey: "inventory.title", groupKey: "sidebar.ecommerceMenu", icon: LuWarehouse },
   { id: "stock-takes", path: "/stock-takes", nameKey: "sidebar.stockTakes", groupKey: "sidebar.ecommerceMenu", icon: LuClipboardList },
+  { id: "stock-transfers", path: "/stock-transfers", nameKey: "sidebar.stockTransfers", groupKey: "sidebar.ecommerceMenu", icon: LuArrowRightLeft },
 
   // Sales
   { id: "cart", path: "/cart", nameKey: "sidebar.checkout", groupKey: "sidebar.sales", icon: LuShoppingCart },

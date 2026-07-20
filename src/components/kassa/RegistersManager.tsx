@@ -4,6 +4,7 @@ import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
+import SelectField from "@/components/form/SelectField";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import { PlusIcon, PencilIcon } from "@/icons/index";
@@ -11,7 +12,9 @@ import {
   getRegisters,
   createRegister,
   updateRegister,
+  getBranches,
   type CashRegister,
+  type Branch,
 } from "@/lib/api";
 
 const CARD =
@@ -26,6 +29,8 @@ export default function RegistersManager() {
   const [editing, setEditing] = useState<CashRegister | null>(null);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branchId, setBranchId] = useState("");
 
   const load = async () => {
     try {
@@ -40,17 +45,24 @@ export default function RegistersManager() {
 
   useEffect(() => {
     load();
+    getBranches()
+      .then((res) => setBranches(res.branches))
+      .catch(() => setBranches([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const defaultBranchId = (branches.find((b) => b.isDefault) ?? branches[0])?.id;
 
   const openAdd = () => {
     setEditing(null);
     setName("");
+    setBranchId(defaultBranchId ?? "");
     setModalOpen(true);
   };
   const openEdit = (r: CashRegister) => {
     setEditing(r);
     setName(r.name);
+    setBranchId(r.branchId ?? defaultBranchId ?? "");
     setModalOpen(true);
   };
 
@@ -59,10 +71,16 @@ export default function RegistersManager() {
     setSaving(true);
     try {
       if (editing) {
-        await updateRegister(editing.id, { name: name.trim() });
+        await updateRegister(editing.id, {
+          name: name.trim(),
+          branchId: branchId || undefined,
+        });
         showToast("success", t("kassa.save"), "Success");
       } else {
-        await createRegister({ name: name.trim() });
+        await createRegister({
+          name: name.trim(),
+          branchId: branchId || undefined,
+        });
         showToast("success", t("kassa.add"), "Success");
       }
       setModalOpen(false);
@@ -144,6 +162,17 @@ export default function RegistersManager() {
           <Label>{t("kassa.name")}</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
+        {branches.length > 1 && (
+          <div className="mt-4">
+            <Label>{t("kassa.branch") || "Do'kon"}</Label>
+            <SelectField
+              value={branchId}
+              onChange={setBranchId}
+              options={branches.map((b) => ({ value: b.id, label: b.name }))}
+              placeholder={t("kassa.selectBranch") || "Do'konni tanlang"}
+            />
+          </div>
+        )}
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button
             variant="outline"

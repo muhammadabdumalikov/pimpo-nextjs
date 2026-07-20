@@ -89,6 +89,7 @@ const AppSidebar: React.FC = () => {
         { name: t('sidebar.addProduct'), path: "/add-product", pro: false },
         { name: t('inventory.title'), path: "/inventory", pro: false },
         { name: t('sidebar.stockTakes'), path: "/stock-takes", pro: false },
+        { name: t('sidebar.stockTransfers'), path: "/stock-transfers", pro: false },
       ],
     },
     {
