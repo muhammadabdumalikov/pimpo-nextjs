@@ -129,8 +129,8 @@
         "label": "KPOS'ning asosiy ustunligi"
       },
       "trial": {
-        "value": "14 kun",
-        "label": "Biznes tarifni bepul sinash"
+        "value": "1 oy",
+        "label": "Standart tarifni bepul sinash"
       }
     },
     "features": {
