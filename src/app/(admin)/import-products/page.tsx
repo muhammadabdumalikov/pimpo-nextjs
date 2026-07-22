@@ -4,12 +4,13 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ImportProductsWizard from "@/components/ecommerce/ImportProductsWizard";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useTranslations } from "@/hooks/useTranslations";
+import { TIER_RANK } from "@/types/subscription";
 
 export default function ImportProductsPage() {
   const { currentTier } = useSubscription();
   const { t } = useTranslations();
-  // Bulk import is a paid-plan feature (backend enforces this too).
-  const allowed = currentTier !== "free";
+  // Bulk import is a Business (pro) and up feature (backend enforces this too).
+  const allowed = TIER_RANK[currentTier] >= TIER_RANK.pro;
 
   return (
     <div>

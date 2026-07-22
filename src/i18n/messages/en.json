@@ -26,6 +26,8 @@
     "PLATFORM_ADMIN_REQUIRED": "Platform administrator access is required.",
     "BRANCH_MAIN_DELETE_FORBIDDEN": "The main store cannot be deleted.",
     "BRANCH_NOT_FOUND": "Branch not found.",
+    "BRANCH_LIMIT_REACHED": "You've reached the branch limit ({limit}) for your plan. Upgrade for more branches.",
+    "PLAN_UPGRADE_REQUIRED": "This feature is available on a higher plan. Please upgrade your subscription.",
     "BRAND_NOT_FOUND": "Brand not found.",
     "CATEGORY_ALREADY_EXISTS": "This category already exists.",
     "CATEGORY_NOT_FOUND": "Category not found.",
@@ -53,7 +55,7 @@
     "HELD_SALE_CHECKOUT_REQUIRED": "A held sale must be completed through checkout.",
     "DEBT_SALE_CUSTOMER_IMMUTABLE": "The customer of a debt sale cannot be changed.",
     "PRODUCT_LIMIT_REACHED": "Product limit of {limit} reached for your current plan.",
-    "PRODUCT_BULK_IMPORT_PRO_ONLY": "Bulk import is not available on the free plan.",
+    "PRODUCT_BULK_IMPORT_PRO_ONLY": "Bulk import is available from the Business plan and up.",
     "PRODUCT_CODE_EXISTS": "A product with this code already exists.",
     "PRODUCT_NOT_FOUND": "Product not found.",
     "BARCODE_QUERY_REQUIRED": "A barcode is required.",
@@ -273,7 +275,8 @@
         "fromMonth2": "from month 2",
         "intro": "First 2 months",
         "then": "then",
-        "perMonth": "UZS/mo"
+        "perMonth": "UZS/mo",
+        "firstMonthFree": "First month free"
       }
     },
     "faq": {
@@ -341,6 +344,9 @@
         "suppliers": "Suppliers & receiving",
         "dashboard": "Dashboard",
         "performance": "Product performance",
+        "operationalReports": "Operational reports",
+        "extendedReports": "Extended analytics (P&L, ABC, forecasts)",
+        "multibranchReports": "Multi-branch analytics",
         "staffSales": "Sales by employee",
         "roles": "Roles & staff",
         "support": "Support",
@@ -643,7 +649,7 @@
   },
   "import": {
     "title": "Import products",
-    "freeGate": "Bulk product import is available on paid plans. Upgrade to import from Excel/CSV.",
+    "freeGate": "Bulk product import is available from the Business plan and up. Upgrade to import from Excel/CSV.",
     "step1": "Upload file",
     "step2": "Map columns",
     "step3": "Result",
@@ -1824,6 +1830,7 @@
     "cumulative": "Cumulative",
     "abcHint": "A ≈ top 80% of revenue, B ≈ next 15%, C ≈ last 5%.",
     "openReport": "Open report",
+    "upgradeToUnlock": "Upgrade to unlock",
     "allReports": "All",
     "favorites": "Favorites",
     "reportsCount": "reports",

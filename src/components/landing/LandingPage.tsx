@@ -472,39 +472,32 @@ export default function LandingPage() {
                     const freeMonth = Boolean(plan.freeFirstMonth) && !yearly;
                     return (
                       <>
+                        {/* Same layout on every card: big price + a blue promo
+                            note beside it ("Ilk oy bepul" / "Ilk 2 oy"). */}
                         <div className="mt-6 flex items-end gap-1.5">
-                          <span
-                            className={`text-4xl font-extrabold tabular-nums tracking-tight ${
-                              freeMonth
-                                ? "text-brand-600 dark:text-brand-400"
-                                : "text-gray-900 dark:text-white"
-                            }`}
-                          >
-                            {freeMonth
-                              ? t("landing.pricing.promo.free")
-                              : paid
-                                ? nf(shown)
-                                : rawPrice}
+                          <span className="text-4xl font-extrabold tabular-nums tracking-tight text-gray-900 dark:text-white">
+                            {paid ? nf(shown) : rawPrice}
                           </span>
-                          {!freeMonth && (
-                            <div className="mb-1 flex flex-col leading-tight">
-                              {introActive && (
-                                <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
-                                  {t("landing.pricing.promo.intro")}
-                                </span>
-                              )}
-                              <span className="text-sm text-gray-500 dark:text-gray-400">
-                                {t(`landing.pricing.${plan.id}.period`)}
+                          <div className="mb-1 flex flex-col leading-tight">
+                            {freeMonth && (
+                              <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
+                                {t("landing.pricing.promo.firstMonthFree")}
                               </span>
-                            </div>
-                          )}
+                            )}
+                            {introActive && (
+                              <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
+                                {t("landing.pricing.promo.intro")}
+                              </span>
+                            )}
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {t(`landing.pricing.${plan.id}.period`)}
+                            </span>
+                          </div>
                         </div>
                         {freeMonth && (
                           <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-                            <span className="font-medium text-brand-600 dark:text-brand-400">
-                              {t("landing.pricing.promo.fromMonth2")}
-                            </span>{" "}
-                            · {nf(monthly)} {t("landing.pricing.promo.perMonth")}
+                            {t("landing.pricing.promo.fromMonth2")} {nf(monthly)}{" "}
+                            {t("landing.pricing.promo.perMonth")}
                           </p>
                         )}
                         {introActive && (

@@ -68,8 +68,10 @@ const GROUPS: { key: string; rows: Row[] }[] = [
     key: "reports",
     rows: [
       { key: "dashboard", basic: true, pro: true, proplus: true },
-      { key: "performance", basic: true, pro: "extended", proplus: "extended" },
+      { key: "operationalReports", basic: true, pro: true, proplus: true },
       { key: "staffSales", basic: true, pro: true, proplus: true },
+      { key: "extendedReports", basic: false, pro: true, proplus: true },
+      { key: "multibranchReports", basic: false, pro: false, proplus: true },
     ],
   },
   {

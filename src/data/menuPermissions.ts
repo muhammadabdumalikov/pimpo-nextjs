@@ -1,57 +1,78 @@
-import { MenuPermission, SubscriptionTier } from '@/types/subscription';
+import { MenuPermission, SubscriptionTier, tiersFrom } from '@/types/subscription';
+
+// Tier plan (mirrors the backend gating — see pimpo-backend/src/subscription):
+//   • free   — internal floor (trial expired / no paid plan): core POS only,
+//              everything else prompts an upgrade.
+//   • basic  — Standart: full POS, credit, inventory, procurement, finance,
+//              team, and the operational reports.
+//   • pro    — Business: + extended analytics (P&L, ABC/assortment, dead-stock,
+//              reorder, debt-aging, traffic, transfers history, targets, digest)
+//              + bulk import + product images.
+//   • proplus— Business+: + multi-branch analytics (branch comparison, transfer
+//              suggestions) + unlimited scale.
+const FREE = tiersFrom('free');   // everyone, incl. expired floor
+const BASIC = tiersFrom('basic'); // basic, pro, proplus
+const PRO = tiersFrom('pro');     // pro, proplus
+const PROPLUS = tiersFrom('proplus'); // proplus only
 
 // Default menu permissions - can be managed from admin page
 export const defaultMenuPermissions: MenuPermission[] = [
   // Dashboard menus
-  { menuItem: 'dashboard.ecommerce', allowedTiers: ['free', 'basic', 'pro', ] },
-  
-  // E-commerce menus
-  { menuItem: 'ecommerce.categories', allowedTiers: ['free', 'basic', 'pro', ] },
-  { menuItem: 'ecommerce.products', allowedTiers: ['free', 'basic', 'pro', ] },
-  // Adding products is available on every tier (each tier just has its own
-  // product-count limit); bulk import is the pro-only capability.
-  { menuItem: 'ecommerce.addProduct', allowedTiers: ['free', 'basic', 'pro', ] },
-  { menuItem: 'checkout', allowedTiers: ['free', 'basic', 'pro',] },
-  
-  // Kassa (cash shifts) — available on every tier
-  { menuItem: 'kassa', allowedTiers: ['free', 'basic', 'pro', ] },
+  { menuItem: 'dashboard.ecommerce', allowedTiers: FREE },
 
-  // Finance (Moliya) — available on every tier
-  { menuItem: 'finance.categories', allowedTiers: ['free', 'basic', 'pro', ] },
-  { menuItem: 'finance.transactions', allowedTiers: ['free', 'basic', 'pro', ] },
-  { menuItem: 'finance.state', allowedTiers: ['free', 'basic', 'pro', ] },
+  // E-commerce menus — core POS, kept on the free floor so an expired account
+  // can still run the shop (each tier has its own product-count limit).
+  { menuItem: 'ecommerce.categories', allowedTiers: FREE },
+  { menuItem: 'ecommerce.products', allowedTiers: FREE },
+  { menuItem: 'ecommerce.addProduct', allowedTiers: FREE },
+  { menuItem: 'checkout', allowedTiers: FREE },
 
-  // User Debt
-  { menuItem: 'userDebt', allowedTiers: ['free', 'basic', 'pro', ] },
+  // Kassa (cash shifts) — core POS.
+  { menuItem: 'kassa', allowedTiers: FREE },
 
-  // Inventory & analytics
-  { menuItem: 'inventory', allowedTiers: ['free', 'basic', 'pro'] },
-  { menuItem: 'productPerformance', allowedTiers: ['free', 'basic', 'pro'] },
+  // User Debt (nasiya) — core POS; the free floor caps at 20 debts (backend).
+  { menuItem: 'userDebt', allowedTiers: FREE },
 
-  // Reports (Hisobotlar) — available on every tier
-  { menuItem: 'reports', allowedTiers: ['free', 'basic', 'pro'] },
+  // Finance (Moliya) — Standart (basic) and up.
+  { menuItem: 'finance.categories', allowedTiers: BASIC },
+  { menuItem: 'finance.transactions', allowedTiers: BASIC },
+  { menuItem: 'finance.state', allowedTiers: BASIC },
 
-  // Procurement (suppliers + goods receipts) — not on the free plan.
-  { menuItem: 'suppliers', allowedTiers: ['basic', 'pro'] },
-  { menuItem: 'receipts', allowedTiers: ['basic', 'pro'] },
+  // Inventory & analytics — Standart and up.
+  { menuItem: 'inventory', allowedTiers: BASIC },
+  { menuItem: 'productPerformance', allowedTiers: BASIC },
+
+  // Reports (Hisobotlar) — three levels:
+  //   reports            operational reports — Standart (basic) and up
+  //   reports.extended   extended analytics  — Business (pro) and up
+  //   reports.multibranch multi-branch analytics — Business+ (proplus) only
+  { menuItem: 'reports', allowedTiers: BASIC },
+  { menuItem: 'reports.extended', allowedTiers: PRO },
+  { menuItem: 'reports.multibranch', allowedTiers: PROPLUS },
+
+  // Procurement (suppliers + goods receipts) — Standart and up.
+  { menuItem: 'suppliers', allowedTiers: BASIC },
+  { menuItem: 'receipts', allowedTiers: BASIC },
 
   // Team management (role/staff access is further gated to the owner via role
-  // permissions) — not on the free plan.
-  { menuItem: 'team.roles', allowedTiers: ['basic', 'pro'] },
-  { menuItem: 'team.staff', allowedTiers: ['basic', 'pro'] },
-  { menuItem: 'team.sales', allowedTiers: ['basic', 'pro'] },
+  // permissions) — Standart and up.
+  { menuItem: 'team.roles', allowedTiers: BASIC },
+  { menuItem: 'team.staff', allowedTiers: BASIC },
+  { menuItem: 'team.sales', allowedTiers: BASIC },
 
-  // Subscription Management (typically admin only, but configurable)
-  // Made accessible to all tiers for easier management
-  { menuItem: 'subscriptionManagement', allowedTiers: ['free', 'basic', 'pro', ] },
-  
-  // Upgrade Plan (accessible to all tiers)
-  { menuItem: 'upgradePlan', allowedTiers: ['free', 'basic', 'pro', ] },
-
-  // Settings
-  { menuItem: 'settings', allowedTiers: ['free', 'basic', 'pro',] },
-  { menuItem: 'settings.receipts', allowedTiers: ['free', 'basic', 'pro',] },
+  // Subscription + upgrade + settings — reachable on every tier so an expired
+  // account can always resubscribe.
+  { menuItem: 'subscriptionManagement', allowedTiers: FREE },
+  { menuItem: 'upgradePlan', allowedTiers: FREE },
+  { menuItem: 'settings', allowedTiers: FREE },
+  { menuItem: 'settings.receipts', allowedTiers: FREE },
 ];
+
+// Versioned so the tier-plan rework ships clean: a stale array saved under the
+// old key (with the previous free-sees-everything mapping, and missing the new
+// reports.extended / reports.multibranch items) would otherwise keep gating the
+// UI by the old rules. Bump this whenever the default shape changes.
+const STORAGE_KEY = 'menuPermissions.v2';
 
 // Helper function to get menu permissions
 export const getMenuPermissions = (): MenuPermission[] => {
@@ -60,8 +81,8 @@ export const getMenuPermissions = (): MenuPermission[] => {
     // Server-side: return default permissions
     return defaultMenuPermissions;
   }
-  
-  const saved = localStorage.getItem('menuPermissions');
+
+  const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
       return JSON.parse(saved);
@@ -75,7 +96,7 @@ export const getMenuPermissions = (): MenuPermission[] => {
 // Helper function to save menu permissions
 export const saveMenuPermissions = (permissions: MenuPermission[]) => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('menuPermissions', JSON.stringify(permissions));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(permissions));
   }
 };
 
@@ -115,9 +136,24 @@ const routeMenuMap: Record<string, string> = {
   '/stock-takes': 'inventory',
   // Branch-to-branch transfers live under the same Inventory permission.
   '/stock-transfers': 'inventory',
-  // Reports hub + all nested report routes (/reports/pnl, /reports/stock, …)
-  // inherit the 'reports' menu id via longest-prefix matching.
+  // Reports hub + operational reports (/reports/sales, /reports/stock, …)
+  // inherit the basic 'reports' menu id via longest-prefix matching. The
+  // analytics-heavier reports are mapped explicitly to a higher tier below.
   '/reports': 'reports',
+  // Extended analytics — Business (pro) and up.
+  '/reports/pnl': 'reports.extended',
+  '/reports/abc': 'reports.extended',
+  '/reports/assortment': 'reports.extended',
+  '/reports/dead-stock': 'reports.extended',
+  '/reports/reorder': 'reports.extended',
+  '/reports/debt-aging': 'reports.extended',
+  '/reports/traffic': 'reports.extended',
+  '/reports/transfers': 'reports.extended',
+  '/reports/target': 'reports.extended',
+  '/reports/customers': 'reports.extended',
+  // Multi-branch analytics — Business+ (proplus) only.
+  '/reports/branch-comparison': 'reports.multibranch',
+  '/reports/transfer-suggestions': 'reports.multibranch',
   '/roles': 'team.roles',
   '/staff': 'team.staff',
   '/staff-sales': 'team.sales',

@@ -26,6 +26,8 @@
     "PLATFORM_ADMIN_REQUIRED": "Platforma administratori huquqi talab qilinadi.",
     "BRANCH_MAIN_DELETE_FORBIDDEN": "Asosiy do'konni o'chirib bo'lmaydi.",
     "BRANCH_NOT_FOUND": "Filial topilmadi.",
+    "BRANCH_LIMIT_REACHED": "Tarifingiz uchun filiallar chegarasiga ({limit}) yetdingiz. Ko'proq filial uchun tarifni yangilang.",
+    "PLAN_UPGRADE_REQUIRED": "Bu imkoniyat yuqoriroq tarifda mavjud. Iltimos, tarifingizni yangilang.",
     "BRAND_NOT_FOUND": "Brend topilmadi.",
     "CATEGORY_ALREADY_EXISTS": "Bunday kategoriya allaqachon mavjud.",
     "CATEGORY_NOT_FOUND": "Kategoriya topilmadi.",
@@ -53,7 +55,7 @@
     "HELD_SALE_CHECKOUT_REQUIRED": "Kutilayotgan sotuvni to'lov orqali yakunlash kerak.",
     "DEBT_SALE_CUSTOMER_IMMUTABLE": "Qarz sotuvining mijozini o'zgartirib bo'lmaydi.",
     "PRODUCT_LIMIT_REACHED": "Joriy tarifingiz uchun {limit} ta mahsulot chegarasiga yetdingiz.",
-    "PRODUCT_BULK_IMPORT_PRO_ONLY": "Ommaviy import bepul tarifda mavjud emas.",
+    "PRODUCT_BULK_IMPORT_PRO_ONLY": "Ommaviy import Biznes tarifidan boshlab mavjud.",
     "PRODUCT_CODE_EXISTS": "Bu kodli mahsulot allaqachon mavjud.",
     "PRODUCT_NOT_FOUND": "Mahsulot topilmadi.",
     "BARCODE_QUERY_REQUIRED": "Shtrix-kod talab qilinadi.",
@@ -273,7 +275,8 @@
         "fromMonth2": "2-oydan",
         "intro": "Ilk 2 oy",
         "then": "keyin",
-        "perMonth": "so'm/oy"
+        "perMonth": "so'm/oy",
+        "firstMonthFree": "Ilk oy bepul"
       }
     },
     "faq": {
@@ -341,6 +344,9 @@
         "suppliers": "Ta'minotchilar va qabul",
         "dashboard": "Boshqaruv paneli",
         "performance": "Mahsulot samaradorligi",
+        "operationalReports": "Operatsion hisobotlar",
+        "extendedReports": "Kengaytirilgan analitika (P&L, ABC, prognoz)",
+        "multibranchReports": "Ko'p-filial analitikasi",
         "staffSales": "Xodim bo'yicha sotuv",
         "roles": "Rollar va xodimlar",
         "support": "Yordam",
@@ -643,7 +649,7 @@
   },
   "import": {
     "title": "Mahsulotlarni import qilish",
-    "freeGate": "Ommaviy import pullik tariflarda mavjud. Excel/CSV'dan import qilish uchun tarifni yangilang.",
+    "freeGate": "Ommaviy import Biznes tarifidan boshlab mavjud. Excel/CSV'dan import qilish uchun tarifni yangilang.",
     "step1": "Fayl yuklash",
     "step2": "Ustunlarni moslashtirish",
     "step3": "Natija",
@@ -1835,6 +1841,7 @@
     "cumulative": "Kumulyativ",
     "abcHint": "A ≈ tushumning ~80%, B ≈ keyingi 15%, C ≈ oxirgi 5%.",
     "openReport": "Hisobotga o'tish",
+    "upgradeToUnlock": "Ochish uchun tarifni yangilang",
     "allReports": "Barchasi",
     "favorites": "Tanlanganlar",
     "reportsCount": "hisobot",
