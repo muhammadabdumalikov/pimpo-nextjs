@@ -11,7 +11,7 @@ import Button from "../ui/button/Button";
 // only. Keep the import so it can be re-enabled later.
 // import CameraScanner from "../checkout/CameraScanner";
 import { useTranslations } from "@/hooks/useTranslations";
-import { createProduct, updateProduct, generateProductCode, generateBarcode, getProduct, getCategories, getProductCount, lookupBarcode, createCategory, getBrands, createBrand, getSuppliers, getBranches, type Product, type Branch } from "@/lib/api";
+import { createProduct, updateProduct, generateProductCode, generateBarcode, getProduct, getCategories, getProductCount, lookupBarcode, createCategory, getBrands, createBrand, getSuppliers, getBranches, getUnits, type Product, type Branch, type Unit } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useSidebar } from "@/context/SidebarContext";
@@ -66,6 +66,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     // Reorder point (kept as a string for the input; "" = no threshold).
     lowStockThreshold: "",
     quantityType: "",
+    unitId: "",
     brandId: "",
     supplierId: "",
     branchId: "",
@@ -122,7 +123,13 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     productCount !== null &&
     isLimitReached('products', productCount);
 
+  // Units of measure catalogue (system + business-owned) for the unit select.
+  const [unitsList, setUnitsList] = useState<Unit[]>([]);
+
   useEffect(() => {
+    getUnits()
+      .then((res) => setUnitsList(res.units))
+      .catch(() => setUnitsList([]));
     getCategories()
       .then((list) => setCategories(list.map((c) => ({ id: c.id, name: c.name }))))
       .catch(() => setCategories([]));
@@ -171,6 +178,15 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         lowStockThreshold:
           product.lowStockThreshold != null ? String(product.lowStockThreshold) : "",
         quantityType: product.quantityType || "",
+        // Prefer the stored unit; map legacy quantityType onto the system units
+        // so old products open with a sensible preselection.
+        unitId:
+          product.unitId ||
+          (product.quantityType === "kg"
+            ? "unit-system-kg"
+            : product.quantityType === "piece"
+              ? "unit-system-dona"
+              : ""),
         brandId: product.brandId || "",
         supplierId: product.supplierId || "",
         branchId: product.branchId || "",
@@ -227,16 +243,27 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     setFormData((prev) => ({ ...prev, lowStockThreshold: digitsOnly(e.target.value) }));
   };
 
+  // Fraction digits the quantity input accepts: driven by the selected unit's
+  // precision; legacy products without a unit fall back to quantityType ('kg'
+  // → 3 decimals, anything else → whole numbers).
+  const selectedUnit = unitsList.find((u) => u.id === formData.unitId);
+  const qtyFracDigits = selectedUnit
+    ? selectedUnit.precision
+    : formData.quantityType === "kg"
+      ? 3
+      : 0;
+
   // Quantity typed directly (still clamped at 0; +/- buttons keep working).
-  // Weighed goods (quantityType 'kg') accept a decimal; everything else stays
-  // digits-only. The raw text lives in qtyText so a decimal can be typed in
-  // steps; formData.quantity tracks the parsed number.
+  // Fractional units accept a decimal (capped at the unit's precision);
+  // everything else stays digits-only. The raw text lives in qtyText so a
+  // decimal can be typed in steps; formData.quantity tracks the parsed number.
   const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const isKg = formData.quantityType === "kg";
     let text: string;
-    if (isKg) {
-      // Keep digits and a single decimal point.
+    if (qtyFracDigits > 0) {
+      // Keep digits and a single decimal point, trimmed to the precision.
       text = e.target.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+      const [whole, frac] = text.split(".");
+      if (frac !== undefined) text = `${whole}.${frac.slice(0, qtyFracDigits)}`;
     } else {
       text = digitsOnly(e.target.value);
     }
@@ -431,11 +458,11 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   //   showToast("success", `${t('addProduct.barcodeScanned') || 'Barcode scanned'}: ${value}`);
   // };
 
-  const quantityTypeOptions = [
-    { value: "kg", label: t('addProduct.quantityTypeKg') },
-    { value: "piece", label: t('addProduct.quantityTypePiece') },
-    { value: "others", label: t('addProduct.quantityTypeOthers') },
-  ];
+  // Unit select fed from the units catalogue (Sozlamalar → O'lchov birliklari).
+  const unitOptions = unitsList.map((u) => ({
+    value: u.id,
+    label: `${u.name} (${u.shortName})`,
+  }));
 
   // BiLLZ-style sectioned layout: a sticky left nav that jumps between the four
   // field groups (+ the image block), highlighting whichever is in view.
@@ -594,7 +621,10 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         lowStockThreshold: formData.lowStockThreshold.trim()
           ? Math.round(Number(formData.lowStockThreshold) * 1000) / 1000
           : undefined,
-        quantityType: formData.quantityType || undefined,
+        // unitId is the source of truth; the backend derives quantityType from
+        // it. quantityType is only sent for legacy products with no unit picked.
+        unitId: formData.unitId || undefined,
+        quantityType: formData.unitId ? undefined : formData.quantityType || undefined,
         brandId: formData.brandId || undefined,
         supplierId: formData.supplierId || undefined,
         branchId: formData.branchId || undefined,
@@ -994,7 +1024,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                     <input
                       className="h-full w-full border-0 bg-white text-center text-sm text-gray-700 outline-none focus:ring-0 dark:bg-gray-900 dark:text-gray-400"
                       type="text"
-                      inputMode={formData.quantityType === "kg" ? "decimal" : "numeric"}
+                      inputMode={qtyFracDigits > 0 ? "decimal" : "numeric"}
                       value={qtyText}
                       onChange={handleQuantityInput}
                     />
@@ -1039,10 +1069,10 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
               <div>
                 <Label htmlFor="quantityType">{t('addProduct.quantityType')}</Label>
                 <Select
-                  options={quantityTypeOptions}
+                  options={unitOptions}
                   placeholder={t('addProduct.quantityTypePlaceholder')}
-                  onChange={handleSelectChange("quantityType")}
-                  defaultValue={formData.quantityType}
+                  onChange={handleSelectChange("unitId")}
+                  defaultValue={formData.unitId}
                 />
               </div>
               </div>

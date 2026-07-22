@@ -25,6 +25,7 @@ import {
   openShift,
   resolveReceiptTemplate,
   getStoredAccount,
+  getUnits,
   type Product,
   type Customer,
   type Shift,
@@ -33,6 +34,7 @@ import {
   type ReceiptTemplate,
   type PriceTier,
   type HoldOrderDto,
+  type Unit,
 } from "@/lib/api";
 import {
   buildReceiptHtml,
@@ -75,21 +77,39 @@ type CartLine = {
   priceWholesale: number | null; // ulgurji
   priceBundle: number | null; // to'plam
   priceTier: PriceTier; // which tier `price` currently reflects
-  // Product's unit of measure. "kg" → sold by weight: `quantity` holds the
-  // weight in KILOGRAMS (fractional) and the cashier enters grams. For any
-  // other type `quantity` is a whole piece count.
+  // Legacy weighted marker derived by the backend from the unit ('kg' when the
+  // unit allows fractions). "kg" → `quantity` holds a fractional amount in the
+  // unit itself; otherwise `quantity` is a whole piece count.
   quantityType: string | null;
+  // Unit label + fraction digits resolved from the units catalogue at add time
+  // (legacy fallback: quantityType 'kg' → "kg"/3, anything else → null/0).
+  unitShort: string | null;
+  unitPrecision: number;
 };
 
-// A product is sold by weight when its quantity type is kilograms; then the
-// cart line's `quantity` is a fractional kg and the stepper edits it in grams.
+// A product is sold fractionally when its (derived) quantity type is 'kg';
+// kg-precision (3) lines keep the grams entry UX, other fractional units
+// (litr, metr…) take a decimal amount directly.
 const isWeightLine = (quantityType?: string | null): boolean =>
   quantityType === "kg";
 
-// Weight conversions + a trimmed kg label (0.5 → "0.5", 1 → "1", 0.25 → "0.25").
+// Unit label + fraction digits for a product line.
+const unitMetaFor = (
+  p: { unitId?: string | null; quantityType: string | null },
+  unitsById: Map<string, Unit>,
+): { short: string | null; precision: number } => {
+  const u = p.unitId ? unitsById.get(p.unitId) : undefined;
+  if (u) return { short: u.shortName, precision: u.precision };
+  return p.quantityType === "kg"
+    ? { short: "kg", precision: 3 }
+    : { short: null, precision: 0 };
+};
+
+// Weight conversions + a trimmed fractional label (0.5 → "0.5", 1 → "1").
 const kgToGrams = (kg: number): number => Math.round(kg * 1000);
 const gramsToKg = (g: number): number => g / 1000;
-const formatKg = (kg: number): string => kg.toFixed(3).replace(/\.?0+$/, "");
+const formatQty = (qty: number, precision: number): string =>
+  qty.toFixed(precision).replace(/\.?0+$/, "");
 // The grams stepper nudges by 50 g; a weighted line can go as low as 1 g.
 const GRAM_STEP = 50;
 const MIN_KG = 0.001;
@@ -626,7 +646,7 @@ export default function Checkout() {
       items: cart.map((l) => ({
         name: l.name,
         qty: l.quantity,
-        qtyLabel: isWeightLine(l.quantityType) ? `${formatKg(l.quantity)} kg` : undefined,
+        qtyLabel: isWeightLine(l.quantityType) ? `${formatQty(l.quantity, l.unitPrecision ?? 3)} ${l.unitShort ?? "kg"}` : undefined,
         price: l.price,
       })),
       subtotal,
@@ -697,6 +717,16 @@ export default function Checkout() {
       .slice(0, 4);
   }, [cashNeeded]);
 
+  // Units catalogue: unit labels + fraction digits for cart lines.
+  const [unitsById, setUnitsById] = useState<Map<string, Unit>>(new Map());
+  useEffect(() => {
+    getUnits()
+      .then((res) => setUnitsById(new Map(res.units.map((u) => [u.id, u]))))
+      .catch(() => {
+        // Lines fall back to the legacy quantityType meta.
+      });
+  }, []);
+
   const addProductToCart = (product: Product, addQty: number) => {
     // Newly added (or topped-up) line becomes the keyboard selection, so ←/→
     // adjust the item you just added without reaching for the mouse.
@@ -725,6 +755,10 @@ export default function Checkout() {
             product.priceBundle != null ? Number(product.priceBundle) : null,
           priceTier: "unit",
           quantityType: product.quantityType,
+          ...(() => {
+            const meta = unitMetaFor(product, unitsById);
+            return { unitShort: meta.short, unitPrecision: meta.precision };
+          })(),
         },
       ];
     });
@@ -851,9 +885,9 @@ export default function Checkout() {
       prev.map((l) => {
         if (l.productId !== productId) return l;
         const weight = isWeightLine(l.quantityType);
-        // Weighted lines can be a fraction of a kg (down to 1 g); piece lines
-        // stay whole numbers with a minimum of 1.
-        const min = weight ? MIN_KG : 1;
+        // Fractional lines can go down to one step of the unit's precision
+        // (1 g for kg); piece lines stay whole numbers with a minimum of 1.
+        const min = weight ? Math.pow(10, -(l.unitPrecision ?? 3)) : 1;
         let capped = l.stock ? Math.min(next, l.stock) : next;
         capped = Math.max(min, capped);
         // Round weight to whole grams to keep float drift out of the total.
@@ -1208,6 +1242,10 @@ export default function Checkout() {
             priceBundle,
             priceTier,
             quantityType: p.quantityType,
+            ...(() => {
+              const meta = unitMetaFor(p, unitsById);
+              return { unitShort: meta.short, unitPrecision: meta.precision };
+            })(),
           });
         } catch {
           missing.push(item.productName);
@@ -1289,7 +1327,7 @@ export default function Checkout() {
         name: l.name,
         qty: l.quantity,
         // Weighed goods print as "0.5 kg"; pieces fall back to the number.
-        qtyLabel: isWeightLine(l.quantityType) ? `${formatKg(l.quantity)} kg` : undefined,
+        qtyLabel: isWeightLine(l.quantityType) ? `${formatQty(l.quantity, l.unitPrecision ?? 3)} ${l.unitShort ?? "kg"}` : undefined,
         price: l.price,
       })),
       subtotal,
@@ -2079,7 +2117,9 @@ export default function Checkout() {
                     {line.stock > 0 && (
                       <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
                         {line.stock}
-                        {isWeightLine(line.quantityType) ? " kg" : ""}{" "}
+                        {isWeightLine(line.quantityType)
+                          ? ` ${line.unitShort ?? "kg"}`
+                          : ""}{" "}
                         {t("checkout.inStock")}
                       </p>
                     )}
@@ -2127,16 +2167,20 @@ export default function Checkout() {
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         {formatMoney(line.price)}
                         {isWeightLine(line.quantityType) && (
-                          <span className="text-gray-400 dark:text-gray-500">/kg</span>
+                          <span className="text-gray-400 dark:text-gray-500">
+                            /{line.unitShort ?? "kg"}
+                          </span>
                         )}
                       </span>
                     )}
                   </div>
 
                   {/* Quantity stepper — large touch targets for fast use.
-                      Weighted (kg) products enter grams; everything else counts
-                      pieces. */}
-                  {isWeightLine(line.quantityType) ? (
+                      kg-precision products enter grams; other fractional units
+                      (litr, metr…) take a decimal amount; everything else
+                      counts pieces. */}
+                  {isWeightLine(line.quantityType) &&
+                  (line.unitPrecision ?? 3) >= 3 ? (
                     // Weighed goods: the cashier types grams; the line total is
                     // derived from the per-kg price (grams / 1000 × price).
                     <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
@@ -2149,18 +2193,23 @@ export default function Checkout() {
                       >
                         −
                       </button>
-                      <div className="relative">
+                      {(() => {
+                        // Number + "g" flow together: content-sized input so
+                        // the suffix starts right where the number ends.
+                        const shown =
+                          qtyDraft?.id === line.productId
+                            ? qtyDraft.value
+                            : String(kgToGrams(line.quantity));
+                        return (
+                      <div className="flex h-10 w-20 items-center justify-center border-x border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                         <input
                           type="number"
                           min={1}
                           step={GRAM_STEP}
                           max={line.stock ? kgToGrams(line.stock) : undefined}
                           aria-label={`${line.name} — g`}
-                          value={
-                            qtyDraft?.id === line.productId
-                              ? qtyDraft.value
-                              : kgToGrams(line.quantity)
-                          }
+                          value={shown}
+                          style={{ width: `${Math.max(shown.length, 1)}ch` }}
                           onChange={(e) => {
                             const v = e.target.value;
                             // Keep the field empty while mid-edit rather than
@@ -2194,12 +2243,96 @@ export default function Checkout() {
                             }
                             setQtyDraft(null);
                           }}
-                          className="h-10 w-20 border-x border-gray-200 bg-white pr-6 text-center text-sm font-medium text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                          className="bg-transparent text-center text-sm font-medium text-gray-800 focus:outline-hidden dark:text-white/90 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
                         />
-                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400 dark:text-gray-500">
+                        <span className="pointer-events-none ml-0.5 text-sm font-medium text-gray-800 dark:text-white/90">
                           g
                         </span>
                       </div>
+                        );
+                      })()}
+                      <button
+                        type="button"
+                        aria-label="+"
+                        onClick={() => changeQty(line.productId, line.quantity + 0.1)}
+                        className="flex h-10 w-9 items-center justify-center text-lg text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+                        disabled={!!line.stock && line.quantity >= line.stock}
+                      >
+                        +
+                      </button>
+                    </div>
+                  ) : isWeightLine(line.quantityType) ? (
+                    // Fractional non-kg units: the cashier types the decimal
+                    // amount in the unit itself (e.g. 0.5 l), capped at the
+                    // unit's precision.
+                    <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                      <button
+                        type="button"
+                        aria-label="-"
+                        onClick={() => changeQty(line.productId, line.quantity - 0.1)}
+                        className="flex h-10 w-9 items-center justify-center text-lg text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+                        disabled={
+                          line.quantity <= Math.pow(10, -(line.unitPrecision || 1))
+                        }
+                      >
+                        −
+                      </button>
+                      {(() => {
+                        // Number + unit flow together: the input is sized to
+                        // its content so the suffix starts right after it.
+                        const shown =
+                          qtyDraft?.id === line.productId
+                            ? qtyDraft.value
+                            : formatQty(line.quantity, line.unitPrecision ?? 3);
+                        return (
+                          <div className="flex h-10 w-20 items-center justify-center border-x border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              aria-label={`${line.name} — ${line.unitShort ?? ""}`}
+                              value={shown}
+                              style={{ width: `${Math.max(shown.length, 1)}ch` }}
+                              onChange={(e) => {
+                                // Digits + one decimal point, trimmed to precision.
+                                let v = e.target.value
+                                  .replace(/[^\d.]/g, "")
+                                  .replace(/(\..*)\./g, "$1");
+                                const [whole, frac] = v.split(".");
+                                if (frac !== undefined)
+                                  v = `${whole}.${frac.slice(0, line.unitPrecision || 1)}`;
+                                setQtyDraft({ id: line.productId, value: v });
+                                const n = Number(v);
+                                if (v === "" || v === "." || Number.isNaN(n)) return;
+                                if (line.stock > 0 && n > line.stock) {
+                                  showToast(
+                                    "warning",
+                                    `${line.name} — ${t("checkout.onlyInStock") || "в наличии"}: ${line.stock} ${line.unitShort ?? ""}`,
+                                  );
+                                }
+                                changeQty(line.productId, n);
+                              }}
+                              onBlur={() => {
+                                if (qtyDraft?.id === line.productId) {
+                                  const n = Number(qtyDraft.value);
+                                  changeQty(
+                                    line.productId,
+                                    qtyDraft.value === "" || Number.isNaN(n)
+                                      ? Math.pow(10, -(line.unitPrecision || 1))
+                                      : n,
+                                  );
+                                }
+                                setQtyDraft(null);
+                              }}
+                              className="bg-transparent text-center text-sm font-medium text-gray-800 focus:outline-hidden dark:text-white/90"
+                            />
+                            {line.unitShort && (
+                              <span className="pointer-events-none ml-0.5 text-sm font-medium text-gray-800 dark:text-white/90">
+                                {line.unitShort}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <button
                         type="button"
                         aria-label="+"
@@ -2761,10 +2894,10 @@ export default function Checkout() {
                     <div className="mt-1 flex items-baseline text-sm">
                       <span className="whitespace-nowrap text-gray-500 dark:text-gray-400">
                         {isWeightLine(l.quantityType)
-                          ? `${formatKg(l.quantity)} kg`
+                          ? `${formatQty(l.quantity, l.unitPrecision ?? 3)} ${l.unitShort ?? "kg"}`
                           : l.quantity}{" "}
                         × {new Intl.NumberFormat("uz-UZ").format(l.price)}
-                        {isWeightLine(l.quantityType) ? "/kg" : ""}
+                        {isWeightLine(l.quantityType) ? `/${l.unitShort ?? "kg"}` : ""}
                       </span>
                       <span className="mx-2 flex-1 border-t border-dashed border-gray-300 dark:border-gray-700" />
                       <span className="whitespace-nowrap font-semibold">

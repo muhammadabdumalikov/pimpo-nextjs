@@ -32,7 +32,7 @@ const GROUPS: { key: string; rows: Row[] }[] = [
       { key: "branches", basic: "1 + 3", pro: "1 + 5", proplus: "unlimited" },
       { key: "branchDiscount", basic: "+150 000", pro: "+150 000", proplus: "+150 000" },
       { key: "products", basic: "unlimited", pro: "unlimited", proplus: "unlimited" },
-      { key: "users", basic: "4", pro: "10", proplus: "unlimited" },
+      { key: "users", basic: "10", pro: "20", proplus: "50" },
     ],
   },
   {

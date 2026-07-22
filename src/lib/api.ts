@@ -12,6 +12,7 @@ export interface AccountInfo {
   id: string;
   name: string;
   login: string;
+  avatarUrl?: string | null;
   roleId: string | null;
   roleName: string | null;
   // Allowed sidebar menu keys. ["*"] means full access (business owner).
@@ -115,6 +116,54 @@ export async function getCurrentUser(): Promise<CurrentUserResponse> {
   return response.json();
 }
 
+/** Update the acting account's own profile (name / avatar). */
+export async function updateMyProfile(data: {
+  name?: string;
+  avatarUrl?: string | null;
+}): Promise<CurrentUserResponse> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const response = await fetch(`${API_BASE_URL}/businesses/me/profile`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const error = await response.json().catch(() => ({ message: 'Failed to update profile' }));
+    throw makeApiError(error, 'Failed to update profile');
+  }
+  return response.json();
+}
+
+/** Change the acting account's own password (verifies the current one). */
+export async function changeMyPassword(data: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<void> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const response = await fetch(`${API_BASE_URL}/businesses/me/password`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Failed to change password' }));
+    throw makeApiError(error, 'Failed to change password');
+  }
+}
+
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('accessToken');
@@ -155,6 +204,8 @@ export function getStoredMenuKeys(): string[] {
 export function clearAccount(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(ACCOUNT_STORAGE_KEY);
+  // Per-business client caches must not leak across a login switch.
+  invalidateUnitsCache();
 }
 
 // Subscription API
@@ -175,6 +226,10 @@ export interface CurrentSubscription {
   plan: SubscriptionPlan;
   tier: string;
   isActive: boolean;
+  // Present on the free floor: the business HAD a subscription that ended.
+  isExpired?: boolean;
+  // Paid window still counting down from a trial start.
+  isTrial?: boolean;
   startDate?: Date;
   endDate?: Date | null;
 }
@@ -182,6 +237,34 @@ export interface CurrentSubscription {
 export interface SubscriptionLimits {
   debtsLimit: number | null;
   productsLimit: number | null;
+}
+
+// Billing info shown on the subscription status page (GET /subscriptions/billing).
+export interface BillingDiscount {
+  id: string;
+  label: string;
+  percent: number;
+  validUntil: string | null;
+}
+
+export interface BillingInfo {
+  balance: number;
+  legalName: string | null;
+  inn: string | null;
+  contractNumber: string | null;
+  contractDate: string | null;
+  monthly: {
+    planTier: string | null;
+    planName: string | null;
+    planPrice: number;
+    extraBranches: number;
+    extraBranchPrice: number;
+    extraBranchesTotal: number;
+    discountPercent: number;
+    discountAmount: number;
+    total: number;
+  };
+  discounts: BillingDiscount[];
 }
 
 export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
@@ -241,6 +324,28 @@ export async function getSubscriptionLimits(): Promise<SubscriptionLimits> {
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     throw new Error('Failed to fetch subscription limits');
+  }
+
+  return response.json();
+}
+
+export async function getBillingInfo(): Promise<BillingInfo> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/subscriptions/billing`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    throw new Error('Failed to fetch billing info');
   }
 
   return response.json();
@@ -331,6 +436,8 @@ export interface Product {
   priceBundle: string | null;
   quantity: number;
   quantityType: string | null;
+  /** Unit of measure id (units table); quantityType is derived from it on write. */
+  unitId: string | null;
   image: string | null;
   isActive: boolean;
   categoryId: string | null;
@@ -352,6 +459,7 @@ export interface CreateProductRequest {
   priceOut: string;
   quantity: number;
   quantityType?: string;
+  unitId?: string;
   image?: string;
   categoryId?: string;
   priceBundle?: string;
@@ -369,6 +477,7 @@ export interface UpdateProductRequest {
   priceOut?: string;
   quantity?: number;
   quantityType?: string;
+  unitId?: string;
   image?: string;
   categoryId?: string;
   priceBundle?: string;
@@ -1414,6 +1523,8 @@ export interface Order {
   businessId: string;
   userId: string | null;
   customerName: string | null;
+  /** Contact phone snapshot (storefront checkout / debt sales). */
+  customerPhone?: string | null;
   status: string;
   totalAmount: string;
   subtotalAmount: string;
@@ -1484,6 +1595,8 @@ export interface OrderListFilters {
   cashierId?: string;
   minAmount?: string | number;
   maxAmount?: string | number;
+  /** 'admin' (POS sales) | 'store' (online storefront orders). */
+  source?: string;
 }
 
 export async function getOrders(
@@ -1506,6 +1619,7 @@ export async function getOrders(
   if (filters?.cashierId) params.set('cashierId', filters.cashierId);
   if (filters?.minAmount) params.set('minAmount', String(filters.minAmount));
   if (filters?.maxAmount) params.set('maxAmount', String(filters.maxAmount));
+  if (filters?.source) params.set('source', filters.source);
   const response = await fetch(`${API_BASE_URL}/orders?${params.toString()}`, {
     method: 'GET',
     headers: authHeaders(),
@@ -1603,8 +1717,32 @@ export async function updateOrder(
   return response.json();
 }
 
-export async function getOrderCount(): Promise<number> {
-  const response = await fetch(`${API_BASE_URL}/orders/count`, {
+/**
+ * Transition an order's status. Store orders: Pending → Confirmed →
+ * Completed / Cancelled; cancelling a store order restores its stock.
+ */
+export async function updateOrderStatus(
+  id: string,
+  status: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled',
+): Promise<Order> {
+  const response = await fetch(`${API_BASE_URL}/orders/${id}/status`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ status }),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update order status');
+  return response.json();
+}
+
+export async function getOrderCount(options?: {
+  status?: string;
+  source?: string;
+}): Promise<number> {
+  const params = new URLSearchParams();
+  if (options?.status) params.set('status', options.status);
+  if (options?.source) params.set('source', options.source);
+  const qs = params.toString();
+  const response = await fetch(`${API_BASE_URL}/orders/count${qs ? `?${qs}` : ''}`, {
     method: 'GET',
     headers: authHeaders(),
   });
@@ -1919,6 +2057,93 @@ export async function deleteBranch(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!response.ok) await parseError(response, 'Failed to delete branch');
+}
+
+// Units of measure (Sozlamalar → O'lchov birliklari)
+export interface Unit {
+  id: string;
+  // null = global system unit (Dona, Kilogramm) — present for every business,
+  // not editable or deletable.
+  businessId: string | null;
+  name: string;
+  shortName: string;
+  // Fraction digits allowed for quantities in this unit (0 = whole pieces).
+  precision: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Client-side cache: the unit catalogue changes rarely but is read on every
+// product-form / checkout mount. One fetch per TTL window, concurrent callers
+// share the in-flight request; any unit mutation below invalidates it.
+const UNITS_CACHE_TTL_MS = 5 * 60 * 1000;
+let unitsCache: { units: Unit[]; at: number } | null = null;
+let unitsInflight: Promise<{ units: Unit[] }> | null = null;
+
+function invalidateUnitsCache(): void {
+  unitsCache = null;
+  unitsInflight = null;
+}
+
+export async function getUnits(): Promise<{ units: Unit[] }> {
+  if (unitsCache && Date.now() - unitsCache.at < UNITS_CACHE_TTL_MS) {
+    return { units: unitsCache.units };
+  }
+  if (unitsInflight) return unitsInflight;
+  unitsInflight = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/units`, {
+        method: 'GET',
+        headers: authHeaders(),
+      });
+      if (!response.ok) await parseError(response, 'Failed to fetch units');
+      const data = (await response.json()) as { units: Unit[] };
+      unitsCache = { units: data.units, at: Date.now() };
+      return data;
+    } finally {
+      unitsInflight = null;
+    }
+  })();
+  return unitsInflight;
+}
+
+export async function createUnit(data: {
+  name: string;
+  shortName: string;
+  precision: number;
+}): Promise<Unit> {
+  const response = await fetch(`${API_BASE_URL}/units`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create unit');
+  invalidateUnitsCache();
+  return response.json();
+}
+
+export async function updateUnit(
+  id: string,
+  data: { name?: string; shortName?: string; precision?: number },
+): Promise<Unit> {
+  const response = await fetch(`${API_BASE_URL}/units/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update unit');
+  invalidateUnitsCache();
+  return response.json();
+}
+
+export async function deleteUnit(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/units/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to delete unit');
+  invalidateUnitsCache();
 }
 
 export interface Supplier {

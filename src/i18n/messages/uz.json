@@ -26,6 +26,8 @@
     "PLATFORM_ADMIN_REQUIRED": "Platforma administratori huquqi talab qilinadi.",
     "BRANCH_MAIN_DELETE_FORBIDDEN": "Asosiy do'konni o'chirib bo'lmaydi.",
     "BRANCH_NOT_FOUND": "Filial topilmadi.",
+    "UNIT_NOT_FOUND": "O'lchov birligi topilmadi.",
+    "UNIT_NAME_EXISTS": "Bu nomdagi o'lchov birligi allaqachon mavjud.",
     "BRANCH_LIMIT_REACHED": "Tarifingiz uchun filiallar chegarasiga ({limit}) yetdingiz. Ko'proq filial uchun tarifni yangilang.",
     "PLAN_UPGRADE_REQUIRED": "Bu imkoniyat yuqoriroq tarifda mavjud. Iltimos, tarifingizni yangilang.",
     "BRAND_NOT_FOUND": "Brend topilmadi.",
@@ -102,7 +104,9 @@
     "TRANSFER_EMPTY": "Ko'chirishda kamida bitta mahsulot bo'lishi kerak.",
     "TRANSFER_SAME_BRANCH": "Manba va qabul qiluvchi do'kon bir xil bo'lmasligi kerak.",
     "TRANSFER_EXCEEDS_STOCK": "\"{name}\" dan {qty} ta ko'chirib bo'lmaydi; manba do'konda faqat {available} ta bor.",
-    "TRANSFER_NOT_FOUND": "Ko'chirish topilmadi."
+    "TRANSFER_NOT_FOUND": "Ko'chirish topilmadi.",
+    "STORE_INSUFFICIENT_STOCK": "«{name}» yetarli emas — omborda {available} ta qoldi",
+    "ORDER_CANCELLED_IMMUTABLE": "Bekor qilingan buyurtma holatini o'zgartirib bo'lmaydi"
   },
   "landing": {
     "nav": {
@@ -218,7 +222,7 @@
         "features": [
           "Har yangi filial uchun +150 000 so'm (3 tagacha)",
           "Cheksiz mahsulot",
-          "4 tagacha foydalanuvchi",
+          "10 tagacha foydalanuvchi",
           "To'liq nasiya boshqaruvi",
           "To'liq inventar",
           "Ta'minotchilar va qabul",
@@ -237,7 +241,7 @@
         "features": [
           "Har yangi filial uchun +150 000 so'm (5 tagacha)",
           "Cheksiz mahsulot",
-          "10 tagacha foydalanuvchi",
+          "20 tagacha foydalanuvchi",
           "To'liq nasiya boshqaruvi",
           "Ommaviy mahsulot qo'shish",
           "Kengaytirilgan hisobotlar",
@@ -255,7 +259,7 @@
         "cta": "Biznes+ tanlash",
         "features": [
           "Cheksiz filial — har yangisiga +150 000 so'm",
-          "Cheksiz foydalanuvchi",
+          "50 tagacha foydalanuvchi",
           "Cheksiz mahsulot",
           "To'liq nasiya boshqaruvi",
           "Ommaviy mahsulot qo'shish",
@@ -737,7 +741,7 @@
       "basic": {
         "everythingInFree": "Bepul rejadagi hamma narsa",
         "addProducts": "Cheksiz mahsulot",
-        "formElements": "4 foydalanuvchigacha",
+        "formElements": "10 foydalanuvchigacha",
         "imagesVideos": "Ta'minot (ta'minotchi va qabul)",
         "emailSupport": "To'liq nasiya + Email yordam"
       },
@@ -755,7 +759,7 @@
       "proplus": {
         "everythingInPro": "Biznes tarifidagi hamma narsa",
         "unlimitedBranches": "Cheksiz filiallar",
-        "unlimitedUsers": "Cheksiz xodimlar",
+        "unlimitedUsers": "50 tagacha xodim",
         "prioritySupport": "Ustuvor qo'llab-quvvatlash"
       }
     },
@@ -823,6 +827,10 @@
     "upgradePlan": "Rejani yangilash",
     "settings": "Sozlamalar",
     "receipts": "Cheklar",
+    "paymentMethods": "To'lov turlari",
+    "units": "O'lchov birliklari",
+    "catalogSettings": "Katalog",
+    "profileSettings": "Profil",
     "menu": "Menyu",
     "others": "Boshqalar",
     "new": "yangi",
@@ -873,7 +881,8 @@
     "reportsBranchComparison": "Filiallar",
     "reportsTransfers": "Transferlar",
     "reportsTransferSuggestions": "Transfer tavsiyasi",
-    "reportsTarget": "Reja / fakt"
+    "reportsTarget": "Reja / fakt",
+    "onlineOrders": "Onlayn buyurtmalar"
   },
   "stockTakes": {
     "title": "Inventarizatsiya",
@@ -1725,6 +1734,104 @@
     "noncashType": "Naqdsiz",
     "newAccount": "Yangi hisob"
   },
+  "unitsPage": {
+    "title": "O'lchov birliklari",
+    "description": "Birliklar va aniqlik — kasrli miqdorda (kg, m) sotish uchun",
+    "add": "Birlik qo'shish",
+    "addTitle": "Yangi o'lchov birligi",
+    "editTitle": "Birlikni tahrirlash",
+    "name": "O'lchov birligi",
+    "namePlaceholder": "Masalan: Kilogramm",
+    "shortName": "Qisqartma",
+    "shortNamePlaceholder": "Masalan: kg",
+    "precision": "Aniqlik",
+    "precision0": "butun son",
+    "precision1": "1 xona kasr",
+    "precision2": "2 xona kasr",
+    "precision3": "3 xona kasr",
+    "precisionHint": "Miqdorda nechta o'nlik xona ruxsat etiladi (0 — faqat butun son)",
+    "nameRequired": "Nomi va qisqartmasi to'ldirilishi shart",
+    "system": "Tizimli",
+    "actions": "Amallar",
+    "edit": "Tahrirlash",
+    "delete": "O'chirish",
+    "deleteTitle": "Birlikni o'chirasizmi?"
+  },
+  "profilePage": {
+    "infoTitle": "Profil ma'lumotlari",
+    "infoDescription": "Ism va avatar — tizimda qanday ko'rinishingiz",
+    "name": "Ism",
+    "login": "Login",
+    "role": "Rol",
+    "save": "Saqlash",
+    "savedName": "Ism saqlandi",
+    "changeAvatar": "Rasm tanlash",
+    "removeAvatar": "O'chirish",
+    "avatarHint": "JPG, PNG yoki WebP, 5 MB gacha",
+    "avatarType": "Faqat JPG, PNG yoki WebP rasm yuklash mumkin",
+    "avatarTooBig": "Rasm hajmi 5 MB dan oshmasligi kerak",
+    "savedAvatar": "Avatar yangilandi",
+    "securityTitle": "Xavfsizlik",
+    "securityDescription": "Hisobingiz parolini o'zgartirish",
+    "currentPassword": "Joriy parol",
+    "newPassword": "Yangi parol",
+    "confirmPassword": "Yangi parolni tasdiqlang",
+    "passwordHint": "Kamida 6 ta belgi",
+    "passwordTooShort": "Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak",
+    "passwordMismatch": "Yangi parollar mos kelmadi",
+    "passwordChanged": "Parol o'zgartirildi",
+    "changePassword": "Parolni o'zgartirish"
+  },
+  "subscriptionStatus": {
+    "currentPlan": "Joriy tarif",
+    "noPlan": "Tarif tanlanmagan",
+    "status": {
+      "active": "Faol",
+      "trial": "Sinov davri",
+      "expired": "Muddati tugagan",
+      "none": "Faol emas"
+    },
+    "activeUntil": "Amal qilish muddati:",
+    "validUntil": "Amal qilish muddati:",
+    "noEndDate": "Muddatsiz",
+    "pickPlanHint": "Ishni davom ettirish uchun tarif tanlang",
+    "balance": "Akkaunt balansi",
+    "topUp": "Balansni to'ldirish",
+    "topUpTitle": "Balansni to'ldirish",
+    "topUpHint": "Onlayn to'lov integratsiyasi tez kunda ishga tushadi. Hozircha balansni to'ldirish uchun biz bilan bog'laning:",
+    "close": "Yopish",
+    "accountInfo": "Hisob ma'lumotlari",
+    "legalName": "Foydalanuvchi",
+    "inn": "INN/JShShIR",
+    "contractNumber": "Shartnoma raqami",
+    "contractDate": "Shartnoma sanasi",
+    "offer": "Ommaviy oferta",
+    "monthly": "Oylik to'lov",
+    "planLine": "Tarif",
+    "extraBranches": "Qo'shimcha filial",
+    "discount": "Chegirma",
+    "activeDiscounts": "Faol chegirmalar"
+  },
+  "settingsPages": {
+    "comingSoon": "Tez kunda",
+    "comingSoonHint": "Bu bo'lim ustida ishlanmoqda va tez orada ishga tushadi.",
+    "paymentMethods": {
+      "title": "To'lov turlari",
+      "description": "Sozlanadigan to'lov turlari — tizimli turlarni yoqish/o'chirish va maxsus turlar qo'shish"
+    },
+    "units": {
+      "title": "O'lchov birliklari",
+      "description": "Birliklar va aniqlik — kasrli miqdorda (kg, m) sotish uchun"
+    },
+    "catalog": {
+      "title": "Katalog sozlamalari",
+      "description": "Katalog xatti-harakati: erkin narx, manfiy qoldiq, bir nechta shtrix-kod va boshqalar"
+    },
+    "profile": {
+      "title": "Profil",
+      "description": "Shaxsiy ma'lumotlar, parol va faol sessiyalar"
+    }
+  },
   "branches": {
     "title": "Do'konlar",
     "description": "Biznesingiz do'konlari (filiallari)",
@@ -2004,5 +2111,33 @@
     "presetWeek": "7 kun",
     "presetMonth": "Shu oy",
     "presetPrevMonth": "O'tgan oy"
+  },
+  "onlineOrders": {
+    "title": "Onlayn buyurtmalar",
+    "searchPlaceholder": "Qidirish (ID, mijoz, telefon)...",
+    "tabAll": "Barchasi",
+    "statusPending": "Yangi",
+    "statusConfirmed": "Tasdiqlangan",
+    "statusCompleted": "Bajarilgan",
+    "statusCancelled": "Bekor qilingan",
+    "empty": "Onlayn buyurtmalar yo'q",
+    "emptyHint": "Onlayn do'kondan kelgan buyurtmalar shu yerda ko'rinadi",
+    "customer": "Mijoz",
+    "phone": "Telefon",
+    "productsCount": "{count} ta mahsulot",
+    "total": "Summa",
+    "status": "Holat",
+    "date": "Sana",
+    "note": "Izoh",
+    "detailTitle": "Buyurtma",
+    "confirm": "Tasdiqlash",
+    "complete": "Bajarildi",
+    "cancel": "Bekor qilish",
+    "cancelConfirm": "Buyurtma bekor qilinadi va mahsulotlar omborga qaytariladi. Davom etasizmi?",
+    "yesCancel": "Ha, bekor qilish",
+    "noKeep": "Yo'q",
+    "statusUpdated": "Buyurtma holati yangilandi",
+    "loadMore": "Yana yuklash",
+    "guest": "Mehmon"
   }
 }

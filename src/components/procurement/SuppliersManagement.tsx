@@ -215,7 +215,7 @@ export default function SuppliersManagement() {
 
       <Modal isOpen={isModalOpen} onClose={closeModal} className="max-w-lg w-full mx-4 p-6 sm:p-8">
         <form onSubmit={handleSubmit}>
-          <h2 className="mb-5 text-xl font-semibold text-gray-800 dark:text-white/90">
+          <h2 className="mb-5 pr-10 text-xl font-semibold text-gray-800 dark:text-white/90">
             {editing ? t("suppliers.editSupplierTitle") : t("suppliers.addSupplierTitle")}
           </h2>
 

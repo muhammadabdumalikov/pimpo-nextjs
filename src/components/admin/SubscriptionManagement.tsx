@@ -74,9 +74,9 @@ export default function SubscriptionManagement() {
       },
       {
         label: t("upgradePlan.compare.users"),
-        basic: "4",
-        pro: "10",
-        proplus: t("upgradePlan.compare.unlimited"),
+        basic: "10",
+        pro: "20",
+        proplus: "50",
       },
       {
         label: t("upgradePlan.compare.debt"),
@@ -130,6 +130,9 @@ export default function SubscriptionManagement() {
     [t],
   );
 
+  // List price for the selected period (annual already includes -20%). Promo
+  // discounts are NOT applied here by design — the table shows catalogue
+  // prices; the business's personal discount lives in SubscriptionStatus.
   const priceFor = (plan: Plan) =>
     monthly ? plan.monthlyPrice : Math.round(plan.monthlyPrice * 12 * 0.8);
   const periodLabel = monthly ? t("upgradePlan.month") : t("upgradePlan.year");
@@ -227,7 +230,7 @@ export default function SubscriptionManagement() {
                         {plan.name}
                       </div>
                       <div className="mt-1 flex items-baseline justify-center gap-1">
-                        <span className="text-xl font-bold text-gray-800 dark:text-white/90">
+                        <span className="text-xl font-bold tabular-nums text-gray-800 dark:text-white/90">
                           {price === 0
                             ? t("upgradePlan.free")
                             : price.toLocaleString("uz-UZ")}

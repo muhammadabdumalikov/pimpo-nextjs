@@ -42,7 +42,7 @@ export default function ConfirmModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-md w-full mx-4 p-6 sm:p-8">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90 mb-2">
+      <h2 className="pr-10 text-xl font-semibold text-gray-800 dark:text-white/90 mb-2">
         {title}
       </h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">

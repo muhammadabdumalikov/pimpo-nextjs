@@ -1052,7 +1052,7 @@ export default function UserDebtList() {
         onClose={addDebtModal.closeModal}
         className="max-w-[600px] p-5 lg:p-10"
       >
-        <h4 className="font-semibold text-gray-800 mb-6 text-title-sm dark:text-white/90">
+        <h4 className="pr-10 font-semibold text-gray-800 mb-6 text-title-sm dark:text-white/90">
           {t('userDebt.addDebt')}
         </h4>
         <form onSubmit={handleAddFormSubmit} className="space-y-4">
@@ -1146,7 +1146,7 @@ export default function UserDebtList() {
         onClose={handleCancel}
         className="max-w-[600px] p-5 lg:p-10"
       >
-        <h4 className="font-semibold text-gray-800 mb-6 text-title-sm dark:text-white/90">
+        <h4 className="pr-10 font-semibold text-gray-800 mb-6 text-title-sm dark:text-white/90">
           {t('userDebt.edit')}
         </h4>
         <form
@@ -1224,7 +1224,7 @@ export default function UserDebtList() {
         onClose={() => { detailsModal.closeModal(); setDetailsDebt(null); }}
         className="max-w-[760px] p-5 lg:p-8"
       >
-        <h4 className="mb-1 text-title-sm font-semibold text-gray-800 dark:text-white/90">
+        <h4 className="mb-1 pr-10 text-title-sm font-semibold text-gray-800 dark:text-white/90">
           {t('userDebt.details') || 'Details'}
         </h4>
         {detailsDebt && (
@@ -1370,7 +1370,7 @@ export default function UserDebtList() {
         onClose={() => { payDebtModal.closeModal(); setPayingDebt(null); }}
         className="max-w-[440px] p-5 lg:p-8"
       >
-        <h4 className="mb-1 text-title-sm font-semibold text-gray-800 dark:text-white/90">
+        <h4 className="mb-1 pr-10 text-title-sm font-semibold text-gray-800 dark:text-white/90">
           {t('userDebt.recordPayment') || 'Record payment'}
         </h4>
         {payingDebt && (

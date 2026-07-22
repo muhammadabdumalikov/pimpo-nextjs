@@ -75,7 +75,7 @@ export default function CostingSettingsModal({ isOpen, onClose }: Props) {
       onClose={onClose}
       className="max-w-[520px] m-4 p-6 sm:p-8"
     >
-      <h4 className="mb-1 text-lg font-semibold text-gray-800 dark:text-white/90">
+      <h4 className="mb-1 pr-10 text-lg font-semibold text-gray-800 dark:text-white/90">
         {t("inventory.costingTitle") || "Учёт себестоимости"}
       </h4>
       <p className="mb-3 text-theme-sm text-gray-500 dark:text-gray-400">

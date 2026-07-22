@@ -123,6 +123,9 @@ const routeMenuMap: Record<string, string> = {
   // All-sales history shares the checkout menu right: whoever can sell can
   // also see the sales list.
   '/sales': 'checkout',
+  // Online storefront orders share the same right: whoever runs the till
+  // handles incoming online orders too.
+  '/online-orders': 'checkout',
   '/kassa': 'kassa',
   '/kassa/operations': 'kassa',
   '/finance/categories': 'finance.categories',

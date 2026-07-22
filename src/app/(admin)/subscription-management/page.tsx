@@ -1,17 +1,21 @@
 import SubscriptionManagement from "@/components/admin/SubscriptionManagement";
+import SubscriptionStatus from "@/components/admin/SubscriptionStatus";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Subscription Management | KPOS - Next.js Dashboard Template",
-  description: "Manage menu permissions for subscription tiers",
+  title: "Obuna boshqaruvi | Pimpo",
+  description: "Current subscription status and plan comparison",
 };
 
 export default function SubscriptionManagementPage() {
   return (
     <>
-      <PageBreadcrumb pageTitle="Subscription Management" titleKey="sidebar.subscriptionManagement" />
-      <SubscriptionManagement />
+      <PageBreadcrumb pageTitle="Obuna boshqaruvi" titleKey="sidebar.subscriptionManagement" />
+      <div className="space-y-6">
+        <SubscriptionStatus />
+        <SubscriptionManagement />
+      </div>
     </>
   );
 }

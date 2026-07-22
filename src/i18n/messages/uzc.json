@@ -335,7 +335,7 @@
       "basic": {
         "everythingInFree": "Бепул режадаги ҳамма нарса",
         "addProducts": "1 500 тагача маҳсулот",
-        "formElements": "4 фойдаланувчигача",
+        "formElements": "10 фойдаланувчигача",
         "imagesVideos": "Таъминот (таъминотчи ва қабул)",
         "emailSupport": "Тўлиқ насия + Email ёрдам"
       },
@@ -353,7 +353,7 @@
       "proplus": {
         "everythingInPro": "Бизнес тарифидаги ҳамма нарса",
         "unlimitedBranches": "Чексиз филиаллар",
-        "unlimitedUsers": "Чексиз ходимлар",
+        "unlimitedUsers": "50 тагача ходим",
         "prioritySupport": "Устувор қўллаб-қувватлаш"
       }
     },
@@ -423,6 +423,10 @@
     "upgradePlan": "Режани янгилаш",
     "settings": "Созламалар",
     "receipts": "Чеклар",
+    "paymentMethods": "Тўлов турлари",
+    "units": "Ўлчов бирликлари",
+    "catalogSettings": "Каталог",
+    "profileSettings": "Профил",
     "menu": "Меню",
     "others": "Бошқалар",
     "new": "янги",
@@ -473,7 +477,8 @@
     "reportsBranchComparison": "Филиаллар",
     "reportsTransfers": "Трансферлар",
     "reportsTransferSuggestions": "Трансфер тавсияси",
-    "reportsTarget": "Режа / факт"
+    "reportsTarget": "Режа / факт",
+    "onlineOrders": "Онлайн буюртмалар"
   },
   "stockTakes": {
     "title": "Инвентаризация",
@@ -1325,6 +1330,104 @@
     "noncashType": "Нақдсиз",
     "newAccount": "Янги ҳисоб"
   },
+  "unitsPage": {
+    "title": "Ўлчов бирликлари",
+    "description": "Бирликлар ва аниқлик — касрли миқдорда (кг, м) сотиш учун",
+    "add": "Бирлик қўшиш",
+    "addTitle": "Янги ўлчов бирлиги",
+    "editTitle": "Бирликни таҳрирлаш",
+    "name": "Ўлчов бирлиги",
+    "namePlaceholder": "Масалан: Килограмм",
+    "shortName": "Қисқартма",
+    "shortNamePlaceholder": "Масалан: кг",
+    "precision": "Аниқлик",
+    "precision0": "бутун сон",
+    "precision1": "1 хона каср",
+    "precision2": "2 хона каср",
+    "precision3": "3 хона каср",
+    "precisionHint": "Миқдорда нечта ўнлик хона рухсат этилади (0 — фақат бутун сон)",
+    "nameRequired": "Номи ва қисқартмаси тўлдирилиши шарт",
+    "system": "Тизимли",
+    "actions": "Амаллар",
+    "edit": "Таҳрирлаш",
+    "delete": "Ўчириш",
+    "deleteTitle": "Бирликни ўчирасизми?"
+  },
+  "profilePage": {
+    "infoTitle": "Профил маълумотлари",
+    "infoDescription": "Исм ва аватар — тизимда қандай кўринишингиз",
+    "name": "Исм",
+    "login": "Логин",
+    "role": "Рол",
+    "save": "Сақлаш",
+    "savedName": "Исм сақланди",
+    "changeAvatar": "Расм танлаш",
+    "removeAvatar": "Ўчириш",
+    "avatarHint": "JPG, PNG ёки WebP, 5 МБ гача",
+    "avatarType": "Фақат JPG, PNG ёки WebP расм юклаш мумкин",
+    "avatarTooBig": "Расм ҳажми 5 МБ дан ошмаслиги керак",
+    "savedAvatar": "Аватар янгиланди",
+    "securityTitle": "Хавфсизлик",
+    "securityDescription": "Ҳисобингиз паролини ўзгартириш",
+    "currentPassword": "Жорий парол",
+    "newPassword": "Янги парол",
+    "confirmPassword": "Янги паролни тасдиқланг",
+    "passwordHint": "Камида 6 та белги",
+    "passwordTooShort": "Янги парол камида 6 та белгидан иборат бўлиши керак",
+    "passwordMismatch": "Янги пароллар мос келмади",
+    "passwordChanged": "Парол ўзгартирилди",
+    "changePassword": "Паролни ўзгартириш"
+  },
+  "subscriptionStatus": {
+    "currentPlan": "Жорий тариф",
+    "noPlan": "Тариф танланмаган",
+    "status": {
+      "active": "Фаол",
+      "trial": "Синов даври",
+      "expired": "Муддати тугаган",
+      "none": "Фаол эмас"
+    },
+    "activeUntil": "Амал қилиш муддати:",
+    "validUntil": "Амал қилиш муддати:",
+    "noEndDate": "Муддатсиз",
+    "pickPlanHint": "Ишни давом эттириш учун тариф танланг",
+    "balance": "Аккаунт баланси",
+    "topUp": "Балансни тўлдириш",
+    "topUpTitle": "Балансни тўлдириш",
+    "topUpHint": "Онлайн тўлов интеграцияси тез кунда ишга тушади. Ҳозирча балансни тўлдириш учун биз билан боғланинг:",
+    "close": "Ёпиш",
+    "accountInfo": "Ҳисоб маълумотлари",
+    "legalName": "Фойдаланувчи",
+    "inn": "ИНН/ЖШШИР",
+    "contractNumber": "Шартнома рақами",
+    "contractDate": "Шартнома санаси",
+    "offer": "Оммавий оферта",
+    "monthly": "Ойлик тўлов",
+    "planLine": "Тариф",
+    "extraBranches": "Қўшимча филиал",
+    "discount": "Чегирма",
+    "activeDiscounts": "Фаол чегирмалар"
+  },
+  "settingsPages": {
+    "comingSoon": "Тез кунда",
+    "comingSoonHint": "Бу бўлим устида ишланмоқда ва тез орада ишга тушади.",
+    "paymentMethods": {
+      "title": "Тўлов турлари",
+      "description": "Созланадиган тўлов турлари — тизимли турларни ёқиш/ўчириш ва махсус турлар қўшиш"
+    },
+    "units": {
+      "title": "Ўлчов бирликлари",
+      "description": "Бирликлар ва аниқлик — касрли миқдорда (кг, м) сотиш учун"
+    },
+    "catalog": {
+      "title": "Каталог созламалари",
+      "description": "Каталог хатти-ҳаракати: эркин нарх, манфий қолдиқ, бир нечта штрих-код ва бошқалар"
+    },
+    "profile": {
+      "title": "Профил",
+      "description": "Шахсий маълумотлар, парол ва фаол сессиялар"
+    }
+  },
   "branches": {
     "title": "Дўконлар",
     "description": "Бизнесингиз дўконлари (филиаллари)",
@@ -1632,6 +1735,8 @@
     "PLATFORM_ADMIN_REQUIRED": "Платформа администратори ҳуқуқи талаб қилинади.",
     "BRANCH_MAIN_DELETE_FORBIDDEN": "Асосий дўконни ўчириб бўлмайди.",
     "BRANCH_NOT_FOUND": "Филиал топилмади.",
+    "UNIT_NOT_FOUND": "Ўлчов бирлиги топилмади.",
+    "UNIT_NAME_EXISTS": "Бу номдаги ўлчов бирлиги аллақачон мавжуд.",
     "BRANCH_LIMIT_REACHED": "Тарифингиз учун филиаллар чегарасига ({limit}) етдингиз. Кўпроқ филиал учун тарифни янгиланг.",
     "PLAN_UPGRADE_REQUIRED": "Бу имконият юқорироқ тарифда мавжуд. Илтимос, тарифингизни янгиланг.",
     "BRAND_NOT_FOUND": "Бренд топилмади.",
@@ -1708,7 +1813,9 @@
     "TRANSFER_EMPTY": "Кўчиришда камида битта маҳсулот бўлиши керак.",
     "TRANSFER_SAME_BRANCH": "Манба ва қабул қилувчи дўкон бир хил бўлмаслиги керак.",
     "TRANSFER_EXCEEDS_STOCK": "\"{name}\" дан {qty} та кўчириб бўлмайди; манба дўконда фақат {available} та бор.",
-    "TRANSFER_NOT_FOUND": "Кўчириш топилмади."
+    "TRANSFER_NOT_FOUND": "Кўчириш топилмади.",
+    "STORE_INSUFFICIENT_STOCK": "«{name}» етарли эмас — омборда {available} та қолди",
+    "ORDER_CANCELLED_IMMUTABLE": "Бекор қилинган буюртма ҳолатини ўзгартириб бўлмайди"
   },
   "landing": {
     "nav": {
@@ -1824,7 +1931,7 @@
         "features": [
           "Har yangi filial uchun +150 000 so'm (3 tagacha)",
           "Cheksiz mahsulot",
-          "4 tagacha foydalanuvchi",
+          "10 tagacha foydalanuvchi",
           "To'liq nasiya boshqaruvi",
           "To'liq inventar",
           "Ta'minotchilar va qabul",
@@ -1843,7 +1950,7 @@
         "features": [
           "Har yangi filial uchun +150 000 so'm (5 tagacha)",
           "Cheksiz mahsulot",
-          "10 tagacha foydalanuvchi",
+          "20 tagacha foydalanuvchi",
           "To'liq nasiya boshqaruvi",
           "Ommaviy mahsulot qo'shish",
           "Kengaytirilgan hisobotlar",
@@ -1861,7 +1968,7 @@
         "cta": "Бизнес+ танлаш",
         "features": [
           "Cheksiz filial — har yangisiga +150 000 so'm",
-          "Cheksiz foydalanuvchi",
+          "50 tagacha foydalanuvchi",
           "Cheksiz mahsulot",
           "To'liq nasiya boshqaruvi",
           "Ommaviy mahsulot qo'shish",
@@ -2004,5 +2111,33 @@
       "telegram": "Telegram орқали ёзиш",
       "call": "Қўнғироқ қилиш"
     }
+  },
+  "onlineOrders": {
+    "title": "Онлайн буюртмалар",
+    "searchPlaceholder": "Қидириш (ID, мижоз, телефон)...",
+    "tabAll": "Барчаси",
+    "statusPending": "Янги",
+    "statusConfirmed": "Тасдиқланган",
+    "statusCompleted": "Бажарилган",
+    "statusCancelled": "Бекор қилинган",
+    "empty": "Онлайн буюртмалар йўқ",
+    "emptyHint": "Онлайн дўкондан келган буюртмалар шу ерда кўринади",
+    "customer": "Мижоз",
+    "phone": "Телефон",
+    "productsCount": "{count} та маҳсулот",
+    "total": "Сумма",
+    "status": "Ҳолат",
+    "date": "Сана",
+    "note": "Изоҳ",
+    "detailTitle": "Буюртма",
+    "confirm": "Тасдиқлаш",
+    "complete": "Бажарилди",
+    "cancel": "Бекор қилиш",
+    "cancelConfirm": "Буюртма бекор қилинади ва маҳсулотлар омборга қайтарилади. Давом этасизми?",
+    "yesCancel": "Ҳа, бекор қилиш",
+    "noKeep": "Йўқ",
+    "statusUpdated": "Буюртма ҳолати янгиланди",
+    "loadMore": "Яна юклаш",
+    "guest": "Меҳмон"
   }
 }

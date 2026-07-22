@@ -26,6 +26,8 @@
     "PLATFORM_ADMIN_REQUIRED": "Platform administrator access is required.",
     "BRANCH_MAIN_DELETE_FORBIDDEN": "The main store cannot be deleted.",
     "BRANCH_NOT_FOUND": "Branch not found.",
+    "UNIT_NOT_FOUND": "Unit not found.",
+    "UNIT_NAME_EXISTS": "A unit with this name already exists.",
     "BRANCH_LIMIT_REACHED": "You've reached the branch limit ({limit}) for your plan. Upgrade for more branches.",
     "PLAN_UPGRADE_REQUIRED": "This feature is available on a higher plan. Please upgrade your subscription.",
     "BRAND_NOT_FOUND": "Brand not found.",
@@ -102,7 +104,9 @@
     "TRANSFER_EMPTY": "A transfer must contain at least one item.",
     "TRANSFER_SAME_BRANCH": "Source and destination store must differ.",
     "TRANSFER_EXCEEDS_STOCK": "Cannot transfer {qty} of \"{name}\"; only {available} in the source store.",
-    "TRANSFER_NOT_FOUND": "Transfer not found."
+    "TRANSFER_NOT_FOUND": "Transfer not found.",
+    "STORE_INSUFFICIENT_STOCK": "Not enough “{name}” — only {available} left in stock",
+    "ORDER_CANCELLED_IMMUTABLE": "A cancelled order cannot change status"
   },
   "landing": {
     "nav": {
@@ -218,7 +222,7 @@
         "features": [
           "+150,000 UZS per new branch (up to 3)",
           "Unlimited products",
-          "4 users",
+          "10 users",
           "Full credit management",
           "Full inventory",
           "Suppliers and receiving",
@@ -237,7 +241,7 @@
         "features": [
           "+150,000 UZS per new branch (up to 5)",
           "Unlimited products",
-          "Up to 10 users",
+          "Up to 20 users",
           "Full credit management",
           "Bulk product import",
           "Advanced reports",
@@ -255,7 +259,7 @@
         "cta": "Choose Business+",
         "features": [
           "Unlimited branches — +150,000 UZS each new one",
-          "Unlimited users",
+          "Up to 50 users",
           "Unlimited products",
           "Full credit management",
           "Bulk product import",
@@ -737,7 +741,7 @@
       "basic": {
         "everythingInFree": "Everything in Free",
         "addProducts": "Unlimited products",
-        "formElements": "Up to 4 users",
+        "formElements": "Up to 10 users",
         "imagesVideos": "Procurement (suppliers & receipts)",
         "emailSupport": "Full debt management + Email support"
       },
@@ -755,7 +759,7 @@
       "proplus": {
         "everythingInPro": "Everything in Business",
         "unlimitedBranches": "Unlimited branches",
-        "unlimitedUsers": "Unlimited staff",
+        "unlimitedUsers": "Up to 50 staff",
         "prioritySupport": "Priority support"
       }
     },
@@ -823,6 +827,10 @@
     "upgradePlan": "Upgrade Plan",
     "settings": "Settings",
     "receipts": "Receipts",
+    "paymentMethods": "Payment methods",
+    "units": "Units of measure",
+    "catalogSettings": "Catalog",
+    "profileSettings": "Profile",
     "menu": "Menu",
     "others": "Others",
     "new": "new",
@@ -873,7 +881,8 @@
     "reportsBranchComparison": "Branches",
     "reportsTransfers": "Transfers",
     "reportsTransferSuggestions": "Transfer suggestions",
-    "reportsTarget": "Plan / actual"
+    "reportsTarget": "Plan / actual",
+    "onlineOrders": "Online orders"
   },
   "stockTakes": {
     "title": "Stock-take",
@@ -1714,6 +1723,104 @@
     "noncashType": "Non-cash",
     "newAccount": "New account"
   },
+  "unitsPage": {
+    "title": "Units of measure",
+    "description": "Units and precision — for selling fractional quantities (kg, m)",
+    "add": "Add unit",
+    "addTitle": "New unit of measure",
+    "editTitle": "Edit unit",
+    "name": "Unit of measure",
+    "namePlaceholder": "e.g. Kilogram",
+    "shortName": "Abbreviation",
+    "shortNamePlaceholder": "e.g. kg",
+    "precision": "Precision",
+    "precision0": "whole numbers",
+    "precision1": "1 decimal place",
+    "precision2": "2 decimal places",
+    "precision3": "3 decimal places",
+    "precisionHint": "How many decimal places quantities may carry (0 — whole numbers only)",
+    "nameRequired": "Name and abbreviation are required",
+    "system": "System",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete this unit?"
+  },
+  "profilePage": {
+    "infoTitle": "Profile details",
+    "infoDescription": "Name and avatar — how you appear in the system",
+    "name": "Name",
+    "login": "Login",
+    "role": "Role",
+    "save": "Save",
+    "savedName": "Name saved",
+    "changeAvatar": "Choose photo",
+    "removeAvatar": "Remove",
+    "avatarHint": "JPG, PNG or WebP, up to 5 MB",
+    "avatarType": "Only JPG, PNG or WebP images are allowed",
+    "avatarTooBig": "Image size must not exceed 5 MB",
+    "savedAvatar": "Avatar updated",
+    "securityTitle": "Security",
+    "securityDescription": "Change your account password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "passwordHint": "At least 6 characters",
+    "passwordTooShort": "New password must be at least 6 characters",
+    "passwordMismatch": "New passwords do not match",
+    "passwordChanged": "Password changed",
+    "changePassword": "Change password"
+  },
+  "subscriptionStatus": {
+    "currentPlan": "Current plan",
+    "noPlan": "No plan selected",
+    "status": {
+      "active": "Active",
+      "trial": "Trial",
+      "expired": "Expired",
+      "none": "Inactive"
+    },
+    "activeUntil": "Subscription active until:",
+    "validUntil": "Valid until:",
+    "noEndDate": "No expiry",
+    "pickPlanHint": "Pick a plan to keep working",
+    "balance": "Account balance",
+    "topUp": "Top up balance",
+    "topUpTitle": "Top up balance",
+    "topUpHint": "Online payments are coming soon. For now, contact us to top up your balance:",
+    "close": "Close",
+    "accountInfo": "Account details",
+    "legalName": "Account holder",
+    "inn": "TIN / PINFL",
+    "contractNumber": "Contract number",
+    "contractDate": "Contract date",
+    "offer": "Public offer",
+    "monthly": "Monthly payment",
+    "planLine": "Plan",
+    "extraBranches": "Extra location",
+    "discount": "Discount",
+    "activeDiscounts": "Active discounts"
+  },
+  "settingsPages": {
+    "comingSoon": "Coming soon",
+    "comingSoonHint": "This section is under development and will be available soon.",
+    "paymentMethods": {
+      "title": "Payment methods",
+      "description": "Configurable payment methods — enable/disable system methods and add custom ones"
+    },
+    "units": {
+      "title": "Units of measure",
+      "description": "Units and precision — for selling fractional quantities (kg, m)"
+    },
+    "catalog": {
+      "title": "Catalog settings",
+      "description": "Catalog behavior: free price, negative stock, multiple barcodes and more"
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "Personal details, password and active sessions"
+    }
+  },
   "branches": {
     "title": "Stores",
     "description": "Your business stores (branches)",
@@ -2004,5 +2111,33 @@
     "total": "Total",
     "unassigned": "Store / guest",
     "noData": "No data found"
+  },
+  "onlineOrders": {
+    "title": "Online orders",
+    "searchPlaceholder": "Search (ID, customer, phone)...",
+    "tabAll": "All",
+    "statusPending": "New",
+    "statusConfirmed": "Confirmed",
+    "statusCompleted": "Completed",
+    "statusCancelled": "Cancelled",
+    "empty": "No online orders",
+    "emptyHint": "Orders from your online store will appear here",
+    "customer": "Customer",
+    "phone": "Phone",
+    "productsCount": "{count} product(s)",
+    "total": "Total",
+    "status": "Status",
+    "date": "Date",
+    "note": "Note",
+    "detailTitle": "Order",
+    "confirm": "Confirm",
+    "complete": "Complete",
+    "cancel": "Cancel",
+    "cancelConfirm": "The order will be cancelled and the goods returned to stock. Continue?",
+    "yesCancel": "Yes, cancel",
+    "noKeep": "No",
+    "statusUpdated": "Order status updated",
+    "loadMore": "Load more",
+    "guest": "Guest"
   }
 }

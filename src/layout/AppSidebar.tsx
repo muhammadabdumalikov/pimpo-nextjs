@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState,useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
@@ -21,13 +21,14 @@ import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useAuth } from "@/context/AuthContext";
 import { getMenuPermissions, isMenuAllowed, getMenuIdFromPath } from "@/data/menuPermissions";
+import { getOrderCount } from "@/lib/api";
 
 type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
   disabled?: boolean;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean; comingSoon?: boolean }[];
+  subItems?: { name: string; path: string; pro?: boolean; new?: boolean; comingSoon?: boolean; count?: number }[];
 };
 
 const AppSidebar: React.FC = () => {
@@ -42,6 +43,29 @@ const AppSidebar: React.FC = () => {
   const { hasMenuAccess } = useAuth();
   const pathname = usePathname();
   const menuPermissions = getMenuPermissions();
+
+  // New (Pending) storefront orders — numeric badge on the "Online orders"
+  // menu item, refreshed every minute and on navigation (so acting on orders
+  // clears it promptly).
+  const [pendingStoreOrders, setPendingStoreOrders] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const poll = () => {
+      getOrderCount({ status: "Pending", source: "store" })
+        .then((count) => {
+          if (alive) setPendingStoreOrders(count);
+        })
+        .catch(() => {
+          /* sidebar badge is best-effort */
+        });
+    };
+    poll();
+    const id = setInterval(poll, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [pathname]);
 
   // A menu is shown only when allowed by BOTH the subscription tier and the
   // acting account's role. The business owner has menuKeys ["*"] so the role
@@ -98,6 +122,7 @@ const AppSidebar: React.FC = () => {
       subItems: [
         { name: t('sidebar.checkout'), path: "/cart", pro: false },
         { name: t('sidebar.allSales'), path: "/sales", pro: false },
+        { name: t('sidebar.onlineOrders'), path: "/online-orders", pro: false, count: pendingStoreOrders },
         { name: t('sidebar.userDebt'), path: "/user-debt", pro: false },
         { name: t('sidebar.kassaShifts'), path: "/kassa", pro: false },
         { name: t('sidebar.kassaOperations'), path: "/kassa/operations", pro: false },
@@ -140,6 +165,10 @@ const AppSidebar: React.FC = () => {
       subItems: [
         { name: t('sidebar.branches'), path: "/settings/branches", pro: false },
         { name: t('sidebar.receipts'), path: "/settings/receipts", pro: false },
+        { name: t('sidebar.paymentMethods'), path: "/settings/payment-methods", pro: false },
+        { name: t('sidebar.units'), path: "/settings/units", pro: false },
+        { name: t('sidebar.catalogSettings'), path: "/settings/catalog", pro: false },
+        { name: t('sidebar.profileSettings'), path: "/settings/profile", pro: false },
         { name: t('sidebar.subscriptionManagement'), path: "/subscription-management", pro: false },
       ],
     },
@@ -223,18 +252,18 @@ const AppSidebar: React.FC = () => {
             )
           )}
           {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
+            // Animated with grid-rows (like the header toggle in the admin
+            // layout) instead of a measured pixel height — measuring broke
+            // whenever navItems refiltered async (tier/role load) and left a
+            // stale height cached for the wrong submenu.
             <div
-              ref={(el) => {
-                subMenuRefs.current[`${menuType}-${index}`] = el;
-              }}
-              className="overflow-hidden transition-all duration-300"
-              style={{
-                height:
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? `${subMenuHeight[`${menuType}-${index}`]}px`
-                    : "0px",
-              }}
+              className={`grid transition-all duration-300 ease-in-out ${
+                openSubmenu?.type === menuType && openSubmenu?.index === index
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "grid-rows-[0fr] opacity-0"
+              }`}
             >
+              <div className="overflow-hidden">
               <ul className="mt-2 space-y-1 ml-9">
                 {nav.subItems.map((subItem) => (
                   <li key={subItem.name}>
@@ -263,6 +292,11 @@ const AppSidebar: React.FC = () => {
                     >
                       {subItem.name}
                       <span className="flex items-center gap-1 ml-auto">
+                        {typeof subItem.count === "number" && subItem.count > 0 && (
+                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-xs font-semibold text-white">
+                            {subItem.count > 99 ? "99+" : subItem.count}
+                          </span>
+                        )}
                         {subItem.new && (
                           <span
                             className={`ml-auto ${
@@ -291,6 +325,7 @@ const AppSidebar: React.FC = () => {
                   </li>
                 ))}
               </ul>
+              </div>
             </div>
           )}
         </li>
@@ -302,10 +337,6 @@ const AppSidebar: React.FC = () => {
     type: "main" | "others";
     index: number;
   } | null>(null);
-  const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>(
-    {}
-  );
-  const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Exact match or a sub-route of the item (e.g. "/reports" stays highlighted
   // on "/reports/sales", "/kassa" on "/kassa/[id]").
@@ -314,6 +345,13 @@ const AppSidebar: React.FC = () => {
       path === pathname || (path !== "/" && pathname.startsWith(path + "/")),
     [pathname],
   );
+
+  // navItems is refiltered when the subscription tier / role permissions load
+  // (async, after mount) — the matched submenu index shifts with it, so the
+  // open-on-load effect must re-run on shape changes, not just on navigation.
+  const menuSignature = navItems
+    .map((nav) => nav.subItems?.map((s) => s.path).join(",") ?? nav.path ?? "")
+    .join("|");
 
   useEffect(() => {
     // Check if the current path matches any submenu item
@@ -333,20 +371,8 @@ const AppSidebar: React.FC = () => {
     if (!submenuMatched) {
       setOpenSubmenu(null);
     }
-  }, [pathname,isActive]);
-
-  useEffect(() => {
-    // Set the height of the submenu items when the submenu is opened
-    if (openSubmenu !== null) {
-      const key = `${openSubmenu.type}-${openSubmenu.index}`;
-      if (subMenuRefs.current[key]) {
-        setSubMenuHeight((prevHeights) => ({
-          ...prevHeights,
-          [key]: subMenuRefs.current[key]?.scrollHeight || 0,
-        }));
-      }
-    }
-  }, [openSubmenu]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, isActive, menuSignature]);
 
   const handleSubmenuToggle = (index: number, menuType: "main" | "others") => {
     setOpenSubmenu((prevOpenSubmenu) => {

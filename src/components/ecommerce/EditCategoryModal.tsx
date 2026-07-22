@@ -67,7 +67,7 @@ export default function EditCategoryModal({
   return (
     <Modal isOpen={isOpen} onClose={handleClose} className="max-w-md w-full mx-4">
       <div className="p-6 sm:p-8">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90 mb-6">
+        <h2 className="pr-10 text-xl font-semibold text-gray-800 dark:text-white/90 mb-6">
           {t("categories.editCategoryTitle")}
         </h2>
         <form onSubmit={handleSubmit}>

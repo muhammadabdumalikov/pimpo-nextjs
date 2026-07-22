@@ -23,6 +23,7 @@ import {
   LuStore,
   LuFileText,
   LuCreditCard,
+  LuGlobe,
 } from "react-icons/lu";
 import { REPORTS } from "./reportsCatalog";
 
@@ -55,6 +56,7 @@ const MENU_ENTRIES: NavEntry[] = [
   // Sales
   { id: "cart", path: "/cart", nameKey: "sidebar.checkout", groupKey: "sidebar.sales", icon: LuShoppingCart },
   { id: "sales", path: "/sales", nameKey: "sidebar.allSales", groupKey: "sidebar.sales", icon: LuReceipt },
+  { id: "online-orders", path: "/online-orders", nameKey: "sidebar.onlineOrders", groupKey: "sidebar.sales", icon: LuGlobe },
   { id: "user-debt", path: "/user-debt", nameKey: "sidebar.userDebt", groupKey: "sidebar.sales", icon: LuHandCoins },
   { id: "kassa", path: "/kassa", nameKey: "sidebar.kassaShifts", groupKey: "sidebar.sales", icon: LuCalendarClock },
   { id: "kassa-operations", path: "/kassa/operations", nameKey: "sidebar.kassaOperations", groupKey: "sidebar.sales", icon: LuArrowRightLeft },
