@@ -54,7 +54,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   const { headerOpen } = useSidebar();
   const isEditMode = !!productId;
   // Product images are a Business (pro) plan feature.
-  const canUseImages = currentTier === "pro";
+  const canUseImages = currentTier === "pro" || currentTier === "proplus";
   const [formData, setFormData] = useState({
     productName: "",
     categoryId: "",

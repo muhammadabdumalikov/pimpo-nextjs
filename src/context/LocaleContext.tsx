@@ -28,6 +28,12 @@ export const LocaleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setIsInitialized(true);
   }, []);
 
+  // Keep <html lang> in sync with the active UI language (a11y + SEO): the
+  // server can't know the localStorage choice, so it's stamped client-side.
+  useEffect(() => {
+    document.documentElement.lang = locale === 'uzc' ? 'uz-Cyrl' : locale;
+  }, [locale]);
+
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale);
     localStorage.setItem('locale', newLocale);

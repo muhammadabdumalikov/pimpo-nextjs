@@ -292,7 +292,7 @@
       },
       "branches": {
         "q": "Bir nechta filialni boshqara olamanmi?",
-        "a": "Ha. To'lovli tariflarda bir nechta filial — Standartda 1 + 3 (har yangisi −20%), Biznesda 1 + 5 (har yangisi −50%). Hammasi bitta paneldan boshqariladi."
+        "a": "Ha. To'lovli tariflarda bir nechta filial — Standartda 1 + 3 tagacha, Biznesda 1 + 5 tagacha, Biznes+ da cheklovsiz. Har bir qo'shimcha filial +150 000 so'm/oy. Hammasi bitta paneldan boshqariladi."
       },
       "data": {
         "q": "Ma'lumotlarim xavfsizmi?",
@@ -307,7 +307,9 @@
     },
     "footer": {
       "tagline": "Do'kon va bozor uchun POS",
-      "rights": "© 2026 KPOS. Barcha huquqlar himoyalangan."
+      "rights": "© 2026 KPOS. Barcha huquqlar himoyalangan.",
+      "terms": "Foydalanish shartlari",
+      "privacy": "Maxfiylik siyosati"
     },
     "compare": {
       "title": "Tariflarni solishtiring",
@@ -383,6 +385,12 @@
         "Gullar do'koni",
         "Avtoehtiyot qismlar"
       ]
+    },
+    "contact": {
+      "title": "Savollaringiz bormi?",
+      "subtitle": "Yozing yoki qo'ng'iroq qiling — sozlashda bepul yordam beramiz.",
+      "telegram": "Telegram orqali yozish",
+      "call": "Qo'ng'iroq qilish"
     }
   },
   "userDebt": {
@@ -737,6 +745,12 @@
         "subscriptionManagement": "Jamoa: rollar va xodimlar",
         "prioritySupport": "Ustuvor qo'llab-quvvatlash",
         "productImages": "Mahsulot rasmini yuklash"
+      },
+      "proplus": {
+        "everythingInPro": "Biznes tarifidagi hamma narsa",
+        "unlimitedBranches": "Cheksiz filiallar",
+        "unlimitedUsers": "Cheksiz xodimlar",
+        "prioritySupport": "Ustuvor qo'llab-quvvatlash"
       }
     },
     "loadingPlans": "Rejalar yuklanmoqda...",
@@ -762,7 +776,8 @@
       "priority": "Ustuvor",
       "debtCustomers": "20 nasiya",
       "productImages": "Mahsulot rasmini yuklash"
-    }
+    },
+    "updateSuccess": "Tarif yangilandi: {plan}"
   },
   "sidebar": {
     "dashboard": "Boshqaruv paneli",

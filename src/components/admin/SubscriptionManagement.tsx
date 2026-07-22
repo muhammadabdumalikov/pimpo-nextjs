@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
 import { CheckLineIcon } from "@/icons/index";
 import Button from "../ui/button/Button";
@@ -30,6 +31,7 @@ type CompareRow = {
 
 export default function SubscriptionManagement() {
   const { t } = useTranslations();
+  const router = useRouter();
   const [monthly, setMonthly] = useState(true);
 
   const plans = useMemo<Plan[]>(
@@ -228,7 +230,7 @@ export default function SubscriptionManagement() {
                         <span className="text-xl font-bold text-gray-800 dark:text-white/90">
                           {price === 0
                             ? t("upgradePlan.free")
-                            : price.toLocaleString("ru-RU")}
+                            : price.toLocaleString("uz-UZ")}
                         </span>
                         {price > 0 && (
                           <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -278,6 +280,7 @@ export default function SubscriptionManagement() {
                       variant={plan.popular ? "primary" : "outline"}
                       size="sm"
                       className="w-full"
+                      onClick={() => router.push("/upgrade-plan")}
                     >
                       {t("upgradePlan.choosePlan")}
                     </Button>

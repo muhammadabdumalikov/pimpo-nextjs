@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Public routes that don't require authentication. "/" is the marketing landing
 // and must match exactly (startsWith("/") would swallow every route).
-const publicRoutes = ["/signin", "/signup", "/reset-password"];
+const publicRoutes = ["/signin", "/signup", "/reset-password", "/terms", "/privacy"];
 const isPublicPath = (pathname: string | null) =>
   pathname === "/" || publicRoutes.some((route) => pathname?.startsWith(route));
 

@@ -8,6 +8,7 @@ import PricingCompare from "./PricingCompare";
 import Reveal from "./Reveal";
 import HeroPreview from "./HeroPreview";
 import { ArrowIcon, CheckIcon, ChevronIcon, featureIcons } from "./icons";
+import { SITE_CONTACT, hasAnyContact } from "@/lib/siteContact";
 
 // Design identity: a light canvas punctuated by indigo "ledger-blocks" (hero,
 // credit cell, diff, CTA). Money is set in mono numerals; one live ledger
@@ -644,6 +645,40 @@ export default function LandingPage() {
         </Reveal>
       </section>
 
+      {/* ===== Contact (renders only when a channel is configured) ===== */}
+      {hasAnyContact() && (
+        <section className="px-4 pb-20 sm:px-6 lg:px-8">
+          <Reveal className="mx-auto max-w-3xl text-center">
+            <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
+              {t("landing.contact.title")}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-gray-500 dark:text-gray-400">
+              {t("landing.contact.subtitle")}
+            </p>
+            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              {SITE_CONTACT.telegram && (
+                <a
+                  href={SITE_CONTACT.telegram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#229ED9] px-7 py-3.5 text-base font-semibold text-white transition-all hover:opacity-90 active:translate-y-px sm:w-auto"
+                >
+                  {t("landing.contact.telegram")}
+                </a>
+              )}
+              {SITE_CONTACT.phone && (
+                <a
+                  href={`tel:${SITE_CONTACT.phone.replace(/[^+\d]/g, "")}`}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 px-7 py-3.5 text-base font-semibold text-gray-800 transition-all hover:bg-gray-50 active:translate-y-px dark:border-gray-700 dark:text-white dark:hover:bg-white/5 sm:w-auto"
+                >
+                  {t("landing.contact.call")} · {SITE_CONTACT.phone}
+                </a>
+              )}
+            </div>
+          </Reveal>
+        </section>
+      )}
+
       {/* ===== Footer ===== */}
       <footer className="border-t border-gray-200 py-10 dark:border-gray-800">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:px-6 md:flex-row lg:px-8">
@@ -654,6 +689,14 @@ export default function LandingPage() {
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {t("landing.footer.tagline")}
             </span>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+            <Link href="/terms" className="hover:text-gray-700 dark:hover:text-gray-200">
+              {t("landing.footer.terms")}
+            </Link>
+            <Link href="/privacy" className="hover:text-gray-700 dark:hover:text-gray-200">
+              {t("landing.footer.privacy")}
+            </Link>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {t("landing.footer.rights")}

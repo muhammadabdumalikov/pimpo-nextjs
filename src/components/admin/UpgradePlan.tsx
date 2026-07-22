@@ -37,7 +37,7 @@ export default function UpgradePlan() {
       const backendPlans = await getSubscriptionPlans();
       
       // Sort plans by tier order for consistent display
-      const tierOrder = ['free', 'basic', 'pro'];
+      const tierOrder = ['free', 'basic', 'pro', 'proplus'];
       const sortedPlans = [...backendPlans].sort((a, b) => {
         const aIndex = tierOrder.indexOf(a.tier);
         const bIndex = tierOrder.indexOf(b.tier);
@@ -59,7 +59,7 @@ export default function UpgradePlan() {
           description: plan.description || '',
           features,
           popular: tier === 'basic',
-          soon: tier === 'pro',
+          soon: tier === 'pro' || tier === 'proplus',
         };
       });
       
@@ -103,6 +103,13 @@ export default function UpgradePlan() {
           t('upgradePlan.features.pro.subscriptionManagement'),
           t('upgradePlan.features.pro.prioritySupport'),
         ];
+      case 'proplus':
+        return [
+          t('upgradePlan.features.proplus.everythingInPro'),
+          t('upgradePlan.features.proplus.unlimitedBranches'),
+          t('upgradePlan.features.proplus.unlimitedUsers'),
+          t('upgradePlan.features.proplus.prioritySupport'),
+        ];
       default:
         return [];
     }
@@ -120,7 +127,7 @@ export default function UpgradePlan() {
     {
       tier: 'basic' as SubscriptionTier,
       name: t('upgradePlan.basic'),
-      price: 99000,
+      price: 119000,
       description: t('upgradePlan.basicDescription'),
       features: getFeaturesForTier('basic', t),
       popular: true,
@@ -128,9 +135,18 @@ export default function UpgradePlan() {
     {
       tier: 'pro' as SubscriptionTier,
       name: t('upgradePlan.pro'),
-      price: 249000,
+      price: 299000,
       description: t('upgradePlan.proDescription'),
       features: getFeaturesForTier('pro', t),
+      popular: false,
+      soon: true,
+    },
+    {
+      tier: 'proplus' as SubscriptionTier,
+      name: t('upgradePlan.proplus'),
+      price: 499000,
+      description: t('upgradePlan.proplusDescription'),
+      features: getFeaturesForTier('proplus', t),
       popular: false,
       soon: true,
     },
@@ -140,7 +156,14 @@ export default function UpgradePlan() {
     try {
       setUpdatingTier(tier);
       await setCurrentTier(tier);
-      showToast('success', `Successfully ${tier === currentTier ? 'updated' : tierOrder.indexOf(tier) > tierOrder.indexOf(currentTier) ? 'upgraded to' : 'downgraded to'} ${tier} plan!`, 'Subscription Updated');
+      showToast(
+        'success',
+        (t('upgradePlan.updateSuccess') || 'Plan updated: {plan}').replace(
+          '{plan}',
+          t(`upgradePlan.${tier}`) || tier,
+        ),
+        'Success',
+      );
     } catch (error: any) {
       console.error('Failed to update subscription:', error);
       showToast('error', error.message || 'Failed to update subscription', 'Error');
@@ -149,7 +172,7 @@ export default function UpgradePlan() {
     }
   };
 
-  const tierOrder = ['free', 'basic', 'pro'];
+  const tierOrder = ['free', 'basic', 'pro', 'proplus'];
   const isCurrentPlan = (tier: SubscriptionTier) => currentTier === tier;
   const isUpgrade = (tier: SubscriptionTier) => {
     return tierOrder.indexOf(tier) > tierOrder.indexOf(currentTier);
@@ -219,7 +242,7 @@ export default function UpgradePlan() {
                 </p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-bold text-gray-800 dark:text-white/90">
-                    {plan.price === 0 ? t('upgradePlan.free') : plan.price.toLocaleString('ru-RU')}
+                    {plan.price === 0 ? t('upgradePlan.free') : plan.price.toLocaleString('uz-UZ')}
                   </span>
                   {plan.price > 0 && (
                     <span className="text-sm text-gray-500 dark:text-gray-400">{t('upgradePlan.som')}{t('upgradePlan.month')}</span>

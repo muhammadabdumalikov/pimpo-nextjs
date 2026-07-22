@@ -80,6 +80,11 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
   };
 
   const hasAccess = (allowedTiers: SubscriptionTier[]): boolean => {
+    // proplus is a superset of pro: menu lists that predate the tier (they
+    // enumerate up to 'pro') automatically grant it too.
+    if (currentTier === 'proplus') {
+      return allowedTiers.includes('proplus') || allowedTiers.includes('pro');
+    }
     return allowedTiers.includes(currentTier);
   };
 

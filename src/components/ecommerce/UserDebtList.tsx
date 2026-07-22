@@ -30,7 +30,7 @@ export default function UserDebtList() {
   const { t, locale } = useTranslations();
   const { getLimit, isLimitReached, currentTier } = useSubscription();
   // Installment payments + payment history are a Pro-plan feature.
-  const isPro = currentTier === 'pro';
+  const isPro = currentTier === 'pro' || currentTier === 'proplus';
   const { showToast } = useToast();
   // Customer groups come pre-grouped, sorted, paginated from the backend.
   const [groups, setGroups] = useState<DebtGroup[]>([]);
