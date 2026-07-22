@@ -3177,3 +3177,421 @@ export const getStockTakesReport = (from?: string, to?: string) =>
     `stock-takes${rangeQs(from, to)}`,
     'Failed to fetch stock-takes report',
   );
+
+// ─── Level-1 reports (HISOBOTLAR.md §6) ─────────────────────────────────────
+
+// R9 — Sales dynamics (day/week/month buckets)
+export type SalesGroupBy = 'day' | 'week' | 'month';
+export interface SalesBucket {
+  period: string;
+  orderCount: number;
+  revenue: number;
+  discounts: number;
+  units: number;
+  cogs: number;
+  profit: number;
+  avgCheck: number;
+  margin: number;
+}
+export interface SalesReport {
+  from: string | null;
+  to: string | null;
+  groupBy: SalesGroupBy;
+  buckets: SalesBucket[];
+  totals: {
+    orderCount: number;
+    revenue: number;
+    discounts: number;
+    units: number;
+    cogs: number;
+    profit: number;
+    avgCheck: number;
+    margin: number;
+  };
+}
+export const getSalesReport = (
+  from?: string,
+  to?: string,
+  branchId?: string,
+  groupBy: SalesGroupBy = 'day',
+) => {
+  const qs = rangeQs(from, to, branchId);
+  return getReport<SalesReport>(
+    `sales${qs ? `${qs}&groupBy=${groupBy}` : `?groupBy=${groupBy}`}`,
+    'Failed to fetch sales report',
+  );
+};
+
+// R10 — Traffic heatmap (weekday × hour)
+export interface TrafficCell {
+  dow: number; // 0 = Sunday … 6 = Saturday
+  hour: number; // 0–23
+  orders: number;
+  revenue: number;
+}
+export interface TrafficReport {
+  from: string | null;
+  to: string | null;
+  cells: TrafficCell[];
+  totals: { orders: number; revenue: number };
+}
+export const getTrafficReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<TrafficReport>(
+    `traffic${rangeQs(from, to, branchId)}`,
+    'Failed to fetch traffic report',
+  );
+
+// R11 — Cash shifts (Z-reports)
+export interface ShiftReportRow {
+  id: string;
+  registerName: string;
+  cashierName: string;
+  openingFloat: number;
+  cashIn: number;
+  cashOut: number;
+  expectedCash: number;
+  countedCash: number;
+  difference: number;
+  orderCount: number;
+  openedAt: string;
+  closedAt: string;
+}
+export interface ShiftCashierRollup {
+  cashierName: string;
+  shifts: number;
+  difference: number;
+  shortages: number;
+  surpluses: number;
+}
+export interface ShiftsReport {
+  from: string | null;
+  to: string | null;
+  shifts: ShiftReportRow[];
+  byCashier: ShiftCashierRollup[];
+  totals: {
+    shifts: number;
+    difference: number;
+    cashIn: number;
+    cashOut: number;
+    shortages: number;
+  };
+}
+export const getShiftsReport = (from?: string, to?: string) =>
+  getReport<ShiftsReport>(
+    `shifts${rangeQs(from, to)}`,
+    'Failed to fetch shifts report',
+  );
+
+// R12 — Payment methods
+export interface PaymentMethodRow {
+  method: string;
+  amount: number;
+  orders: number;
+  share: number;
+}
+export interface PaymentMethodsReport {
+  from: string | null;
+  to: string | null;
+  total: number;
+  methods: PaymentMethodRow[];
+}
+export const getPaymentMethodsReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<PaymentMethodsReport>(
+    `payment-methods${rangeQs(from, to, branchId)}`,
+    'Failed to fetch payment methods report',
+  );
+
+// R13 — Discounts (per cashier)
+export interface DiscountSellerRow {
+  cashierId: string | null;
+  cashierName: string;
+  orderCount: number;
+  discountedOrders: number;
+  discountTotal: number;
+  revenue: number;
+  discountRate: number;
+}
+export interface DiscountsReport {
+  from: string | null;
+  to: string | null;
+  sellers: DiscountSellerRow[];
+  totals: {
+    discountTotal: number;
+    discountedOrders: number;
+    orderCount: number;
+    revenue: number;
+    discountRate: number;
+  };
+}
+export const getDiscountsReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<DiscountsReport>(
+    `discounts${rangeQs(from, to, branchId)}`,
+    'Failed to fetch discounts report',
+  );
+
+// R14 — Cancelled receipts
+export interface CancelledOrderRow {
+  id: string;
+  createdAt: string;
+  cashierName: string;
+  customerName: string | null;
+  totalAmount: number;
+  itemCount: number;
+  note: string | null;
+}
+export interface CancelledCashierRollup {
+  cashierName: string;
+  count: number;
+  amount: number;
+}
+export interface CancelledReport {
+  from: string | null;
+  to: string | null;
+  items: CancelledOrderRow[];
+  byCashier: CancelledCashierRollup[];
+  totals: { count: number; amount: number };
+}
+export const getCancelledReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<CancelledReport>(
+    `cancelled${rangeQs(from, to, branchId)}`,
+    'Failed to fetch cancelled receipts report',
+  );
+
+// ─── Level-2 reports (HISOBOTLAR.md §6, 2-daraja) ───────────────────────────
+
+// R17 — Debt aging (as-of-now snapshot)
+export type DebtBucketKey = 'current' | 'd30' | 'd60' | 'd90' | 'd90plus';
+export interface DebtBucket {
+  key: DebtBucketKey;
+  amount: number;
+  count: number;
+}
+export interface DebtorRow {
+  userId: string | null;
+  name: string;
+  phone: string | null;
+  remaining: number;
+  current: number;
+  d30: number;
+  d60: number;
+  d90: number;
+  d90plus: number;
+  oldestDays: number;
+}
+export interface DebtAgingReport {
+  asOf: string;
+  buckets: DebtBucket[];
+  totalOutstanding: number;
+  debtorCount: number;
+  debtors: DebtorRow[];
+}
+export const getDebtAgingReport = () =>
+  getReport<DebtAgingReport>('debt-aging', 'Failed to fetch debt aging report');
+
+// R15 — Dead / slow stock
+export interface DeadStockItem {
+  productId: string;
+  name: string;
+  code: string | null;
+  quantity: number;
+  priceIn: number;
+  frozenValue: number;
+  lastSaleAt: string | null;
+  daysSinceSale: number | null;
+}
+export interface DeadStockReport {
+  days: number;
+  items: DeadStockItem[];
+  totals: { products: number; units: number; frozenValue: number };
+}
+export const getDeadStockReport = (branchId?: string, days?: number) => {
+  const p = new URLSearchParams();
+  if (branchId) p.set('branchId', branchId);
+  if (days) p.set('days', String(days));
+  const qs = p.toString();
+  return getReport<DeadStockReport>(
+    `dead-stock${qs ? `?${qs}` : ''}`,
+    'Failed to fetch dead stock report',
+  );
+};
+
+// R16 — Reorder / stockout forecast
+export interface ReorderItem {
+  productId: string;
+  name: string;
+  code: string | null;
+  quantity: number;
+  threshold: number | null;
+  soldWindow: number;
+  dailyVelocity: number;
+  daysOfStock: number | null;
+  suggestedQty: number;
+  flagged: boolean;
+}
+export interface ReorderReport {
+  days: number;
+  coverDays: number;
+  items: ReorderItem[];
+  totals: { products: number; suggestedUnits: number };
+}
+export const getReorderReport = (branchId?: string, days?: number) => {
+  const p = new URLSearchParams();
+  if (branchId) p.set('branchId', branchId);
+  if (days) p.set('days', String(days));
+  const qs = p.toString();
+  return getReport<ReorderReport>(
+    `reorder${qs ? `?${qs}` : ''}`,
+    'Failed to fetch reorder report',
+  );
+};
+
+// R18 — Suppliers
+export interface SupplierRow {
+  supplierId: string | null;
+  supplierName: string;
+  receipts: number;
+  purchased: number;
+  paid: number;
+  returned: number;
+  outstanding: number;
+}
+export interface SuppliersReport {
+  from: string | null;
+  to: string | null;
+  suppliers: SupplierRow[];
+  totals: {
+    suppliers: number;
+    purchased: number;
+    paid: number;
+    returned: number;
+    outstanding: number;
+  };
+}
+export const getSuppliersReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<SuppliersReport>(
+    `suppliers${rangeQs(from, to, branchId)}`,
+    'Failed to fetch suppliers report',
+  );
+
+// R19 — Assortment (category / brand)
+export type AssortmentDimension = 'category' | 'brand';
+export interface AssortmentGroup {
+  key: string | null;
+  name: string;
+  revenue: number;
+  cogs: number;
+  profit: number;
+  units: number;
+  margin: number;
+  share: number;
+}
+export interface AssortmentReport {
+  from: string | null;
+  to: string | null;
+  dimension: AssortmentDimension;
+  groups: AssortmentGroup[];
+  totals: { groups: number; revenue: number; cogs: number; profit: number; units: number };
+}
+export const getAssortmentReport = (
+  from?: string,
+  to?: string,
+  branchId?: string,
+  dimension: AssortmentDimension = 'category',
+) => {
+  const qs = rangeQs(from, to, branchId);
+  return getReport<AssortmentReport>(
+    `assortment${qs ? `${qs}&dimension=${dimension}` : `?dimension=${dimension}`}`,
+    'Failed to fetch assortment report',
+  );
+};
+
+// R20 — Branch comparison
+export interface BranchComparisonRow {
+  branchId: string | null;
+  branchName: string;
+  revenue: number;
+  orderCount: number;
+  avgCheck: number;
+  profit: number;
+  margin: number;
+  stockValue: number;
+}
+export interface BranchComparisonReport {
+  from: string | null;
+  to: string | null;
+  branches: BranchComparisonRow[];
+  totals: {
+    branches: number;
+    revenue: number;
+    orderCount: number;
+    profit: number;
+    stockValue: number;
+  };
+}
+export const getBranchComparisonReport = (from?: string, to?: string) =>
+  getReport<BranchComparisonReport>(
+    `branch-comparison${rangeQs(from, to)}`,
+    'Failed to fetch branch comparison report',
+  );
+
+// R23 — Inter-branch transfers
+export interface TransferRow {
+  id: string;
+  fromBranchName: string;
+  toBranchName: string;
+  itemCount: number;
+  totalQty: number;
+  totalValue: number;
+  cashierName: string;
+  note: string | null;
+  createdAt: string;
+}
+export interface TransfersReport {
+  from: string | null;
+  to: string | null;
+  items: TransferRow[];
+  totals: { transfers: number; qty: number; value: number };
+}
+export const getTransfersReport = (from?: string, to?: string, branchId?: string) =>
+  getReport<TransfersReport>(
+    `transfers${rangeQs(from, to, branchId)}`,
+    'Failed to fetch transfers report',
+  );
+
+// ─── R31 — Monthly target (Reja vs fakt) ────────────────────────────────────
+// Lives at /targets (a mutation-bearing resource), not under /reports.
+export interface TargetProgress {
+  month: string; // 'YYYY-MM'
+  revenueTarget: number;
+  actual: number;
+  orderCount: number;
+  achievedPct: number;
+  expectedPct: number;
+  projected: number;
+  daysElapsed: number;
+  daysInMonth: number;
+  onTrack: boolean;
+  isCurrentMonth: boolean;
+  remaining: number;
+}
+export const getTargetProgress = async (month?: string): Promise<TargetProgress> => {
+  const qs = month ? `?month=${encodeURIComponent(month)}` : '';
+  const response = await fetch(`${API_BASE_URL}/targets${qs}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch target');
+  return response.json();
+};
+export const setMonthlyTarget = async (
+  revenueTarget: number,
+  month?: string,
+): Promise<TargetProgress> => {
+  const response = await fetch(`${API_BASE_URL}/targets`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(month ? { revenueTarget, month } : { revenueTarget }),
+  });
+  if (!response.ok) await parseError(response, 'Failed to set target');
+  return response.json();
+};

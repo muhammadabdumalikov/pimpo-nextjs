@@ -10,6 +10,19 @@ import {
   LuUndo2,
   LuUsers,
   LuUserRound,
+  LuReceipt,
+  LuClock,
+  LuWallet,
+  LuCreditCard,
+  LuPercent,
+  LuBan,
+  LuBanknote,
+  LuPackageX,
+  LuPackagePlus,
+  LuTags,
+  LuStore,
+  LuBuilding2,
+  LuTarget,
 } from "react-icons/lu";
 
 // Single source of truth for the reports listing, favorites and card grid.
@@ -32,6 +45,39 @@ export interface ReportMeta {
 }
 
 export const REPORTS: ReportMeta[] = [
+  // Store ("Do'kon") — the operational control set an owner opens daily.
+  {
+    id: 'sales',
+    path: '/reports/sales',
+    category: 'store',
+    nameKey: 'sidebar.reportsSales',
+    descKey: 'reportsPage.salesDesc',
+    icon: LuReceipt,
+  },
+  {
+    id: 'traffic',
+    path: '/reports/traffic',
+    category: 'store',
+    nameKey: 'sidebar.reportsTraffic',
+    descKey: 'reportsPage.trafficDesc',
+    icon: LuClock,
+  },
+  {
+    id: 'discounts',
+    path: '/reports/discounts',
+    category: 'store',
+    nameKey: 'sidebar.reportsDiscounts',
+    descKey: 'reportsPage.discountsDesc',
+    icon: LuPercent,
+  },
+  {
+    id: 'cancelled',
+    path: '/reports/cancelled',
+    category: 'store',
+    nameKey: 'sidebar.reportsCancelled',
+    descKey: 'reportsPage.cancelledDesc',
+    icon: LuBan,
+  },
   // Finance
   {
     id: 'pnl',
@@ -40,6 +86,30 @@ export const REPORTS: ReportMeta[] = [
     nameKey: 'sidebar.reportsPnl',
     descKey: 'reportsPage.pnlDesc',
     icon: LuTrendingUp,
+  },
+  {
+    id: 'shifts',
+    path: '/reports/shifts',
+    category: 'finance',
+    nameKey: 'sidebar.reportsShifts',
+    descKey: 'reportsPage.shiftsDesc',
+    icon: LuWallet,
+  },
+  {
+    id: 'payment-methods',
+    path: '/reports/payment-methods',
+    category: 'finance',
+    nameKey: 'sidebar.reportsPaymentMethods',
+    descKey: 'reportsPage.paymentMethodsDesc',
+    icon: LuCreditCard,
+  },
+  {
+    id: 'target',
+    path: '/reports/target',
+    category: 'finance',
+    nameKey: 'sidebar.reportsTarget',
+    descKey: 'reportsPage.targetDesc',
+    icon: LuTarget,
   },
   // Products
   {
@@ -116,9 +186,67 @@ export const REPORTS: ReportMeta[] = [
     descKey: 'reportsPage.customersDesc',
     icon: LuUserRound,
   },
+  // ── Level-2 (HISOBOTLAR.md §6, 2-daraja) ──
+  {
+    id: 'debt-aging',
+    path: '/reports/debt-aging',
+    category: 'customers',
+    nameKey: 'sidebar.reportsDebtAging',
+    descKey: 'reportsPage.debtAgingDesc',
+    icon: LuBanknote,
+  },
+  {
+    id: 'dead-stock',
+    path: '/reports/dead-stock',
+    category: 'products',
+    nameKey: 'sidebar.reportsDeadStock',
+    descKey: 'reportsPage.deadStockDesc',
+    icon: LuPackageX,
+  },
+  {
+    id: 'reorder',
+    path: '/reports/reorder',
+    category: 'products',
+    nameKey: 'sidebar.reportsReorder',
+    descKey: 'reportsPage.reorderDesc',
+    icon: LuPackagePlus,
+  },
+  {
+    id: 'assortment',
+    path: '/reports/assortment',
+    category: 'products',
+    nameKey: 'sidebar.reportsAssortment',
+    descKey: 'reportsPage.assortmentDesc',
+    icon: LuTags,
+  },
+  {
+    id: 'suppliers',
+    path: '/reports/suppliers',
+    category: 'products',
+    nameKey: 'sidebar.reportsSuppliers',
+    descKey: 'reportsPage.suppliersDesc',
+    icon: LuBuilding2,
+  },
+  {
+    id: 'branch-comparison',
+    path: '/reports/branch-comparison',
+    category: 'store',
+    nameKey: 'sidebar.reportsBranchComparison',
+    descKey: 'reportsPage.branchComparisonDesc',
+    icon: LuStore,
+  },
+  {
+    id: 'transfers',
+    path: '/reports/transfers',
+    category: 'products',
+    nameKey: 'sidebar.reportsTransfers',
+    descKey: 'reportsPage.transfersDesc',
+    icon: LuArrowLeftRight,
+  },
 ];
 
 export const REPORT_CATEGORIES: { key: ReportCategory; labelKey: string }[] = [
+  { key: 'store', labelKey: 'reportsPage.catStore' },
   { key: 'finance', labelKey: 'reportsPage.catFinance' },
   { key: 'products', labelKey: 'reportsPage.catProducts' },
   { key: 'sellers', labelKey: 'reportsPage.catSellers' },

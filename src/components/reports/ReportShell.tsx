@@ -152,17 +152,59 @@ export function ReportFilterField({
   );
 }
 
+// Δ% badge vs the comparison period. `pct === null` means "was zero, now not" —
+// an infinite jump we label "new" instead of a number. `inverse` flips the good
+// direction for cost-like metrics (discounts, shortages, cancellations) where a
+// drop is the win.
+export function DeltaBadge({
+  pct,
+  inverse = false,
+}: {
+  pct: number | null;
+  inverse?: boolean;
+}) {
+  const { t } = useTranslations();
+  if (pct === null) {
+    return (
+      <span className="text-xs font-medium text-brand-500">{t("reportsPage.new")}</span>
+    );
+  }
+  const rounded = Math.round(pct * 10) / 10;
+  if (rounded === 0) {
+    return <span className="text-xs font-medium text-gray-400">0%</span>;
+  }
+  const up = rounded > 0;
+  const good = inverse ? !up : up;
+  return (
+    <span
+      title={t("reportsPage.vsComparison")}
+      className={`inline-flex items-center gap-0.5 text-xs font-medium tabular-nums ${
+        good ? "text-success-600 dark:text-success-500" : "text-error-500"
+      }`}
+    >
+      {up ? "↑" : "↓"} {Math.abs(rounded).toFixed(1)}%
+    </span>
+  );
+}
+
 // A small KPI stat card used in the KPI row of several reports. Hierarchy is
 // carried by weight + color, per the dashboard craft rules: the label is a
-// demoted tracked caption, the figure is the tabular-nums hero.
+// demoted tracked caption, the figure is the tabular-nums hero. When a `delta`
+// is supplied a Δ% badge sits under the figure (period-over-period, R29).
 export function ReportKpi({
   label,
   value,
   tone = "default",
+  delta,
+  deltaInverse = false,
 }: {
   label: string;
   value: string;
   tone?: "default" | "success" | "error";
+  /** Δ% vs comparison period. undefined = no comparison; null = "new". */
+  delta?: number | null;
+  /** True for cost-like metrics where a decrease is the good direction. */
+  deltaInverse?: boolean;
 }) {
   const toneClass =
     tone === "success"
@@ -175,9 +217,12 @@ export function ReportKpi({
       <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
         {label}
       </p>
-      <p className={`mt-1.5 text-xl font-semibold tabular-nums ${toneClass}`}>
-        {value}
-      </p>
+      <div className="mt-1.5 flex items-baseline gap-2">
+        <p className={`text-xl font-semibold tabular-nums ${toneClass}`}>
+          {value}
+        </p>
+        {delta !== undefined && <DeltaBadge pct={delta} inverse={deltaInverse} />}
+      </div>
     </div>
   );
 }

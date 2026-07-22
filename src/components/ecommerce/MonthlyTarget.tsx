@@ -3,12 +3,10 @@
 import { ApexOptions } from "apexcharts";
 
 import dynamic from "next/dynamic";
-import { Dropdown } from "../ui/dropdown/Dropdown";
-import { MoreDotIcon } from "@/icons";
-import { useEffect, useState } from "react";
-import { DropdownItem } from "../ui/dropdown/DropdownItem";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
-import { getMonthlySales } from "@/lib/api";
+import { getTargetProgress } from "@/lib/api";
 // Dynamically import the ReactApexChart component
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
@@ -17,24 +15,21 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 export default function MonthlyTarget() {
   const { t } = useTranslations();
 
-  // Real data: this month's revenue vs last month's, from completed orders.
-  const [thisMonth, setThisMonth] = useState(0);
-  const [growth, setGrowth] = useState(0);
+  // Real data: this month's revenue vs the monthly target (R31 Reja/fakt).
+  const [actual, setActual] = useState(0);
+  const [target, setTarget] = useState(0);
+  const [achievedPct, setAchievedPct] = useState(0);
+  const [onTrack, setOnTrack] = useState(true);
 
   useEffect(() => {
     let active = true;
-    getMonthlySales()
-      .then((data) => {
-        if (!active || data.length !== 12) return;
-        const idx = new Date().getMonth();
-        const current = data[idx] ?? 0;
-        const previous = idx > 0 ? data[idx - 1] ?? 0 : 0;
-        setThisMonth(current);
-        if (previous > 0) {
-          setGrowth(Math.round(((current - previous) / previous) * 100));
-        } else {
-          setGrowth(current > 0 ? 100 : 0);
-        }
+    getTargetProgress()
+      .then((d) => {
+        if (!active) return;
+        setActual(d.actual);
+        setTarget(d.revenueTarget);
+        setAchievedPct(d.achievedPct);
+        setOnTrack(d.onTrack);
       })
       .catch(() => {
         /* leave at zero on failure */
@@ -44,10 +39,12 @@ export default function MonthlyTarget() {
     };
   }, []);
 
-  // Gauge shows growth vs last month, clamped to a readable 0–100 range.
-  const progress = Math.max(0, Math.min(100, growth));
+  // Gauge shows achievement of the monthly target, clamped to a 0–100 range.
+  const progress = Math.max(0, Math.min(100, Math.round(achievedPct)));
   const series = [progress];
-  const options: ApexOptions = {
+  // Memoized so its identity is stable: react-apexcharts only calls updateSeries
+  // (which the radialBar gauge actually reflects) when `options` doesn't change.
+  const options: ApexOptions = useMemo<ApexOptions>(() => ({
     colors: ["#465FFF"],
     chart: {
       fontFamily: "var(--font-gilroy), sans-serif",
@@ -93,17 +90,7 @@ export default function MonthlyTarget() {
       lineCap: "round",
     },
     labels: ["Progress"],
-  };
-
-  const [isOpen, setIsOpen] = useState(false);
-
-  function toggleDropdown() {
-    setIsOpen(!isOpen);
-  }
-
-  function closeDropdown() {
-    setIsOpen(false);
-  }
+  }), []);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-white/[0.03]">
@@ -117,35 +104,18 @@ export default function MonthlyTarget() {
               {t('dashboard.targetDescription')}
             </p>
           </div>
-          <div className="relative inline-block">
-            <button onClick={toggleDropdown} className="dropdown-toggle">
-              <MoreDotIcon className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-300" />
-            </button>
-            <Dropdown
-              isOpen={isOpen}
-              onClose={closeDropdown}
-              className="w-40 p-2"
-            >
-              <DropdownItem
-                tag="a"
-                onItemClick={closeDropdown}
-                className="flex w-full font-normal text-left text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
-              >
-                {t('dashboardviewMore')}
-              </DropdownItem>
-              <DropdownItem
-                tag="a"
-                onItemClick={closeDropdown}
-                className="flex w-full font-normal text-left text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
-              >
-                {t('dashboarddelete')}
-              </DropdownItem>
-            </Dropdown>
-          </div>
+          {/* Shortcut to the Reja/fakt report, where the target is set. */}
+          <Link
+            href="/reports/target"
+            className="text-sm font-medium text-brand-500 hover:text-brand-600"
+          >
+            {t('reportsPage.openReport')}
+          </Link>
         </div>
         <div className="relative ">
           <div className="max-h-[200px]">
             <ReactApexChart
+              key={progress}
               options={options}
               series={series}
               type="radialBar"
@@ -155,19 +125,25 @@ export default function MonthlyTarget() {
 
           <span
             className={`absolute left-1/2 top-full -translate-x-1/2 -translate-y-[90%] rounded-full px-3 py-1 text-xs font-medium ${
-              growth >= 0
-                ? "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500"
-                : "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500"
+              target <= 0
+                ? "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400"
+                : onTrack
+                  ? "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500"
+                  : "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500"
             }`}
           >
-            {growth >= 0 ? "+" : ""}
-            {growth}%
+            {target > 0 ? `${Math.round(achievedPct)}%` : "—"}
           </span>
         </div>
         <p className="mx-auto mt-4 w-full max-w-[380px] text-center text-sm text-gray-500">
-          {t('dashboard.earnMessage').replace(
-            '{amount}',
-            new Intl.NumberFormat('uz-UZ').format(Math.round(thisMonth)) + " so'm"
+          {t('reportsPage.fact')}:{" "}
+          {new Intl.NumberFormat('uz-UZ').format(Math.round(actual))} {t('reportsPage.som')}
+          {target > 0 && (
+            <>
+              {" · "}
+              {t('reportsPage.plan')}:{" "}
+              {new Intl.NumberFormat('uz-UZ').format(Math.round(target))} {t('reportsPage.som')}
+            </>
           )}
         </p>
       </div>
