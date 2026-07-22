@@ -3420,19 +3420,33 @@ export interface ReorderItem {
   productId: string;
   name: string;
   code: string | null;
+  supplierId: string | null;
+  supplierName: string | null;
   quantity: number;
   threshold: number | null;
+  priceIn: number;
   soldWindow: number;
+  availableDays: number;
   dailyVelocity: number;
   daysOfStock: number | null;
   suggestedQty: number;
+  estimatedCost: number;
   flagged: boolean;
+}
+export interface ReorderSupplierGroup {
+  supplierId: string | null;
+  supplierName: string | null;
+  items: ReorderItem[];
+  products: number;
+  suggestedUnits: number;
+  estimatedCost: number;
 }
 export interface ReorderReport {
   days: number;
   coverDays: number;
   items: ReorderItem[];
-  totals: { products: number; suggestedUnits: number };
+  bySupplier: ReorderSupplierGroup[];
+  totals: { products: number; suggestedUnits: number; estimatedCost: number };
 }
 export const getReorderReport = (branchId?: string, days?: number) => {
   const p = new URLSearchParams();
@@ -3442,6 +3456,46 @@ export const getReorderReport = (branchId?: string, days?: number) => {
   return getReport<ReorderReport>(
     `reorder${qs ? `?${qs}` : ''}`,
     'Failed to fetch reorder report',
+  );
+};
+
+// Transfer suggestions — inter-branch rebalancing recommendations
+export interface TransferSuggestionItem {
+  productId: string;
+  name: string;
+  code: string | null;
+  fromBranchId: string;
+  fromBranchName: string | null;
+  toBranchId: string;
+  toBranchName: string | null;
+  quantity: number;
+  priceIn: number;
+  valueMoved: number;
+}
+export interface TransferRoute {
+  fromBranchId: string;
+  fromBranchName: string | null;
+  toBranchId: string;
+  toBranchName: string | null;
+  items: TransferSuggestionItem[];
+  products: number;
+  totalQty: number;
+  totalValue: number;
+}
+export interface TransferSuggestionsReport {
+  days: number;
+  coverDays: number;
+  suggestions: TransferSuggestionItem[];
+  byRoute: TransferRoute[];
+  totals: { routes: number; products: number; moves: number; totalValue: number };
+}
+export const getTransferSuggestionsReport = (days?: number) => {
+  const p = new URLSearchParams();
+  if (days) p.set('days', String(days));
+  const qs = p.toString();
+  return getReport<TransferSuggestionsReport>(
+    `transfer-suggestions${qs ? `?${qs}` : ''}`,
+    'Failed to fetch transfer suggestions',
   );
 };
 

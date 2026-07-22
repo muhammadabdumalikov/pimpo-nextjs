@@ -4,6 +4,7 @@ import {
   LuChartBar,
   LuBoxes,
   LuArrowLeftRight,
+  LuShuffle,
   LuChartPie,
   LuClipboardCheck,
   LuTruck,
@@ -242,6 +243,14 @@ export const REPORTS: ReportMeta[] = [
     nameKey: 'sidebar.reportsTransfers',
     descKey: 'reportsPage.transfersDesc',
     icon: LuArrowLeftRight,
+  },
+  {
+    id: 'transfer-suggestions',
+    path: '/reports/transfer-suggestions',
+    category: 'products',
+    nameKey: 'sidebar.reportsTransferSuggestions',
+    descKey: 'reportsPage.transferSuggestionsDesc',
+    icon: LuShuffle,
   },
 ];
 
