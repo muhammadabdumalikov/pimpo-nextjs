@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import flatpickr from "flatpickr";
 import { useTranslations } from "@/hooks/useTranslations";
 import { getFlatpickrLocale } from "@/lib/flatpickrLocale";
+import { storeToday } from "@/lib/reportFormat";
 
 /** Inclusive day range as YYYY-MM-DD strings; both empty = all time. */
 export interface DateRange {
@@ -30,7 +31,7 @@ const dayOnly = (d: Date) =>
 
 /** Monday of the current week (weeks start on Monday). */
 function startOfWeek(): Date {
-  const d = dayOnly(new Date());
+  const d = dayOnly(storeToday());
   const day = (d.getDay() + 6) % 7; // Mon = 0 … Sun = 6
   d.setDate(d.getDate() - day);
   return d;
@@ -128,8 +129,8 @@ export default function DateRangeFilter({
   };
 
   const presets = useMemo(() => {
-    const today = dayOnly(new Date());
-    const yest = dayOnly(new Date());
+    const today = dayOnly(storeToday());
+    const yest = dayOnly(storeToday());
     yest.setDate(yest.getDate() - 1);
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const yearStart = new Date(today.getFullYear(), 0, 1);

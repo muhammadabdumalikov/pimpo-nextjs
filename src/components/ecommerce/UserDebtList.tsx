@@ -61,6 +61,9 @@ export default function UserDebtList() {
   const deleteConfirm = useModal();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Payment delete confirmation (shares the same ConfirmModal pattern).
+  const [paymentToDelete, setPaymentToDelete] = useState<{ debtId: string; paymentId: string } | null>(null);
+  const [isDeletingPayment, setIsDeletingPayment] = useState(false);
   // Order/receipt drill-in for a debt that came from a POS sale.
   // Combined "details" modal: bought items (order) + installment payment history.
   const detailsModal = useModal();
@@ -130,18 +133,22 @@ export default function UserDebtList() {
     return `${new Intl.NumberFormat('uz-UZ').format(Math.round(numAmount))} so'm`;
   };
 
+  // Dates follow the active UI language, not a hardcoded English locale.
+  const dateLocale =
+    locale === 'ru' ? 'ru-RU' : locale === 'en' ? 'en-GB' : locale === 'uzc' ? 'uz-Cyrl-UZ' : 'uz-UZ';
+
   // Format date helper
   const formatDate = (date: string | Date | null): string => {
     if (!date) return '—';
     const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   // Date + time (with hours/minutes) for precise debt/sale timestamps.
   const formatDateTime = (date: string | Date | null): string => {
     if (!date) return '—';
     const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleString('en-GB', {
+    return d.toLocaleString(dateLocale, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -284,6 +291,20 @@ export default function UserDebtList() {
     } else {
       setSelectedDebts(selectedDebts.filter(id => id !== debtId));
     }
+  };
+
+  // Display-only overdue detection: a non-paid debt past its due date shows as
+  // overdue regardless of the manually-set status. The stored status is never
+  // modified, so nothing changes for the backend.
+  const daysOverdue = (debt: UserDebt): number => {
+    if (!debt.dueDate || debt.status === 'Paid') return 0;
+    const due = new Date(debt.dueDate);
+    if (Number.isNaN(due.getTime())) return 0;
+    const today = new Date();
+    due.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today.getTime() - due.getTime()) / 86_400_000);
+    return diff > 0 ? diff : 0;
   };
 
   const getStatusBadgeColor = (status: string) => {
@@ -518,17 +539,24 @@ export default function UserDebtList() {
     }
   };
 
-  const handleDeletePayment = async (debtId: string, paymentId: string) => {
-    if (!window.confirm(t('userDebt.deletePaymentConfirm') || 'Delete this payment?')) {
-      return;
-    }
+  const handleDeletePayment = (debtId: string, paymentId: string) => {
+    setPaymentToDelete({ debtId, paymentId });
+  };
+
+  const handleConfirmDeletePayment = async () => {
+    if (!paymentToDelete) return;
+    setIsDeletingPayment(true);
     try {
-      await deleteDebtPayment(debtId, paymentId);
+      await deleteDebtPayment(paymentToDelete.debtId, paymentToDelete.paymentId);
       showToast('success', t('userDebt.deletePaymentSuccess') || 'Payment deleted', 'Success');
+      const debtId = paymentToDelete.debtId;
+      setPaymentToDelete(null);
       await loadPayments(debtId);
       await loadGroups();
     } catch (error: any) {
       showToast('error', error.message || 'Failed to delete payment', 'Error');
+    } finally {
+      setIsDeletingPayment(false);
     }
   };
 
@@ -614,9 +642,9 @@ export default function UserDebtList() {
             value={sortBy}
             onChange={(value) => setSortBy(value as "date" | "amount" | "count")}
             options={[
-              { value: "date", label: t('userDebt.sortByDate') || 'Sort: Date' },
-              { value: "amount", label: t('userDebt.sortByAmount') || 'Sort: Total debt' },
-              { value: "count", label: t('userDebt.sortByCount') || 'Sort: Debt count' },
+              { value: "date", label: t('userDebt.sortByDate') || 'Date' },
+              { value: "amount", label: t('userDebt.sortByAmount') || 'Total debt' },
+              { value: "count", label: t('userDebt.sortByCount') || 'Debt count' },
             ]}
           />
           <button
@@ -838,6 +866,7 @@ export default function UserDebtList() {
                       group.debts.map((debt) => {
                         const remaining = remainingOf(debt);
                         const paid = paidOf(debt);
+                        const overdueDays = daysOverdue(debt);
                         const canPay = isPro && debt.status !== 'Paid' && remaining > 0;
                         // Eye opens the details modal: bought items + payment history.
                         const hasDetails = !!debt.orderId || (isPro && paid > 0);
@@ -871,14 +900,29 @@ export default function UserDebtList() {
                           </p>
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[15%]">
-                          <Badge color={getStatusBadgeColor(debt.status)}>
-                            {t(`userDebt.${debt.status.toLowerCase()}`)}
-                          </Badge>
+                          {overdueDays > 0 ? (
+                            <Badge color="error">{t('userDebt.overdue')}</Badge>
+                          ) : (
+                            <Badge color={getStatusBadgeColor(debt.status)}>
+                              {t(`userDebt.${debt.status.toLowerCase()}`)}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[12%]">
-                          <span className="text-gray-500 text-base dark:text-gray-400">
-                            {formatDate(debt.dueDate)}
-                          </span>
+                          {overdueDays > 0 ? (
+                            <span className="block">
+                              <span className="font-medium text-error-600 dark:text-error-400">
+                                {formatDate(debt.dueDate)}
+                              </span>
+                              <span className="block text-xs text-error-500 dark:text-error-400/80">
+                                {t('userDebt.daysOverdue').replace('{days}', String(overdueDays))}
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-gray-500 text-base dark:text-gray-400">
+                              {formatDate(debt.dueDate)}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="py-3 px-4 sm:px-6 w-[13%]">
                           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
@@ -1402,6 +1446,20 @@ export default function UserDebtList() {
         cancelLabel={t('userDebt.cancel') || 'Cancel'}
         variant="danger"
         isLoading={isDeleting}
+        loadingLabel={t('userDebt.deleting') || undefined}
+      />
+
+      {/* Payment delete confirmation (shared ConfirmModal) */}
+      <ConfirmModal
+        isOpen={!!paymentToDelete}
+        onClose={() => !isDeletingPayment && setPaymentToDelete(null)}
+        onConfirm={handleConfirmDeletePayment}
+        title={t('userDebt.deletePayment') || 'Delete payment'}
+        message={t('userDebt.deletePaymentConfirm') || 'Delete this payment?'}
+        confirmLabel={t('userDebt.delete') || 'Delete'}
+        cancelLabel={t('userDebt.cancel') || 'Cancel'}
+        variant="danger"
+        isLoading={isDeletingPayment}
         loadingLabel={t('userDebt.deleting') || undefined}
       />
     </div>

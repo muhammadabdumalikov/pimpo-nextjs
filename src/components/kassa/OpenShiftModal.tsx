@@ -91,10 +91,17 @@ export default function OpenShiftModal({
         </div>
         <div>
           <Label>{t("kassa.openingFloat")}</Label>
+          {/* Enter submits — cashiers type the float and hit Enter, no mouse */}
           <Input
             inputMode="numeric"
             value={formatNumberInput(float)}
             onChange={(e) => setFloat(digitsOnly(e.target.value))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !submitting && registerId) {
+                e.preventDefault();
+                handleOpen();
+              }
+            }}
             placeholder="0"
           />
         </div>

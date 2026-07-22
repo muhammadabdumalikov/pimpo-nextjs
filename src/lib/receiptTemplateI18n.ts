@@ -26,6 +26,10 @@ export interface ReceiptOutLabels {
   poweredBy: string;
   thankYou: string;
   defaultStoreName: string;
+  /** Currency word printed after amounts (e.g. so'm / сум). */
+  currency: string;
+  /** BCP-47 tag used to format the receipt's date/time. */
+  dateLocale: string;
 }
 
 export interface ReceiptTplStrings {
@@ -69,6 +73,10 @@ export interface ReceiptTplStrings {
     saveFailed: string;
     cantDeleteDefault: string;
     confirmDelete: string; // uses {name}
+    deleteTitle: string;
+    deleteBtn: string;
+    deleting: string;
+    cancel: string;
     deleted: string;
     deleteFailed: string;
     loadError: string;
@@ -125,6 +133,10 @@ const en: ReceiptTplStrings = {
     saveFailed: "Failed to save",
     cantDeleteDefault: "Can't delete the default template",
     confirmDelete: 'Delete template "{name}"?',
+    deleteTitle: "Delete template?",
+    deleteBtn: "Delete",
+    deleting: "Deleting...",
+    cancel: "Cancel",
     deleted: "Deleted",
     deleteFailed: "Failed to delete",
     loadError: "Failed to load",
@@ -184,6 +196,8 @@ const en: ReceiptTplStrings = {
     poweredBy: "Printed with KPOS",
     thankYou: "Thank you for your purchase!",
     defaultStoreName: "Store",
+    currency: "sum",
+    dateLocale: "en-GB",
   },
 };
 
@@ -228,6 +242,10 @@ const ru: ReceiptTplStrings = {
     saveFailed: "Не удалось сохранить",
     cantDeleteDefault: "Нельзя удалить шаблон по умолчанию",
     confirmDelete: "Удалить шаблон «{name}»?",
+    deleteTitle: "Удалить шаблон?",
+    deleteBtn: "Удалить",
+    deleting: "Удаление...",
+    cancel: "Отмена",
     deleted: "Удалено",
     deleteFailed: "Не удалось удалить",
     loadError: "Ошибка загрузки",
@@ -287,6 +305,8 @@ const ru: ReceiptTplStrings = {
     poweredBy: "Чек напечатан с помощью KPOS",
     thankYou: "Спасибо за вашу покупку!",
     defaultStoreName: "Магазин",
+    currency: "сум",
+    dateLocale: "ru-RU",
   },
 };
 
@@ -331,6 +351,10 @@ const uz: ReceiptTplStrings = {
     saveFailed: "Saqlab bo'lmadi",
     cantDeleteDefault: "Standart shablonni o'chirib bo'lmaydi",
     confirmDelete: "«{name}» shablonini o'chirasizmi?",
+    deleteTitle: "Shablon o'chirilsinmi?",
+    deleteBtn: "O'chirish",
+    deleting: "O'chirilmoqda...",
+    cancel: "Bekor qilish",
     deleted: "O'chirildi",
     deleteFailed: "O'chirib bo'lmadi",
     loadError: "Yuklashda xatolik",
@@ -390,6 +414,8 @@ const uz: ReceiptTplStrings = {
     poweredBy: "Chek KPOS yordamida chop etildi",
     thankYou: "Xaridingiz uchun rahmat!",
     defaultStoreName: "Do'kon",
+    currency: "so'm",
+    dateLocale: "uz-UZ",
   },
 };
 
@@ -434,6 +460,10 @@ const uzc: ReceiptTplStrings = {
     saveFailed: "Сақлаб бўлмади",
     cantDeleteDefault: "Стандарт шаблонни ўчириб бўлмайди",
     confirmDelete: "«{name}» шаблонини ўчирасизми?",
+    deleteTitle: "Шаблон ўчирилсинми?",
+    deleteBtn: "Ўчириш",
+    deleting: "Ўчирилмоқда...",
+    cancel: "Бекор қилиш",
     deleted: "Ўчирилди",
     deleteFailed: "Ўчириб бўлмади",
     loadError: "Юклашда хатолик",
@@ -493,6 +523,8 @@ const uzc: ReceiptTplStrings = {
     poweredBy: "Чек KPOS ёрдамида чоп этилди",
     thankYou: "Харидингиз учун раҳмат!",
     defaultStoreName: "Дўкон",
+    currency: "сўм",
+    dateLocale: "uz-Cyrl-UZ",
   },
 };
 

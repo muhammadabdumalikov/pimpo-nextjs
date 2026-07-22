@@ -180,7 +180,7 @@ export function buildReceiptHtml(
   const on = (key: string, list = info) =>
     list.find((f) => f.key === key)?.enabled ?? false;
 
-  const cur = d.currency ?? "сум";
+  const cur = d.currency ?? L.currency;
   const parts: string[] = ['<div class="rc">'];
 
   // Logo

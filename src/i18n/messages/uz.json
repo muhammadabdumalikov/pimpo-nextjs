@@ -431,9 +431,9 @@
     "orderItems": "Sotib olingan mahsulotlar",
     "paidAmount": "To'langan",
     "debtAmount": "Qarz",
-    "sortByDate": "Saralash: Sana",
-    "sortByAmount": "Saralash: Qarz summasi",
-    "sortByCount": "Saralash: Qarzlar soni",
+    "sortByDate": "Sana",
+    "sortByAmount": "Qarz summasi",
+    "sortByCount": "Qarzlar soni",
     "allStatuses": "Barcha holatlar",
     "dateFrom": "Dan",
     "dateTo": "Gacha",
@@ -469,7 +469,8 @@
     "saving": "Saqlanmoqda...",
     "details": "Tafsilotlar",
     "deleteConfirmTitle": "Qarzni o'chirish",
-    "deleting": "O'chirilmoqda..."
+    "deleting": "O'chirilmoqda...",
+    "daysOverdue": "{days} kun kechikkan"
   },
   "products": {
     "title": "Mahsulotlar ro'yxati",
@@ -495,6 +496,8 @@
     "edit": "Tahrirlash",
     "delete": "O'chirish",
     "confirmDelete": "Bu mahsulotni o'chirishni xohlaysizmi?",
+    "deleteConfirmTitle": "Mahsulotni o'chirish?",
+    "deleting": "O'chirilmoqda...",
     "deleteSuccess": "Mahsulot muvaffaqiyatli o'chirildi",
     "deleteError": "Mahsulotni o'chirib bo'lmadi",
     "showing": "Ko'rsatilmoqda",
@@ -547,7 +550,15 @@
     "viewMore": "Ko'proq ko'rish",
     "delete": "O'chirish",
     "totalOrders": "Jami buyurtmalar",
-    "revenue": "Tushum"
+    "revenue": "Tushum",
+    "todayRevenue": "Bugungi tushum",
+    "todayProfit": "Bugungi foyda",
+    "salesCount": "{count} ta savdo",
+    "lowStockTitle": "Kam qoldiq mahsulotlar",
+    "lowStockHint": "Buyurtma berish tavsiya etiladi",
+    "debtTitle": "Umumiy qarzdorlik",
+    "debtors": "{count} qarzdor",
+    "loadError": "Ma'lumotlarni yuklab bo'lmadi"
   },
   "addProduct": {
     "productInformation": "Mahsulot ma'lumotlari",
@@ -1315,7 +1326,12 @@
     "of": "dan",
     "results": "natija",
     "dismiss": "Yopish",
-    "back": "Orqaga"
+    "back": "Orqaga",
+    "errorTitle": "Xatolik yuz berdi",
+    "errorDescription": "Sahifani yuklashda kutilmagan xatolik yuz berdi. Qayta urinib ko'ring.",
+    "retry": "Qayta urinish",
+    "previous": "Oldingi",
+    "next": "Keyingi"
   },
   "auth": {
     "backToDashboard": "Boshqaruv paneliga qaytish",
@@ -1583,7 +1599,12 @@
     "enterNote": "Izoh kiriting",
     "openRegister": "Kassani ochish",
     "branch": "Do'kon",
-    "selectBranch": "Do'konni tanlang"
+    "selectBranch": "Do'konni tanlang",
+    "closeConfirmTitle": "Smenani yopish",
+    "closeConfirmMessage": "Smena yopilgandan keyin uni qayta ochib bo'lmaydi.",
+    "closeUncounted": "Diqqat: {count} ta qator sanalmagan.",
+    "closeDiff": "Kassa farqi: {list}.",
+    "closing": "Yopilmoqda..."
   },
   "sales": {
     "title": "Barcha sotuvlar",
@@ -1698,6 +1719,8 @@
     "editTitle": "Do'konni tahrirlash",
     "addTitle": "Yangi do'kon",
     "deleteConfirm": "Do'kon o'chirilsinmi?",
+    "deleteConfirmTitle": "Do'konni o'chirish?",
+    "deleting": "O'chirilmoqda...",
     "nameRequired": "Do'kon nomini kiriting"
   },
   "reportsPage": {
@@ -1953,6 +1976,11 @@
     "noTarget": "Reja belgilanmagan",
     "remainingToTarget": "Rejagacha qoldi",
     "expectedPace": "Kutilgan sur'at",
-    "dayOfMonth": "Oy kuni"
+    "dayOfMonth": "Oy kuni",
+    "presetToday": "Bugun",
+    "presetYesterday": "Kecha",
+    "presetWeek": "7 kun",
+    "presetMonth": "Shu oy",
+    "presetPrevMonth": "O'tgan oy"
   }
 }

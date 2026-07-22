@@ -190,8 +190,11 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Limit barcode to 14 characters
-    if (name === 'barcode' && value.length > 14) {
+    // Barcode: digits only (leading zeros preserved), max 14 characters
+    if (name === 'barcode') {
+      const digits = value.replace(/\D/g, '');
+      if (digits.length > 14) return;
+      setFormData((prev) => ({ ...prev, barcode: digits }));
       return;
     }
     if (name === 'productName' && value.trim()) {
@@ -796,10 +799,13 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                     scanner types the code and the Enter terminator is swallowed. */}
                 <div className="flex gap-2">
                   <div className="flex-1">
+                    {/* text + numeric keypad: type=number would strip leading zeros
+                        (breaking EANs that start with 0) and ignore maxLength */}
                     <Input
                       id="barcode"
                       name="barcode"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       placeholder={t('addProduct.barcodePlaceholder') || 'Enter barcode (optional)'}
                       value={formData.barcode}
                       onChange={handleInputChange}

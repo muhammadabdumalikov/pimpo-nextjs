@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   Table,
@@ -16,19 +16,26 @@ import Pagination from "../ui/pagination/Pagination";
 import SelectField from "@/components/form/SelectField";
 import {
   getProducts,
+  getProductStats,
   getBranches,
   type Product,
+  type ProductStats,
   type Branch,
+  type StockStatusFilter,
 } from "@/lib/api";
 
-const LOW_STOCK_THRESHOLD = 10;
+// Fallback reorder point when a product has no lowStockThreshold of its own —
+// must match the backend's default (product.service.ts) so the badge, the
+// cards and the server-side filter all agree.
+const DEFAULT_LOW_STOCK_THRESHOLD = 10;
 const ITEMS_PER_PAGE = 10;
 
 type StockStatus = "in" | "low" | "out";
 
-function stockStatus(qty: number): StockStatus {
-  if (qty <= 0) return "out";
-  if (qty <= LOW_STOCK_THRESHOLD) return "low";
+function stockStatus(p: Product): StockStatus {
+  const threshold = p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
+  if (p.quantity <= 0) return "out";
+  if (p.quantity <= threshold) return "low";
   return "in";
 }
 
@@ -47,12 +54,44 @@ export default function InventoryManagement() {
   // "" = all branches (shows the cross-branch total); a branch id shows that
   // store's own stock.
   const [branchId, setBranchId] = useState("");
+  // "" = no status filter; clicking a stat card narrows the list to that bucket.
+  const [statusFilter, setStatusFilter] = useState<StockStatusFilter | "">("");
+  // Whole-catalogue counts from the backend (respect search + branch, not the
+  // visible page).
+  const [stats, setStats] = useState<ProductStats | null>(null);
 
   useEffect(() => {
     getBranches()
       .then((res) => setBranches(res.branches))
       .catch(() => setBranches([]));
   }, []);
+
+  // Filters live in the URL so drilling into a product and coming back (or a
+  // reload) keeps the search/branch/status view. Restored once on mount.
+  const filtersRestoredRef = useRef(false);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const q = p.get("q");
+    if (q) {
+      setSearchQuery(q);
+      setDebouncedSearch(q);
+    }
+    const branch = p.get("branch");
+    if (branch) setBranchId(branch);
+    const stock = p.get("stock");
+    if (stock === "in" || stock === "low" || stock === "out") setStatusFilter(stock);
+    filtersRestoredRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!filtersRestoredRef.current) return;
+    const p = new URLSearchParams();
+    if (debouncedSearch) p.set("q", debouncedSearch);
+    if (branchId) p.set("branch", branchId);
+    if (statusFilter) p.set("stock", statusFilter);
+    const qs = p.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, [debouncedSearch, branchId, statusFilter]);
 
   // Debounce the search box, and reset to the first page when the query changes.
   useEffect(() => {
@@ -75,6 +114,7 @@ export default function InventoryManagement() {
           ITEMS_PER_PAGE,
           debouncedSearch || undefined,
           branchId || undefined,
+          statusFilter || undefined,
         );
         if (active) {
           setProducts(res.products);
@@ -90,21 +130,29 @@ export default function InventoryManagement() {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearch, branchId]);
+  }, [currentPage, debouncedSearch, branchId, statusFilter]);
 
-  // Stock-status counts for the current page (Total reflects all matching rows).
-  const stats = useMemo(() => {
-    let inStock = 0;
-    let low = 0;
-    let out = 0;
-    for (const p of products) {
-      const s = stockStatus(p.quantity);
-      if (s === "in") inStock++;
-      else if (s === "low") low++;
-      else out++;
-    }
-    return { total, inStock, low, out };
-  }, [products, total]);
+  // Whole-catalogue stock-status counts (independent of the status filter, so
+  // the cards keep showing all four buckets while one is selected).
+  useEffect(() => {
+    let active = true;
+    getProductStats(debouncedSearch || undefined, branchId || undefined)
+      .then((s) => {
+        if (active) setStats(s);
+      })
+      .catch(() => {
+        if (active) setStats(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [debouncedSearch, branchId]);
+
+  // Toggle a card's bucket filter (click again to clear) and restart paging.
+  const toggleStatusFilter = (s: StockStatusFilter | "") => {
+    setStatusFilter((prev) => (prev === s ? "" : s));
+    setCurrentPage(1);
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
   const page = Math.min(currentPage, totalPages);
@@ -112,7 +160,7 @@ export default function InventoryManagement() {
 
   const handleExport = async () => {
     // Export every matching row, not just the current page. Respect the branch
-    // filter so the quantities match what's on screen (that branch's on-hand).
+    // and status filters so the rows match what's on screen.
     setIsExporting(true);
     try {
       const res = await getProducts(
@@ -120,6 +168,7 @@ export default function InventoryManagement() {
         Math.max(total, 1),
         debouncedSearch || undefined,
         branchId || undefined,
+        statusFilter || undefined,
       );
       const header = ["Name", "Code", "Barcode", "Quantity"];
       const rows = res.products.map((p) => [
@@ -145,8 +194,8 @@ export default function InventoryManagement() {
     }
   };
 
-  const statusBadge = (qty: number) => {
-    const s = stockStatus(qty);
+  const statusBadge = (p: Product) => {
+    const s = stockStatus(p);
     if (s === "out") return <Badge color="error">{t("inventory.outOfStock")}</Badge>;
     if (s === "low") return <Badge color="warning">{t("inventory.lowStock")}</Badge>;
     return <Badge color="success">{t("inventory.inStock")}</Badge>;
@@ -167,7 +216,7 @@ export default function InventoryManagement() {
         <button
           type="button"
           onClick={handleExport}
-          disabled
+          disabled={isExporting}
           className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
         >
           <RiFileExcel2Line className="h-5 w-5 text-success-600 dark:text-success-500" />
@@ -175,24 +224,37 @@ export default function InventoryManagement() {
         </button>
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — each is a toggle that filters the list to its bucket */}
       <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-          <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">{t("inventory.totalItems")}</p>
-          <p className="text-2xl font-bold text-gray-800 dark:text-white/90">{stats.total}</p>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-          <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">{t("inventory.inStock")}</p>
-          <p className="text-2xl font-bold text-success-600 dark:text-success-500">{stats.inStock}</p>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-          <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">{t("inventory.lowStock")}</p>
-          <p className="text-2xl font-bold text-warning-600 dark:text-warning-500">{stats.low}</p>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-          <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">{t("inventory.outOfStock")}</p>
-          <p className="text-2xl font-bold text-error-600 dark:text-error-500">{stats.out}</p>
-        </div>
+        {(
+          [
+            { key: "" as const, label: t("inventory.totalItems"), value: stats?.total, valueClass: "text-gray-800 dark:text-white/90" },
+            { key: "in" as const, label: t("inventory.inStock"), value: stats?.inStock, valueClass: "text-success-600 dark:text-success-500" },
+            { key: "low" as const, label: t("inventory.lowStock"), value: stats?.lowStock, valueClass: "text-warning-600 dark:text-warning-500" },
+            { key: "out" as const, label: t("inventory.outOfStock"), value: stats?.outOfStock, valueClass: "text-error-600 dark:text-error-500" },
+          ]
+        ).map((card) => {
+          const active = statusFilter === card.key && card.key !== "";
+          const isTotal = card.key === "";
+          return (
+            <button
+              key={card.key || "total"}
+              type="button"
+              onClick={() => toggleStatusFilter(card.key)}
+              aria-pressed={isTotal ? statusFilter === "" : active}
+              className={`rounded-lg border p-4 text-left transition-colors ${
+                active
+                  ? "border-brand-400 bg-brand-50/60 ring-1 ring-brand-400 dark:border-brand-600 dark:bg-brand-500/10 dark:ring-brand-600"
+                  : "border-gray-200 bg-white hover:border-brand-300 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-brand-700 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
+              <p className={`text-2xl font-bold ${card.valueClass}`}>
+                {card.value ?? "—"}
+              </p>
+            </button>
+          );
+        })}
       </div>
 
       {/* Search + per-branch filter */}
@@ -277,7 +339,7 @@ export default function InventoryManagement() {
                     <TableCell className="px-5 py-3 text-theme-sm font-medium text-gray-800 dark:text-white/90">
                       {p.quantity} {p.quantityType || ""}
                     </TableCell>
-                    <TableCell className="px-5 py-3">{statusBadge(p.quantity)}</TableCell>
+                    <TableCell className="px-5 py-3">{statusBadge(p)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

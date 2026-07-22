@@ -9,6 +9,7 @@ import {
 } from "../ui/table";
 import { CalenderIcon } from "@/icons/index";
 import { useTranslations } from "@/hooks/useTranslations";
+import { storeToday } from "@/lib/reportFormat";
 import flatpickr from "flatpickr";
 import { getFlatpickrLocale } from "@/lib/flatpickrLocale";
 import { getSalesByEmployee, type SalesByEmployeeRow } from "@/lib/api";
@@ -25,7 +26,7 @@ export default function StaffSales() {
   const { t, locale } = useTranslations();
   const datePickerRef = useRef<HTMLInputElement>(null);
 
-  const today = new Date();
+  const today = storeToday();
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([

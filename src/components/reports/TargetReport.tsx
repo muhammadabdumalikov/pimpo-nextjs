@@ -4,7 +4,7 @@ import { useTranslations } from "@/hooks/useTranslations";
 import SelectField from "../form/SelectField";
 import ReportShell, { ReportKpi, ReportFilterField } from "./ReportShell";
 import { getTargetProgress, setMonthlyTarget, type TargetProgress } from "@/lib/api";
-import { formatMoney, formatNumber } from "@/lib/reportFormat";
+import { formatMoney, formatNumber, storeToday } from "@/lib/reportFormat";
 import { formatNumberInput, digitsOnly } from "@/lib/number";
 
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -12,7 +12,7 @@ const monthLabel = (m: string) => m.split("-").reverse().join(".");
 
 export default function TargetReport() {
   const { t } = useTranslations();
-  const [month, setMonth] = useState(() => monthKey(new Date()));
+  const [month, setMonth] = useState(() => monthKey(storeToday()));
   const [data, setData] = useState<TargetProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -22,7 +22,7 @@ export default function TargetReport() {
   const money = (n: number) => formatMoney(n, som);
 
   const months = useMemo(() => {
-    const now = new Date();
+    const now = storeToday();
     return Array.from({ length: 12 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const v = monthKey(d);

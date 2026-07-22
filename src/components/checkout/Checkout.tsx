@@ -9,6 +9,7 @@ import { useSidebar } from "@/context/SidebarContext";
 import { formatPhone } from "@/lib/phone";
 import { formatNumberInput, digitsOnly } from "@/lib/number";
 import DatePicker from "@/components/form/date-picker";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
   getProducts,
   getProduct,
@@ -276,6 +277,8 @@ export default function Checkout() {
   // open, so the page behind it doesn't scroll.
   useBodyScrollLock(showPayment || showHeld);
   const [resumingId, setResumingId] = useState<string | null>(null);
+  // Draft waiting for the "replace current cart?" confirmation.
+  const [pendingResumeId, setPendingResumeId] = useState<string | null>(null);
   // The draft backing the current cart. A ref so the debounced auto-saver always
   // reads the latest id without re-subscribing. Completing the sale sends it as
   // `heldOrderId` so the backend retires the draft in the same transaction.
@@ -611,8 +614,8 @@ export default function Checkout() {
     const data: ReceiptData = {
       saleNumber: "—",
       storeName: account?.name || receiptStrings.out.defaultStoreName,
-      date: now.toLocaleDateString("ru-RU"),
-      time: now.toLocaleTimeString("ru-RU", {
+      date: now.toLocaleDateString(receiptStrings.out.dateLocale),
+      time: now.toLocaleTimeString(receiptStrings.out.dateLocale, {
         hour: "2-digit",
         minute: "2-digit",
       }),
@@ -629,7 +632,7 @@ export default function Checkout() {
       subtotal,
       discount: discountAmount,
       total,
-      currency: "сум",
+      currency: receiptStrings.out.currency,
     };
     return buildReceiptHtml(receiptTemplate, data, receiptStrings);
   }, [
@@ -1147,15 +1150,15 @@ export default function Checkout() {
   // products so price/stock are current; missing products are reported.
   const resumeHeld = async (id: string) => {
     if (resumingId) return;
-    if (
-      cart.length > 0 &&
-      !window.confirm(
-        t("checkout.resumeReplaceConfirm") ||
-          "Replace the current cart with the draft?",
-      )
-    ) {
+    if (cart.length > 0) {
+      // Replacing a non-empty cart needs an explicit confirm (styled modal, not window.confirm).
+      setPendingResumeId(id);
       return;
     }
+    await doResumeHeld(id);
+  };
+
+  const doResumeHeld = async (id: string) => {
     setResumingId(id);
     try {
       const order = await getOrder(id);
@@ -1273,8 +1276,8 @@ export default function Checkout() {
     const data: ReceiptData = {
       saleNumber: order.id.slice(0, 8),
       storeName: account?.name || receiptStrings.out.defaultStoreName,
-      date: created.toLocaleDateString("ru-RU"),
-      time: created.toLocaleTimeString("ru-RU", {
+      date: created.toLocaleDateString(receiptStrings.out.dateLocale),
+      time: created.toLocaleTimeString(receiptStrings.out.dateLocale, {
         hour: "2-digit",
         minute: "2-digit",
       }),
@@ -1292,7 +1295,7 @@ export default function Checkout() {
       subtotal,
       discount: discountAmount,
       total,
-      currency: "сум",
+      currency: receiptStrings.out.currency,
     };
     try {
       const template = await resolveReceiptTemplate(activeShift?.registerId);
@@ -3044,6 +3047,24 @@ export default function Checkout() {
             )}
           </div>
       </aside>
+
+      {/* Confirm replacing a non-empty cart with a resumed draft */}
+      <ConfirmModal
+        isOpen={!!pendingResumeId}
+        onClose={() => setPendingResumeId(null)}
+        onConfirm={async () => {
+          const id = pendingResumeId;
+          setPendingResumeId(null);
+          if (id) await doResumeHeld(id);
+        }}
+        title={t("checkout.heldTitle") || "Drafts"}
+        message={
+          t("checkout.resumeReplaceConfirm") ||
+          "Replace the current cart with the draft?"
+        }
+        confirmLabel={t("checkout.resume") || "Resume"}
+        cancelLabel={t("common.cancel") || "Cancel"}
+      />
     </div>
   );
 }

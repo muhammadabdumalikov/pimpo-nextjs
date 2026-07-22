@@ -307,8 +307,13 @@ const AppSidebar: React.FC = () => {
   );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // const isActive = (path: string) => path === pathname;
-   const isActive = useCallback((path: string) => path === pathname, [pathname]);
+  // Exact match or a sub-route of the item (e.g. "/reports" stays highlighted
+  // on "/reports/sales", "/kassa" on "/kassa/[id]").
+  const isActive = useCallback(
+    (path: string) =>
+      path === pathname || (path !== "/" && pathname.startsWith(path + "/")),
+    [pathname],
+  );
 
   useEffect(() => {
     // Check if the current path matches any submenu item

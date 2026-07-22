@@ -25,11 +25,14 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+// Monotonic suffix so two toasts fired in the same millisecond never collide.
+let toastCounter = 0;
+
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((variant: ToastVariant, message: string, title?: string) => {
-    const id = Math.random().toString(36).substring(7);
+    const id = `${Date.now()}-${toastCounter++}`;
     const newToast: Toast = { id, variant, message, title };
     
     setToasts((prev) => [...prev, newToast]);
@@ -153,24 +156,8 @@ const ToastItem: React.FC<{ toast: Toast; onClose: () => void }> = ({ toast, onC
       ? toast.title
       : t(`toast.${toast.variant}`);
 
-  // Errors and warnings carry a message the user needs to read, so show the text
-  // beside the icon. Success/info stay as compact, icon-only confirmation badges.
-  const showText = toast.variant === 'error' || toast.variant === 'warning';
-
-  if (!showText) {
-    // Icon-only toast: a compact circular badge, click to dismiss.
-    return (
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label={title || toast.message}
-        className={`animate-toast-in pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full text-white shadow-theme-lg transition active:scale-95 ${variant.iconBg}`}
-      >
-        {icons[toast.variant]}
-      </button>
-    );
-  }
-
+  // Every variant shows its message: a bare icon can't tell the user *what*
+  // succeeded (e.g. "Sale saved" vs "Debt recorded"), only that something did.
   return (
     <button
       type="button"

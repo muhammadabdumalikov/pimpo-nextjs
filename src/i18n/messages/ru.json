@@ -431,9 +431,9 @@
     "orderItems": "Купленные товары",
     "paidAmount": "Оплачено",
     "debtAmount": "Долг",
-    "sortByDate": "Сорт.: Дата",
-    "sortByAmount": "Сорт.: Сумма долга",
-    "sortByCount": "Сорт.: Кол-во долгов",
+    "sortByDate": "Дата",
+    "sortByAmount": "Сумма долга",
+    "sortByCount": "Количество долгов",
     "allStatuses": "Все статусы",
     "dateFrom": "С",
     "dateTo": "По",
@@ -469,7 +469,8 @@
     "saving": "Сохранение...",
     "details": "Подробнее",
     "deleteConfirmTitle": "Удалить долг",
-    "deleting": "Удаление..."
+    "deleting": "Удаление...",
+    "daysOverdue": "просрочено на {days} дн."
   },
   "products": {
     "title": "Список товаров",
@@ -495,6 +496,8 @@
     "edit": "Редактировать",
     "delete": "Удалить",
     "confirmDelete": "Вы уверены, что хотите удалить этот товар?",
+    "deleteConfirmTitle": "Удалить товар?",
+    "deleting": "Удаление...",
     "deleteSuccess": "Товар успешно удален",
     "deleteError": "Не удалось удалить товар",
     "showing": "Показано",
@@ -547,7 +550,15 @@
     "viewMore": "Подробнее",
     "delete": "Удалить",
     "totalOrders": "Всего заказов",
-    "revenue": "Выручка"
+    "revenue": "Выручка",
+    "todayRevenue": "Выручка сегодня",
+    "todayProfit": "Прибыль сегодня",
+    "salesCount": "Продаж: {count}",
+    "lowStockTitle": "Товары на исходе",
+    "lowStockHint": "Рекомендуется дозаказ",
+    "debtTitle": "Общая задолженность",
+    "debtors": "Должников: {count}",
+    "loadError": "Не удалось загрузить данные"
   },
   "addProduct": {
     "productInformation": "Информация о товаре",
@@ -1315,7 +1326,12 @@
     "of": "из",
     "results": "результатов",
     "dismiss": "Закрыть",
-    "back": "Назад"
+    "back": "Назад",
+    "errorTitle": "Произошла ошибка",
+    "errorDescription": "При загрузке страницы произошла непредвиденная ошибка. Попробуйте ещё раз.",
+    "retry": "Повторить",
+    "previous": "Назад",
+    "next": "Вперёд"
   },
   "auth": {
     "backToDashboard": "Назад в панель",
@@ -1583,7 +1599,12 @@
     "enterNote": "Введите комментарий",
     "openRegister": "Открыть кассу",
     "branch": "Магазин",
-    "selectBranch": "Выберите магазин"
+    "selectBranch": "Выберите магазин",
+    "closeConfirmTitle": "Закрыть смену",
+    "closeConfirmMessage": "После закрытия смену нельзя открыть заново.",
+    "closeUncounted": "Внимание: не подсчитано строк: {count}.",
+    "closeDiff": "Расхождение кассы: {list}.",
+    "closing": "Закрытие..."
   },
   "sales": {
     "title": "Все продажи",
@@ -1698,6 +1719,8 @@
     "editTitle": "Изменить магазин",
     "addTitle": "Новый магазин",
     "deleteConfirm": "Удалить этот магазин?",
+    "deleteConfirmTitle": "Удалить магазин?",
+    "deleting": "Удаление...",
     "nameRequired": "Введите название магазина"
   },
   "reportsPage": {
@@ -1953,6 +1976,11 @@
     "noTarget": "План не задан",
     "remainingToTarget": "До плана осталось",
     "expectedPace": "Ожидаемый темп",
-    "dayOfMonth": "День месяца"
+    "dayOfMonth": "День месяца",
+    "presetToday": "Сегодня",
+    "presetYesterday": "Вчера",
+    "presetWeek": "7 дней",
+    "presetMonth": "Этот месяц",
+    "presetPrevMonth": "Прошлый месяц"
   }
 }

@@ -7,7 +7,7 @@ import ReportSingleDate from "./ReportSingleDate";
 import ReportSearch from "./ReportSearch";
 import ReportPager from "./ReportPager";
 import { getStockReport, type StockReport as StockData } from "@/lib/api";
-import { formatMoney, formatNumber, formatDate, toISODate } from "@/lib/reportFormat";
+import { formatMoney, formatNumber, formatDate, toISODate, storeToday } from "@/lib/reportFormat";
 import { exportAoaToExcel } from "@/lib/exportExcel";
 
 const PAGE = 12;
@@ -15,7 +15,7 @@ const th = "py-3 px-4 sm:px-6 font-medium text-gray-500 text-sm dark:text-gray-4
 
 export default function StockReport() {
   const { t } = useTranslations();
-  const [date, setDate] = useState<Date | null>(new Date());
+  const [date, setDate] = useState<Date | null>(storeToday());
   const [data, setData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

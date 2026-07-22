@@ -10,13 +10,13 @@ import {
 } from "../ui/table";
 import Image from "next/image";
 import { PlusIcon, ChevronLeftIcon, PencilIcon, TrashBinIcon } from "@/icons/index";
-import { RiFileExcel2Line } from "react-icons/ri";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { getProducts, getProductCount, deleteProduct, type Product } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useRouter } from "next/navigation";
 import Pagination from "@/components/ui/pagination/Pagination";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 // Format a UZS price string as grouped so'm (matches the rest of the dashboard).
 // Returns "—" for empty/unset optional tiers (wholesale, bundle).
@@ -39,6 +39,7 @@ export default function ProductsList() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const itemsPerPage = 7;
 
   // Check product limit
@@ -111,15 +112,18 @@ export default function ProductsList() {
     router.push(`/edit-product?id=${productId}`);
   };
 
-  const handleDelete = async (productId: string) => {
-    if (!confirm(t('products.confirmDelete') || 'Are you sure you want to delete this product?')) {
-      return;
-    }
+  const handleDelete = (productId: string) => {
+    setProductToDelete(productId);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return;
 
     try {
-      setDeletingProductId(productId);
-      await deleteProduct(productId);
+      setDeletingProductId(productToDelete);
+      await deleteProduct(productToDelete);
       showToast('success', t('products.deleteSuccess') || 'Product deleted successfully', 'Success');
+      setProductToDelete(null);
       // Reload products
       await loadProducts();
     } catch (error: any) {
@@ -144,10 +148,6 @@ export default function ProductsList() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button disabled className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-            <RiFileExcel2Line className="h-5 w-5 text-success-600 dark:text-success-500" />
-            {t('products.export')}
-          </button>
           <Link
             href="/import-products"
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
@@ -208,44 +208,6 @@ export default function ProductsList() {
           />
         </div>
 
-        <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-          <svg
-            className="stroke-current fill-white dark:fill-gray-800 w-4 h-4"
-            width="16"
-            height="16"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M2.29004 5.90393H17.7067"
-              stroke=""
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M17.7075 14.0961H2.29085"
-              stroke=""
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M12.0826 3.33331C13.5024 3.33331 14.6534 4.48431 14.6534 5.90414C14.6534 7.32398 13.5024 8.47498 12.0826 8.47498C10.6627 8.47498 9.51172 7.32398 9.51172 5.90415C9.51172 4.48432 10.6627 3.33331 12.0826 3.33331Z"
-              fill=""
-              stroke=""
-              strokeWidth="1.5"
-            />
-            <path
-              d="M7.91745 11.525C6.49762 11.525 5.34662 12.676 5.34662 14.0959C5.34661 15.5157 6.49762 16.6667 7.91745 16.6667C9.33728 16.6667 10.4883 15.5157 10.4883 14.0959C10.4883 12.676 9.33728 11.525 7.91745 11.525Z"
-              fill=""
-              stroke=""
-              strokeWidth="1.5"
-            />
-          </svg>
-          {t('products.filter')}
-        </button>
       </div>
 
       {/* Products Table */}
@@ -282,19 +244,6 @@ export default function ProductsList() {
               >
                 <div className="flex items-center gap-2">
                   {t('products.products')}
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                    />
-                  </svg>
                 </div>
               </TableCell>
               <TableCell
@@ -303,19 +252,6 @@ export default function ProductsList() {
               >
                 <div className="flex items-center gap-2">
                   {t('products.priceIn')}
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                    />
-                  </svg>
                 </div>
               </TableCell>
               <TableCell
@@ -324,19 +260,6 @@ export default function ProductsList() {
               >
                 <div className="flex items-center gap-2">
                   {t('products.priceOut')}
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                    />
-                  </svg>
                 </div>
               </TableCell>
               <TableCell
@@ -345,19 +268,6 @@ export default function ProductsList() {
               >
                 <div className="flex items-center gap-2">
                   {t('products.priceBundle')}
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                    />
-                  </svg>
                 </div>
               </TableCell>
               <TableCell
@@ -366,19 +276,6 @@ export default function ProductsList() {
               >
                 <div className="flex items-center gap-2">
                   {t('products.priceWholesale')}
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                    />
-                  </svg>
                 </div>
               </TableCell>
               <TableCell
@@ -387,19 +284,6 @@ export default function ProductsList() {
               >
                 <div className="flex items-center gap-2">
                   {t('products.code')}
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                    />
-                  </svg>
                 </div>
               </TableCell>
               <TableCell
@@ -408,19 +292,6 @@ export default function ProductsList() {
               >
                 <div className="flex items-center gap-2">
                   {t('products.barcode')}
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                    />
-                  </svg>
                 </div>
               </TableCell>
               <TableCell
@@ -429,19 +300,6 @@ export default function ProductsList() {
               >
                 <div className="flex items-center gap-2">
                   {t('products.quantity')}
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                    />
-                  </svg>
                 </div>
               </TableCell>
               <TableCell
@@ -604,6 +462,19 @@ export default function ProductsList() {
         totalItems={totalProducts}
         itemsPerPage={itemsPerPage}
         onPageChange={handlePageChange}
+      />
+
+      <ConfirmModal
+        isOpen={!!productToDelete}
+        onClose={() => !deletingProductId && setProductToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title={t('products.deleteConfirmTitle') || 'Delete product?'}
+        message={t('products.confirmDelete') || 'Are you sure you want to delete this product?'}
+        confirmLabel={t('products.delete') || 'Delete'}
+        cancelLabel={t('common.cancel') || 'Cancel'}
+        variant="danger"
+        isLoading={!!productToDelete && deletingProductId === productToDelete}
+        loadingLabel={t('products.deleting') || 'Deleting...'}
       />
     </div>
   );

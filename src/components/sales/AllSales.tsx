@@ -28,6 +28,7 @@ import { receiptTplStrings } from "@/lib/receiptTemplateI18n";
 import type { Locale } from "@/i18n/config";
 import SelectField from "@/components/form/SelectField";
 import DateRangeFilter, { toYmd, type DateRange } from "./DateRangeFilter";
+import { storeToday } from "@/lib/reportFormat";
 import SalesFilters, {
   EMPTY_FILTERS,
   type SalesFilterValues,
@@ -38,9 +39,9 @@ const PAGE_SIZE = 50;
 const CARD =
   "rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.02]";
 
-/** Today as the YYYY-MM-DD string the API expects. */
+/** Today (store timezone) as the YYYY-MM-DD string the API expects. */
 function todayStr() {
-  return toYmd(new Date());
+  return toYmd(storeToday());
 }
 
 export default function AllSales() {
@@ -83,6 +84,52 @@ export default function AllSales() {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [filters, setFilters] = useState<SalesFilterValues>(EMPTY_FILTERS);
+
+  // Filters live in the URL so navigating into a sale and back (or a reload)
+  // keeps the view. Restored once on mount; written on every change below.
+  const filtersRestoredRef = useRef(false);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("all") === "1") {
+      setRange({ from: "", to: "" });
+    } else if (p.has("from") || p.has("to")) {
+      setRange({ from: p.get("from") ?? "", to: p.get("to") ?? "" });
+    }
+    const q = p.get("q");
+    if (q) {
+      setSearch(q);
+      setDebounced(q);
+    }
+    const restored: SalesFilterValues = {
+      paymentMethod: p.get("pm") ?? "",
+      cashierId: p.get("cashier") ?? "",
+      minAmount: p.get("min") ?? "",
+      maxAmount: p.get("max") ?? "",
+    };
+    if (restored.paymentMethod || restored.cashierId || restored.minAmount || restored.maxAmount) {
+      setFilters(restored);
+    }
+    filtersRestoredRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!filtersRestoredRef.current) return;
+    const p = new URLSearchParams();
+    const today = todayStr();
+    if (!range.from && !range.to) {
+      p.set("all", "1");
+    } else if (range.from !== today || range.to !== today) {
+      if (range.from) p.set("from", range.from);
+      if (range.to) p.set("to", range.to);
+    }
+    if (debounced) p.set("q", debounced);
+    if (filters.paymentMethod) p.set("pm", filters.paymentMethod);
+    if (filters.cashierId) p.set("cashier", filters.cashierId);
+    if (filters.minAmount) p.set("min", filters.minAmount);
+    if (filters.maxAmount) p.set("max", filters.maxAmount);
+    const qs = p.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, [range, debounced, filters]);
 
   const [ordersList, setOrdersList] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
@@ -212,8 +259,8 @@ export default function AllSales() {
     const data: ReceiptData = {
       saleNumber: order.id.slice(0, 8),
       storeName: account?.name || receiptStrings.out.defaultStoreName,
-      date: created.toLocaleDateString("ru-RU"),
-      time: created.toLocaleTimeString("ru-RU", {
+      date: created.toLocaleDateString(receiptStrings.out.dateLocale),
+      time: created.toLocaleTimeString(receiptStrings.out.dateLocale, {
         hour: "2-digit",
         minute: "2-digit",
       }),
@@ -228,7 +275,7 @@ export default function AllSales() {
       subtotal: Number(order.subtotalAmount),
       discount: Number(order.discountAmount),
       total: Number(order.totalAmount),
-      currency: "сум",
+      currency: receiptStrings.out.currency,
     };
     try {
       const template = await resolveReceiptTemplate();

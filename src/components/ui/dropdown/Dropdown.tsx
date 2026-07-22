@@ -28,9 +28,16 @@ export const Dropdown: React.FC<DropdownProps> = ({
     }
   };
 
+  // Escape closes the menu — keyboard parity with the outside click.
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") onClose();
+  };
+
   document.addEventListener("mousedown", handleClickOutside);
+  document.addEventListener("keydown", handleKeyDown);
   return () => {
     document.removeEventListener("mousedown", handleClickOutside);
+    document.removeEventListener("keydown", handleKeyDown);
   };
 }, [onClose]);
 

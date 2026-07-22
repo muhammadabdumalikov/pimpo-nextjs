@@ -42,6 +42,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
+          aria-label={t("common.previous")}
           className="flex items-center justify-center h-10 w-10 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,6 +66,7 @@ export default function Pagination({
                 key={page}
                 type="button"
                 onClick={() => onPageChange(page)}
+                aria-current={currentPage === page ? "page" : undefined}
                 className={`flex w-10 h-10 items-center justify-center rounded-lg text-sm font-medium ${
                   currentPage === page
                     ? "bg-brand-500 text-white"
@@ -80,6 +82,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= pages}
+          aria-label={t("common.next")}
           className="flex items-center justify-center h-10 w-10 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

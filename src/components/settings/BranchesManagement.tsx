@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import { Drawer } from "@/components/ui/drawer";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import Button from "@/components/ui/button/Button";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
@@ -28,6 +29,8 @@ export default function BranchesManagement() {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [saving, setSaving] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     const res = await getBranches();
@@ -87,13 +90,17 @@ export default function BranchesManagement() {
     }
   };
 
-  const remove = async (b: Branch) => {
-    if (!window.confirm(t("branches.deleteConfirm"))) return;
+  const confirmRemove = async () => {
+    if (!branchToDelete) return;
+    setDeleting(true);
     try {
-      await deleteBranch(b.id);
+      await deleteBranch(branchToDelete.id);
+      setBranchToDelete(null);
       await load();
     } catch (e) {
       showToast("error", (e as Error).message, "Error");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -155,7 +162,7 @@ export default function BranchesManagement() {
                       {!b.isDefault && (
                         <button
                           type="button"
-                          onClick={() => remove(b)}
+                          onClick={() => setBranchToDelete(b)}
                           className="rounded-lg p-2 text-gray-500 hover:bg-error-50 hover:text-error-500 dark:text-gray-400 dark:hover:bg-error-500/10"
                           aria-label={t("branches.delete")}
                         >
@@ -205,6 +212,19 @@ export default function BranchesManagement() {
           </div>
         </div>
       </Drawer>
+
+      <ConfirmModal
+        isOpen={!!branchToDelete}
+        onClose={() => !deleting && setBranchToDelete(null)}
+        onConfirm={confirmRemove}
+        title={t("branches.deleteConfirmTitle")}
+        message={t("branches.deleteConfirm")}
+        confirmLabel={t("branches.delete")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        isLoading={deleting}
+        loadingLabel={t("branches.deleting")}
+      />
     </div>
   );
 }

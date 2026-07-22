@@ -10,6 +10,9 @@ interface ModalProps {
   isFullscreen?: boolean; // Default to false for backwards compatibility
 }
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -48,6 +51,49 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen]);
 
+  // Focus management: move focus into the dialog on open, keep Tab cycling
+  // inside it, and return focus to the trigger element on close — so keyboard
+  // users can't tab into the obscured page behind the overlay.
+  useEffect(() => {
+    if (!isOpen) return;
+    const opener = document.activeElement as HTMLElement | null;
+    const dialog = modalRef.current;
+    // Respect content that autofocuses its own field; otherwise focus the
+    // first focusable element (or the dialog itself).
+    if (dialog && !dialog.contains(document.activeElement)) {
+      const first = dialog.querySelector<HTMLElement>(FOCUSABLE);
+      (first ?? dialog).focus();
+    }
+
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || !modalRef.current) return;
+      const focusable = Array.from(
+        modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE),
+      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        modalRef.current.focus();
+        return;
+      }
+      const firstEl = focusable[0];
+      const lastEl = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === firstEl || active === modalRef.current)) {
+        event.preventDefault();
+        lastEl.focus();
+      } else if (!event.shiftKey && active === lastEl) {
+        event.preventDefault();
+        firstEl.focus();
+      }
+    };
+
+    document.addEventListener("keydown", trapFocus);
+    return () => {
+      document.removeEventListener("keydown", trapFocus);
+      opener?.focus?.();
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const contentClasses = isFullscreen
@@ -64,12 +110,16 @@ export const Modal: React.FC<ModalProps> = ({
       )}
       <div
         ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
         className={`${contentClasses}  ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {showCloseButton && (
           <button
             onClick={onClose}
+            aria-label="Close"
             className="absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white sm:right-6 sm:top-6 sm:h-11 sm:w-11"
           >
             <svg

@@ -34,6 +34,7 @@ import {
 } from "@/lib/receiptTemplateI18n";
 import type { Locale } from "@/i18n/config";
 import { PlusIcon, TrashBinIcon } from "@/icons/index";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import ReceiptTemplatePreview from "./ReceiptTemplatePreview";
 import ReceiptTemplateEditor from "./ReceiptTemplateEditor";
 
@@ -88,6 +89,8 @@ export default function ReceiptTemplateManagement() {
   const [widthMm, setWidthMm] = useState(80);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<ReceiptTemplate | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(
     async (selectId?: string) => {
@@ -216,18 +219,26 @@ export default function ReceiptTemplateManagement() {
     }
   };
 
-  const remove = async (t: ReceiptTemplate) => {
+  const remove = (t: ReceiptTemplate) => {
     if (t.isDefault) {
       showToast("error", L.toasts.cantDeleteDefault);
       return;
     }
-    if (!confirm(L.toasts.confirmDelete.replace("{name}", t.name))) return;
+    setTemplateToDelete(t);
+  };
+
+  const confirmRemove = async () => {
+    if (!templateToDelete) return;
+    setDeleting(true);
     try {
-      await deleteReceiptTemplate(t.id);
+      await deleteReceiptTemplate(templateToDelete.id);
       showToast("success", L.toasts.deleted);
+      setTemplateToDelete(null);
       await load();
     } catch (e) {
       showToast("error", (e as Error)?.message || L.toasts.deleteFailed);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -383,6 +394,19 @@ export default function ReceiptTemplateManagement() {
             </div>
           </div>
         )}
+
+        <ConfirmModal
+          isOpen={!!templateToDelete}
+          onClose={() => !deleting && setTemplateToDelete(null)}
+          onConfirm={confirmRemove}
+          title={L.toasts.deleteTitle}
+          message={L.toasts.confirmDelete.replace("{name}", templateToDelete?.name ?? "")}
+          confirmLabel={L.toasts.deleteBtn}
+          cancelLabel={L.toasts.cancel}
+          variant="danger"
+          isLoading={deleting}
+          loadingLabel={L.toasts.deleting}
+        />
       </div>
     </DndProvider>
   );

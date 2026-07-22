@@ -385,7 +385,9 @@ export interface ProductsResponse {
   limit: number;
 }
 
-export async function getProducts(page?: number, limit?: number, search?: string, branchId?: string): Promise<ProductsResponse> {
+export type StockStatusFilter = 'in' | 'low' | 'out';
+
+export async function getProducts(page?: number, limit?: number, search?: string, branchId?: string, stock?: StockStatusFilter): Promise<ProductsResponse> {
   const token = getAuthToken();
   if (!token) {
     throw new Error('Not authenticated');
@@ -396,6 +398,7 @@ export async function getProducts(page?: number, limit?: number, search?: string
   if (limit) params.append('limit', limit.toString());
   if (search) params.append('search', search);
   if (branchId) params.append('branchId', branchId);
+  if (stock) params.append('stock', stock);
 
   const response = await fetch(`${API_BASE_URL}/products?${params.toString()}`, {
     method: 'GET',
@@ -408,6 +411,42 @@ export async function getProducts(page?: number, limit?: number, search?: string
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
     throw new Error('Failed to fetch products');
+  }
+
+  return response.json();
+}
+
+// Whole-catalogue stock-status counts (respects search + branch scoping), so
+// the inventory stat cards reflect the full inventory, not the current page.
+export interface ProductStats {
+  total: number;
+  inStock: number;
+  lowStock: number;
+  outOfStock: number;
+}
+
+export async function getProductStats(search?: string, branchId?: string): Promise<ProductStats> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (branchId) params.append('branchId', branchId);
+  const qs = params.toString();
+
+  const response = await fetch(`${API_BASE_URL}/products/stats${qs ? `?${qs}` : ''}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    throw new Error('Failed to fetch product stats');
   }
 
   return response.json();

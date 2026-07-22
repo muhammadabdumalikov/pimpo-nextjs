@@ -109,6 +109,14 @@ export default function CashMovementModal({
         {t("kassa.addMovement")}
       </h2>
 
+      {/* Real form so Enter in the amount/reason fields submits — cash in/out
+          is a high-frequency flow that shouldn't require the mouse. */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!submitting) handleAdd();
+        }}
+      >
       <div className="space-y-4">
         <div className="flex gap-2">
           <Segment active={type === "in"} onClick={() => setType("in")}>
@@ -171,13 +179,14 @@ export default function CashMovementModal({
       </div>
 
       <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Button variant="outline" onClick={onClose} disabled={submitting}>
+        <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
           {t("kassa.cancel")}
         </Button>
-        <Button onClick={handleAdd} disabled={submitting}>
+        <Button type="submit" disabled={submitting}>
           {t("kassa.add")}
         </Button>
       </div>
+      </form>
     </Modal>
   );
 }

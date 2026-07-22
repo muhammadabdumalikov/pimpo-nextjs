@@ -1,6 +1,7 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Drawer } from "@/components/ui/drawer";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import Button from "@/components/ui/button/Button";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
@@ -43,6 +44,7 @@ export default function ShiftModal({
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const onError = useCallback(
     (message: string) => showToast("error", message, "Error"),
@@ -129,6 +131,43 @@ export default function ShiftModal({
           ? "text-warning-500"
           : "text-success-500";
 
+  // The Z-report confirmation surfaces exactly what the cashier is about to
+  // commit: uncounted rows (silently dropped from the payload) and any
+  // per-currency discrepancy between counted and expected.
+  const closeWarnings = useMemo(() => {
+    const uncounted = rows.filter((r) => {
+      const raw = counted[key(r)];
+      return raw === undefined || raw === "";
+    });
+    const diffs = rows
+      .map((r) => ({ r, d: diffOf(r) }))
+      .filter((x): x is { r: ReconRow; d: number } => x.d != null && x.d !== 0);
+    return { uncounted, diffs };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, counted]);
+
+  const confirmMessage = useMemo(() => {
+    const parts: string[] = [t("kassa.closeConfirmMessage")];
+    if (closeWarnings.uncounted.length > 0) {
+      parts.push(
+        t("kassa.closeUncounted").replace(
+          "{count}",
+          String(closeWarnings.uncounted.length),
+        ),
+      );
+    }
+    if (closeWarnings.diffs.length > 0) {
+      const list = closeWarnings.diffs
+        .map(
+          ({ r, d }) =>
+            `${t(methodLabelKey(r.method))} (${r.currency}): ${d > 0 ? "+" : "−"}${fmt(Math.abs(d))}`,
+        )
+        .join(", ");
+      parts.push(t("kassa.closeDiff").replace("{list}", list));
+    }
+    return parts.join(" ");
+  }, [t, closeWarnings]);
+
   const handleClose = async () => {
     if (!shiftId) return;
     setSubmitting(true);
@@ -146,6 +185,7 @@ export default function ShiftModal({
         note: note.trim() || undefined,
       });
       showToast("success", t("kassa.closeShift"), "Success");
+      setConfirmOpen(false);
       onChanged();
       onClose();
     } catch (e) {
@@ -156,6 +196,7 @@ export default function ShiftModal({
   };
 
   return (
+    <>
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
@@ -180,7 +221,7 @@ export default function ShiftModal({
           {shift && !closed && (
             <Button
               startIcon={<LockIcon className="h-5 w-5" />}
-              onClick={handleClose}
+              onClick={() => setConfirmOpen(true)}
               disabled={submitting}
             >
               {t("kassa.closeShift")}
@@ -275,6 +316,7 @@ export default function ShiftModal({
                         ) : (
                           <input
                             inputMode="numeric"
+                            data-counted-input
                             value={group(counted[key(r)] ?? "")}
                             onChange={(e) =>
                               setCounted((c) => ({
@@ -282,6 +324,24 @@ export default function ShiftModal({
                                 [key(r)]: digits(e.target.value),
                               }))
                             }
+                            onKeyDown={(e) => {
+                              // Enter walks down the reconciliation column;
+                              // on the last row it opens the close confirm.
+                              if (e.key !== "Enter") return;
+                              e.preventDefault();
+                              const inputs = Array.from(
+                                document.querySelectorAll<HTMLInputElement>(
+                                  "[data-counted-input]",
+                                ),
+                              );
+                              const idx = inputs.indexOf(e.currentTarget);
+                              if (idx >= 0 && idx < inputs.length - 1) {
+                                inputs[idx + 1].focus();
+                                inputs[idx + 1].select();
+                              } else if (!submitting) {
+                                setConfirmOpen(true);
+                              }
+                            }}
                             placeholder="0"
                             className="h-10 w-full max-w-[10rem] rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-right text-sm text-gray-800 shadow-theme-xs focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                           />
@@ -392,5 +452,24 @@ export default function ShiftModal({
         </div>
       )}
     </Drawer>
+
+    {/* Irreversible close: confirm with the discrepancy / uncounted-row summary */}
+    <ConfirmModal
+      isOpen={confirmOpen}
+      onClose={() => !submitting && setConfirmOpen(false)}
+      onConfirm={handleClose}
+      title={t("kassa.closeConfirmTitle")}
+      message={confirmMessage}
+      confirmLabel={t("kassa.closeShift")}
+      cancelLabel={t("kassa.cancel")}
+      variant={
+        closeWarnings.uncounted.length > 0 || closeWarnings.diffs.length > 0
+          ? "danger"
+          : "primary"
+      }
+      isLoading={submitting}
+      loadingLabel={t("kassa.closing")}
+    />
+    </>
   );
 }

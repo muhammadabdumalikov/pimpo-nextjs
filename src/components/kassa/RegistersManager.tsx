@@ -158,6 +158,13 @@ export default function RegistersManager() {
         <h2 className="mb-5 text-xl font-semibold text-gray-800 dark:text-white/90">
           {editing ? t("kassa.edit") : t("kassa.newRegister")}
         </h2>
+        {/* Real form so Enter in the name field saves */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!saving) save();
+          }}
+        >
         <div>
           <Label>{t("kassa.name")}</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -175,16 +182,18 @@ export default function RegistersManager() {
         )}
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button
+            type="button"
             variant="outline"
             onClick={() => setModalOpen(false)}
             disabled={saving}
           >
             {t("kassa.cancel")}
           </Button>
-          <Button onClick={save} disabled={saving}>
+          <Button type="submit" disabled={saving}>
             {t("kassa.save")}
           </Button>
         </div>
+        </form>
       </Modal>
     </div>
   );
