@@ -87,7 +87,7 @@ export default function ImageUpload({
           ) : (
             <div className="flex h-24 w-24 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
               {uploading ? (
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500" />
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
               ) : (
                 <span className="text-xs text-gray-400">No image</span>
               )}

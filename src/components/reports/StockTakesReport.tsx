@@ -5,6 +5,7 @@ import Badge from "../ui/badge/Badge";
 import SelectField from "../form/SelectField";
 import { useTranslations } from "@/hooks/useTranslations";
 import ReportShell, { ReportKpi, ReportFilterField } from "./ReportShell";
+import { ReportTableSkeleton } from "./ReportSkeleton";
 import ReportDateRange from "./ReportDateRange";
 import { getStockTakesReport, type StockTakesReport as Data } from "@/lib/api";
 import { currentMonthRange, formatMoney, formatDate, formatNumber, rangeLabel, toISODate } from "@/lib/reportFormat";
@@ -138,7 +139,7 @@ export default function StockTakesReport() {
           </TableHeader>
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-gray-500 dark:text-gray-400">{t("reportsPage.loading")}</TableCell></TableRow>
+              <ReportTableSkeleton columns={7} />
             ) : error ? (
               <TableRow><TableCell colSpan={7} className="py-10 text-center text-error-500">{error}</TableCell></TableRow>
             ) : items.length === 0 ? (

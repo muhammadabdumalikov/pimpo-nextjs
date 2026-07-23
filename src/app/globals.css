@@ -332,6 +332,14 @@ select:focus {
   scrollbar-width: none; /* Firefox */
 }
 
+/* Fill the admin content area so a page's primary card is never a tiny box
+   floating on empty background, and the height stays consistent as you move
+   between pages. The offset is the admin layout's vertical chrome (content
+   padding + header). Single-source for the value — used by list/table pages. */
+@utility min-h-fill {
+  min-height: calc(100vh - 170px);
+}
+
 @utility custom-scrollbar {
   &::-webkit-scrollbar {
     @apply size-1.5;

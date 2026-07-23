@@ -26,6 +26,8 @@ import {
   resolveReceiptTemplate,
   getStoredAccount,
   getUnits,
+  getPaymentMethods,
+  type PaymentMethod as ApiPaymentMethod,
   type Product,
   type Customer,
   type Shift,
@@ -116,7 +118,10 @@ const MIN_KG = 0.001;
 
 // One line of the payment drawer: a method plus the amount applied via it.
 // A sale is paid by composing these (cash 30k + card 10k = split, etc.).
-type PayMethod = "cash" | "card" | "debt";
+// The method is a payment-method CODE from the configurable catalogue
+// (Sozlamalar → To'lov turlari); 'cash' keeps its change semantics and 'debt'
+// is the special credit pseudo-method.
+type PayMethod = string;
 type PayEntry = { method: PayMethod; amount: string };
 
 // Colour dot per price tier — shared by the cart-header legend and the tier
@@ -683,20 +688,25 @@ export default function Checkout() {
       .filter((e) => e.method === m)
       .reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const cashEntered = entrySum("cash");
-  const cardEntered = entrySum("card");
   const debtEntered = entrySum("debt");
-  const totalEntered = cashEntered + cardEntered + debtEntered;
+  const totalEntered = payEntries.reduce(
+    (s, e) => s + (Number(e.amount) || 0),
+    0,
+  );
+  // Everything that isn't cash or debt: card + the configurable methods
+  // (UzCard, Click, …). None of them produce change.
+  const nonCashEntered = totalEntered - cashEntered - debtEntered;
   const payRemaining = Math.max(0, total - totalEntered);
   const hasDebt = payEntries.some((e) => e.method === "debt");
   // Change is only ever given from the cash the customer handed over.
-  const cashNeeded = Math.max(0, total - cardEntered - debtEntered);
+  const cashNeeded = Math.max(0, total - nonCashEntered - debtEntered);
   const change = Math.max(0, cashEntered - cashNeeded);
 
   const paymentValid =
     payEntries.length > 0 &&
     payEntries.every((e) => (Number(e.amount) || 0) > 0) &&
     totalEntered >= total - 0.5 &&
-    cardEntered + debtEntered <= total + 0.5 &&
+    nonCashEntered + debtEntered <= total + 0.5 &&
     (!hasDebt ||
       (customerName.trim() !== "" && phone.trim() !== "" && change < 1));
 
@@ -726,6 +736,36 @@ export default function Checkout() {
         // Lines fall back to the legacy quantityType meta.
       });
   }, []);
+
+  // Configurable payment methods — the visible ones become the drawer tiles.
+  const [payMethods, setPayMethods] = useState<ApiPaymentMethod[]>([]);
+  useEffect(() => {
+    getPaymentMethods()
+      .then((res) => setPayMethods(res.paymentMethods))
+      .catch(() => {
+        // Fall back to the built-in cash/card tiles below.
+      });
+  }, []);
+  const visiblePayMethods = useMemo(
+    () =>
+      payMethods.length > 0
+        ? payMethods.filter((m) => m.isVisible)
+        : // Catalogue unavailable (offline/older backend): the classic pair.
+          ([
+            { code: "cash", name: "Naqd" },
+            { code: "card", name: "Karta" },
+          ] as Pick<ApiPaymentMethod, "code" | "name">[]),
+    [payMethods],
+  );
+
+  // Human label for a method code: localized for the classics, catalogue name
+  // for the rest (custom codes have no translation key).
+  const payMethodLabel = (code: string): string => {
+    if (code === "debt") return t("checkout.debt") || "Credit";
+    if (code === "cash") return t("checkout.cash") || "Cash";
+    if (code === "card") return t("checkout.card") || "Card";
+    return payMethods.find((m) => m.code === code)?.name ?? code;
+  };
 
   const addProductToCart = (product: Product, addQty: number) => {
     // Newly added (or topped-up) line becomes the keyboard selection, so ←/→
@@ -1019,6 +1059,15 @@ export default function Checkout() {
   // convenience: enter 30k cash, tap Card — it fills the remaining 70k).
   // Tapping an existing method tops it up by the remainder instead.
   const addPayEntry = (method: PayMethod) => {
+    // A hidden code can only arrive via a hotkey (e.g. F2 while Karta is
+    // switched off in settings) — ignore it so the drawer matches the tiles.
+    if (
+      method !== "debt" &&
+      payMethods.length > 0 &&
+      !payMethods.some((m) => m.code === method && m.isVisible)
+    ) {
+      return;
+    }
     setPayEntries((prev) => {
       const entered = prev.reduce((s, e) => s + (Number(e.amount) || 0), 0);
       const left = Math.max(0, Math.round(total - entered));
@@ -1373,11 +1422,18 @@ export default function Checkout() {
     // what was APPLIED to the sale (cash capped at what was needed); the full
     // tendered cash goes to amountPaid so the backend can compute the change.
     // A debt entry is not a payment — the backend records the unpaid remainder
-    // (total - paid now) as the customer's debt.
-    const payments = [
-      { method: "cash", amount: Math.min(cashEntered, cashNeeded) },
-      { method: "card", amount: cardEntered },
-    ].filter((p) => p.amount > 0);
+    // (total - paid now) as the customer's debt. Each entry keeps its method
+    // CODE so per-method reporting/reconciliation see the real method.
+    const payments = payEntries
+      .filter((e) => e.method !== "debt")
+      .map((e) => ({
+        method: e.method,
+        amount:
+          e.method === "cash"
+            ? Math.min(cashEntered, cashNeeded)
+            : Number(e.amount) || 0,
+      }))
+      .filter((p) => p.amount > 0);
     const paymentMethod = hasDebt
       ? "debt"
       : payments.length > 1
@@ -1828,7 +1884,7 @@ export default function Checkout() {
             <ul className="absolute left-0 right-0 z-30 mt-1.5 max-h-80 overflow-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark">
               {searchLoading && searchResults.length === 0 ? (
                 <li className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
                   {t("common.searching") || "Searching..."}
                 </li>
               ) : (
@@ -1995,7 +2051,7 @@ export default function Checkout() {
                         {formatMoney(Number(o.totalAmount))}
                       </span>
                       {resumingId === o.id ? (
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500" />
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
                       ) : (
                         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" className="text-gray-400">
                           <path d="M7.5 5l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -2924,7 +2980,7 @@ export default function Checkout() {
                 </div>
                 {payEntries.map((e) => (
                   <div key={e.method} className="flex justify-between italic text-gray-500 dark:text-gray-400">
-                    <span>{t(`checkout.${e.method}`) || e.method}</span>
+                    <span>{payMethodLabel(e.method)}</span>
                     <span>{formatMoney(Number(e.amount) || 0)}</span>
                   </div>
                 ))}
@@ -2986,30 +3042,41 @@ export default function Checkout() {
               )}
             </div>
 
-            {/* Method tiles — tapping auto-fills the remaining amount */}
+            {/* Method tiles — tapping auto-fills the remaining amount. The
+                list comes from Sozlamalar → To'lov turlari (visible methods),
+                plus the built-in debt (nasiya) tile. */}
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {(
-                [
-                  ["cash", "F1"],
-                  ["card", "F2"],
-                  ["debt", "F3"],
-                ] as const
-              ).map(([m, hotkey]) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => addPayEntry(m)}
-                  className="flex h-14 items-center justify-between rounded-xl border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 active:scale-[0.99] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03]"
-                >
-                  <span className="flex items-center gap-2.5">
-                    {t(`checkout.${m}`) || m}
-                    <span className="rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-xs font-semibold text-gray-500 dark:border-gray-700 dark:bg-white/[0.06] dark:text-gray-400">
-                      {hotkey}
+              {[
+                ...visiblePayMethods.map((m) => m.code),
+                "debt",
+              ].map((code) => {
+                const hotkey =
+                  code === "cash"
+                    ? "F1"
+                    : code === "card"
+                      ? "F2"
+                      : code === "debt"
+                        ? "F3"
+                        : null;
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => addPayEntry(code)}
+                    className="flex h-14 items-center justify-between rounded-xl border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 active:scale-[0.99] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03]"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      {payMethodLabel(code)}
+                      {hotkey && (
+                        <span className="rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-xs font-semibold text-gray-500 dark:border-gray-700 dark:bg-white/[0.06] dark:text-gray-400">
+                          {hotkey}
+                        </span>
+                      )}
                     </span>
-                  </span>
-                  <span className="text-xl font-semibold text-brand-500">+</span>
-                </button>
-              ))}
+                    <span className="text-xl font-semibold text-brand-500">+</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Payment entries */}
@@ -3022,7 +3089,7 @@ export default function Checkout() {
                   >
                     <div className="mb-3 flex items-center justify-between">
                       <span className="text-sm font-semibold text-gray-800 dark:text-white/90">
-                        {t(`checkout.${e.method}`) || e.method}
+                        {payMethodLabel(e.method)}
                       </span>
                       <button
                         type="button"

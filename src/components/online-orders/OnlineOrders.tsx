@@ -233,38 +233,41 @@ export default function OnlineOrders() {
         </div>
       </div>
 
-      {/* Status tabs */}
-      <div className="flex flex-wrap items-center gap-2">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab || "all"}
-            type="button"
-            onClick={() => setStatusTab(tab)}
-            className={`h-10 rounded-xl px-4 text-sm font-medium transition ${
-              statusTab === tab
-                ? "bg-brand-500 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-            }`}
-          >
-            {tab ? statusLabel(tab) : t("onlineOrders.tabAll")}
-          </button>
-        ))}
+      {/* Status tabs (filter) + search on one row: the filter sits next to the
+          search, and the search is width-capped rather than spanning the page. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap items-center gap-2">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab || "all"}
+              type="button"
+              onClick={() => setStatusTab(tab)}
+              className={`h-10 rounded-xl px-4 text-sm font-medium transition ${
+                statusTab === tab
+                  ? "bg-brand-500 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              }`}
+            >
+              {tab ? statusLabel(tab) : t("onlineOrders.tabAll")}
+            </button>
+          ))}
+        </div>
+
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("onlineOrders.searchPlaceholder")}
+          className={`${inputClass} w-full sm:max-w-md`}
+        />
       </div>
 
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder={t("onlineOrders.searchPlaceholder")}
-        className={inputClass}
-      />
-
       {/* List */}
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <div className="min-h-fill overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div
-              className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500"
+              className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400"
               aria-hidden
             />
           </div>

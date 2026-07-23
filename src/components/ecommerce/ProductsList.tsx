@@ -135,7 +135,7 @@ export default function ProductsList() {
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
+    <div className="min-h-fill overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
       {/* Header Section */}
       <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -317,7 +317,7 @@ export default function ProductsList() {
               <TableRow>
                 <TableCell colSpan={10} className="py-12 text-center">
                   <div className="flex flex-col items-center justify-center gap-3">
-                    <div className="h-8 w-8 animate-spin rounded-full border-3 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400"></div>
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400"></div>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
                       {t('products.loading') || 'Loading products...'}
                     </span>

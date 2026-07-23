@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
 import { useTranslations } from "@/hooks/useTranslations";
 import ReportShell, { ReportKpi, ReportFilterField } from "./ReportShell";
+import { ReportTableSkeleton } from "./ReportSkeleton";
 import ReportDateRange from "./ReportDateRange";
 import ReportBranchFilter from "./ReportBranchFilter";
 import ReportPager from "./ReportPager";
@@ -148,7 +149,7 @@ export default function CancelledReport() {
           </TableHeader>
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="py-10 text-center text-gray-500 dark:text-gray-400">{t("reportsPage.loading")}</TableCell></TableRow>
+              <ReportTableSkeleton columns={6} />
             ) : error ? (
               <TableRow><TableCell colSpan={6} className="py-10 text-center text-error-500">{error}</TableCell></TableRow>
             ) : paged.length === 0 ? (

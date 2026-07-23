@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableRow } from "../ui/table";
 import { useTranslations } from "@/hooks/useTranslations";
 import ReportShell, { ReportKpi, ReportFilterField } from "./ReportShell";
+import { ReportTableSkeleton } from "./ReportSkeleton";
 import ReportDateRange from "./ReportDateRange";
 import ReportBranchFilter from "./ReportBranchFilter";
 import { getPnlReport, type PnlReport as PnlData } from "@/lib/api";
@@ -126,11 +127,7 @@ export default function PnlReport() {
         <Table className="w-full min-w-[480px]">
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={2} className="py-10 text-center text-gray-500 dark:text-gray-400">
-                  {t("reportsPage.loading")}
-                </TableCell>
-              </TableRow>
+              <ReportTableSkeleton columns={2} />
             ) : error ? (
               <TableRow>
                 <TableCell colSpan={2} className="py-10 text-center text-error-500">

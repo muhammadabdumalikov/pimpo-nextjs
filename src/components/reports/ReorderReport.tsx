@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table"
 import { useTranslations } from "@/hooks/useTranslations";
 import SelectField from "../form/SelectField";
 import ReportShell, { ReportKpi, ReportFilterField } from "./ReportShell";
+import { ReportTableSkeleton } from "./ReportSkeleton";
 import ReportBranchFilter from "./ReportBranchFilter";
 import ReportSearch from "./ReportSearch";
 import ReportPager from "./ReportPager";
@@ -169,7 +170,7 @@ export default function ReorderReport() {
 
   const colCount = 8;
   const stateRow = loading ? (
-    <TableRow><TableCell colSpan={colCount} className="py-10 text-center text-gray-500 dark:text-gray-400">{t("reportsPage.loading")}</TableCell></TableRow>
+    <ReportTableSkeleton columns={colCount} />
   ) : error ? (
     <TableRow><TableCell colSpan={colCount} className="py-10 text-center text-error-500">{error}</TableCell></TableRow>
   ) : null;

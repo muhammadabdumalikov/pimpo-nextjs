@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
 import { useTranslations } from "@/hooks/useTranslations";
 import ReportShell, { ReportKpi, ReportFilterField } from "./ReportShell";
+import { ReportTableSkeleton } from "./ReportSkeleton";
 import ReportDateRange from "./ReportDateRange";
 import ReportCompareToggle from "./ReportCompareToggle";
 import { getBranchComparisonReport, type BranchComparisonReport as BranchData } from "@/lib/api";
@@ -103,7 +104,7 @@ export default function BranchComparisonReport() {
           </TableHeader>
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-gray-500 dark:text-gray-400">{t("reportsPage.loading")}</TableCell></TableRow>
+              <ReportTableSkeleton columns={7} />
             ) : error ? (
               <TableRow><TableCell colSpan={7} className="py-10 text-center text-error-500">{error}</TableCell></TableRow>
             ) : rows.length === 0 ? (

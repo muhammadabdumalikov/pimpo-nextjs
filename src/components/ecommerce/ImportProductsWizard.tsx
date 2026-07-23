@@ -384,7 +384,7 @@ export default function ImportProductsWizard() {
           <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
             {isParsing ? (
               <div className="flex flex-col items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-6 py-16 text-center dark:border-gray-800 dark:bg-white/[0.02]">
-                <span className="h-9 w-9 animate-spin rounded-full border-3 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
+                <span className="h-9 w-9 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("import.parsing")}</p>
                 {fileName && <p className="text-xs text-gray-500 dark:text-gray-400">{fileName}</p>}
               </div>

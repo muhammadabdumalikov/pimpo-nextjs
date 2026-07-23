@@ -258,7 +258,7 @@ export default function ReceiptTemplateManagement() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="rounded-2xl border border-gray-200 bg-white px-4 pb-4 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
+      <div className="min-h-fill rounded-2xl border border-gray-200 bg-white px-4 pb-4 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
         {/* Header */}
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -287,7 +287,9 @@ export default function ReceiptTemplateManagement() {
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-gray-500">{L.loading}</div>
+          <div className="flex items-center justify-center py-16">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
             {/* Template list — sticky */}

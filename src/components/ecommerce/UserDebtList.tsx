@@ -568,7 +568,7 @@ export default function UserDebtList() {
 
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
+    <div className="min-h-fill overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
       {/* Header Section */}
       <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -606,9 +606,10 @@ export default function UserDebtList() {
         </div>
       </div>
 
-      {/* Search and Filter Bar */}
-      <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
+      {/* Search and Filter Bar — search is width-capped and the controls
+          (sort + filter) sit right next to it, not pushed to the far edge. */}
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center">
+        <div className="relative w-full max-w-md">
           <span className="absolute -translate-y-1/2 left-4 top-1/2 pointer-events-none">
             <svg
               className="fill-gray-500 dark:fill-gray-400"
@@ -789,7 +790,7 @@ export default function UserDebtList() {
               <TableRow>
                 <TableCell colSpan={7} className="py-12 text-center">
                   <div className="flex flex-col items-center justify-center gap-3">
-                    <div className="h-8 w-8 animate-spin rounded-full border-3 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400"></div>
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400"></div>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
                       {t('userDebt.loading') || 'Loading debts...'}
                     </span>

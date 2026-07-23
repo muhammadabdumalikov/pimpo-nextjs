@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
 import { useTranslations } from "@/hooks/useTranslations";
 import ReportShell, { ReportKpi } from "./ReportShell";
+import { ReportTableSkeleton } from "./ReportSkeleton";
 import ReportSearch from "./ReportSearch";
 import ReportPager from "./ReportPager";
 import { getDebtAgingReport, type DebtAgingReport as AgingData, type DebtBucketKey } from "@/lib/api";
@@ -113,7 +114,7 @@ export default function DebtAgingReport() {
           </TableHeader>
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
-              <TableRow><TableCell colSpan={5} className="py-10 text-center text-gray-500 dark:text-gray-400">{t("reportsPage.loading")}</TableCell></TableRow>
+              <ReportTableSkeleton columns={5} />
             ) : error ? (
               <TableRow><TableCell colSpan={5} className="py-10 text-center text-error-500">{error}</TableCell></TableRow>
             ) : paged.length === 0 ? (

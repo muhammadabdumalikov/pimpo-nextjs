@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
 import SelectField from "../form/SelectField";
 import ReportShell, { ReportKpi, ReportFilterField } from "./ReportShell";
+import { ReportBlockSkeleton } from "./ReportSkeleton";
 import ReportDateRange from "./ReportDateRange";
 import ReportBranchFilter from "./ReportBranchFilter";
 import ReportCompareToggle from "./ReportCompareToggle";
@@ -157,7 +158,7 @@ export default function TrafficReport() {
       exportDisabled={!data || loading || (data?.cells.length ?? 0) === 0}
     >
       {loading ? (
-        <div className="py-10 text-center text-gray-500 dark:text-gray-400">{t("reportsPage.loading")}</div>
+        <ReportBlockSkeleton />
       ) : error ? (
         <div className="py-10 text-center text-error-500">{error}</div>
       ) : (data?.cells.length ?? 0) === 0 ? (

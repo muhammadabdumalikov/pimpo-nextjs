@@ -206,6 +206,7 @@ export function clearAccount(): void {
   localStorage.removeItem(ACCOUNT_STORAGE_KEY);
   // Per-business client caches must not leak across a login switch.
   invalidateUnitsCache();
+  invalidatePaymentMethodsCache();
 }
 
 // Subscription API
@@ -2144,6 +2145,100 @@ export async function deleteUnit(id: string): Promise<void> {
   });
   if (!response.ok) await parseError(response, 'Failed to delete unit');
   invalidateUnitsCache();
+}
+
+// Payment methods (Sozlamalar → To'lov turlari)
+export interface PaymentMethod {
+  id: string;
+  businessId: string;
+  // Stable machine code stored on order payments; 'cash' keeps its special
+  // change/reconciliation semantics.
+  code: string;
+  name: string;
+  // 'system' rows can only be shown/hidden; 'custom' rows are fully editable.
+  type: 'system' | 'custom';
+  isVisible: boolean;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Same client-cache pattern as units: read on every checkout mount, changes
+// rarely; mutations below invalidate.
+const PAYMENT_METHODS_CACHE_TTL_MS = 5 * 60 * 1000;
+let paymentMethodsCache: { methods: PaymentMethod[]; at: number } | null = null;
+let paymentMethodsInflight: Promise<{ paymentMethods: PaymentMethod[] }> | null =
+  null;
+
+function invalidatePaymentMethodsCache(): void {
+  paymentMethodsCache = null;
+  paymentMethodsInflight = null;
+}
+
+export async function getPaymentMethods(): Promise<{
+  paymentMethods: PaymentMethod[];
+}> {
+  if (
+    paymentMethodsCache &&
+    Date.now() - paymentMethodsCache.at < PAYMENT_METHODS_CACHE_TTL_MS
+  ) {
+    return { paymentMethods: paymentMethodsCache.methods };
+  }
+  if (paymentMethodsInflight) return paymentMethodsInflight;
+  paymentMethodsInflight = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/payment-methods`, {
+        method: 'GET',
+        headers: authHeaders(),
+      });
+      if (!response.ok)
+        await parseError(response, 'Failed to fetch payment methods');
+      const data = (await response.json()) as { paymentMethods: PaymentMethod[] };
+      paymentMethodsCache = { methods: data.paymentMethods, at: Date.now() };
+      return data;
+    } finally {
+      paymentMethodsInflight = null;
+    }
+  })();
+  return paymentMethodsInflight;
+}
+
+export async function createPaymentMethod(data: {
+  name: string;
+  sortOrder?: number;
+}): Promise<PaymentMethod> {
+  const response = await fetch(`${API_BASE_URL}/payment-methods`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to create payment method');
+  invalidatePaymentMethodsCache();
+  return response.json();
+}
+
+export async function updatePaymentMethod(
+  id: string,
+  data: { name?: string; isVisible?: boolean; sortOrder?: number },
+): Promise<PaymentMethod> {
+  const response = await fetch(`${API_BASE_URL}/payment-methods/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update payment method');
+  invalidatePaymentMethodsCache();
+  return response.json();
+}
+
+export async function deletePaymentMethod(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/payment-methods/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to delete payment method');
+  invalidatePaymentMethodsCache();
 }
 
 export interface Supplier {

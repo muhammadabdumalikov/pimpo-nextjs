@@ -93,7 +93,7 @@ export default function RegistersManager() {
   };
 
   return (
-    <div className={CARD}>
+    <div className={`${CARD} min-h-fill`}>
       <div className="mb-6 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
           {t("kassa.registers")}

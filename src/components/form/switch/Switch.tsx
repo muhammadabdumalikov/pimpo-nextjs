@@ -18,6 +18,14 @@ const Switch: React.FC<SwitchProps> = ({
 }) => {
   const [isChecked, setIsChecked] = useState(defaultChecked);
 
+  // Keep in sync when the parent swaps defaultChecked (e.g. an optimistic
+  // toggle reverted after a failed save) — mirrors the Select component's
+  // defaultValue behavior. The knob still animates because the component is
+  // not remounted.
+  React.useEffect(() => {
+    setIsChecked(defaultChecked);
+  }, [defaultChecked]);
+
   const handleToggle = () => {
     if (disabled) return;
     const newCheckedState = !isChecked;

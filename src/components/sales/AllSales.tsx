@@ -462,7 +462,7 @@ export default function AllSales() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="relative flex-1">
+          <div className="relative w-full max-w-md">
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
                 <path

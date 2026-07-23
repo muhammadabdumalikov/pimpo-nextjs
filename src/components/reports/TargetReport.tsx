@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
 import SelectField from "../form/SelectField";
 import ReportShell, { ReportKpi, ReportFilterField } from "./ReportShell";
+import { ReportBlockSkeleton } from "./ReportSkeleton";
 import { getTargetProgress, setMonthlyTarget, type TargetProgress } from "@/lib/api";
 import { formatMoney, formatNumber, storeToday } from "@/lib/reportFormat";
 import { formatNumberInput, digitsOnly } from "@/lib/number";
@@ -105,7 +106,7 @@ export default function TargetReport() {
       kpis={kpis}
     >
       {loading ? (
-        <div className="py-10 text-center text-gray-500 dark:text-gray-400">{t("reportsPage.loading")}</div>
+        <ReportBlockSkeleton />
       ) : error ? (
         <div className="py-10 text-center text-error-500">{error}</div>
       ) : data ? (

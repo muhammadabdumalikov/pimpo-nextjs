@@ -180,8 +180,8 @@ export default function UpgradePlan() {
 
   if (isLoading || subscriptionLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-gray-500 dark:text-gray-400">{t('upgradePlan.loadingPlans')}</div>
+      <div className="flex items-center justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
       </div>
     );
   }
