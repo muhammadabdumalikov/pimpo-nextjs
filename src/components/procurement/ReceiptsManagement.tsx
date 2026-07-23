@@ -35,6 +35,15 @@ function formatDate(iso: string): string {
   });
 }
 
+// 24-hour HH:mm, matching the app's other list time stamps (uz-UZ).
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("uz-UZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 export default function ReceiptsManagement() {
   const { t } = useTranslations();
   const { showToast } = useToast();
@@ -318,13 +327,16 @@ export default function ReceiptsManagement() {
                         onChange={() => toggleOne(r.id)}
                       />
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <Link
                         href={`/receipts/${r.id}`}
                         className="font-medium text-brand-500 hover:underline"
                       >
                         {formatDate(r.createdAt)}
                       </Link>
+                      <span className="mt-0.5 block text-theme-xs text-gray-400 dark:text-gray-500">
+                        {formatTime(r.createdAt)}
+                      </span>
                     </td>
                     <td className="px-3 py-3 text-gray-700 dark:text-gray-300">
                       {r.branchName || "—"}

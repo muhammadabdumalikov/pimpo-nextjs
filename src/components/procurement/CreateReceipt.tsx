@@ -20,6 +20,11 @@ import {
   type Branch,
 } from "@/lib/api";
 
+// Selling-price tiers accept either an absolute amount or a percent markup on
+// the line's cost (priceIn). Percent is a UI convenience only — the API always
+// receives the computed amount.
+type PriceMode = "sum" | "pct";
+
 interface Line {
   key: string;
   productId: string;
@@ -29,16 +34,173 @@ interface Line {
   priceIn: string;
   // Selling price for this batch. Blank → keep the product's current price.
   priceOut: string;
+  priceOutMode: PriceMode;
   // Optional wholesale ("ulgurji") + bundle ("to'plam") tiers. Blank → keep the
   // product's current tier.
   priceWholesale: string;
+  priceWholesaleMode: PriceMode;
   priceBundle: string;
+  priceBundleMode: PriceMode;
 }
 
 function formatMoney(n: number): string {
   // Same locale as the price inputs (formatNumberInput) so the Summa/Total
   // grouping matches the fields exactly.
   return new Intl.NumberFormat("uz-UZ").format(Math.round(n));
+}
+
+/** Percent input: digits plus one decimal separator ("12,5" → "12.5"). */
+function sanitizePct(value: string): string {
+  const cleaned = value.replace(/,/g, ".").replace(/[^\d.]/g, "");
+  const dot = cleaned.indexOf(".");
+  if (dot === -1) return cleaned;
+  return cleaned.slice(0, dot + 1) + cleaned.slice(dot + 1).replace(/\./g, "");
+}
+
+/**
+ * Resolve a tier field to the amount sent to the API. Blank → undefined (keep
+ * the product's current price). Percent without a cost price → undefined too.
+ */
+function tierToNumber(raw: string, mode: PriceMode, base: number): number | undefined {
+  if (!raw.trim()) return undefined;
+  if (mode === "pct") {
+    const pct = Number(raw);
+    if (base <= 0 || !Number.isFinite(pct)) return undefined;
+    return Math.round(base * (1 + pct / 100));
+  }
+  return Number(raw) || 0;
+}
+
+/** Markup implied by an absolute amount vs the cost, rounded to one decimal. */
+function impliedPct(sum: number, base: number): number {
+  return Math.round((sum / base - 1) * 1000) / 10;
+}
+
+interface SmartPriceInputProps {
+  value: string;
+  mode: PriceMode;
+  /** The line's cost price — the base a percent markup is computed from. */
+  base: number;
+  currencyLabel: string;
+  noBaseHint: string;
+  toggleTitle: string;
+  onChange: (value: string, mode: PriceMode) => void;
+  inputRef?: (el: HTMLInputElement | null) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+}
+
+/**
+ * Price input with a so'm/% mode chip. In % mode the field edits the markup
+ * while focused and shows the resulting price when blurred (the chip keeps the
+ * percent visible), so the row always reads as real prices. Typing "%" in the
+ * field, or clicking the chip, toggles the mode and converts the value both
+ * ways — 15 000 with cost 12 000 becomes 25%, and back.
+ */
+function SmartPriceInput({
+  value,
+  mode,
+  base,
+  currencyLabel,
+  noBaseHint,
+  toggleTitle,
+  onChange,
+  inputRef,
+  onKeyDown,
+}: SmartPriceInputProps) {
+  const [focused, setFocused] = useState(false);
+  const innerRef = useRef<HTMLInputElement | null>(null);
+
+  const computed = tierToNumber(value, mode, base);
+  const sumValue = mode === "sum" ? Number(value) || 0 : 0;
+
+  const display =
+    mode === "pct"
+      ? focused || computed == null
+        ? value
+        : formatNumberInput(String(computed))
+      : formatNumberInput(value);
+
+  const setRef = (el: HTMLInputElement | null) => {
+    innerRef.current = el;
+    inputRef?.(el);
+  };
+
+  const toggleMode = () => {
+    if (mode === "sum") {
+      const pct = base > 0 && sumValue > 0 ? impliedPct(sumValue, base) : null;
+      onChange(pct != null ? String(pct) : "", "pct");
+    } else {
+      onChange(computed != null ? String(computed) : "", "sum");
+    }
+    requestAnimationFrame(() => innerRef.current?.focus());
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "%") {
+      e.preventDefault();
+      if (mode === "sum") toggleMode();
+      return;
+    }
+    onKeyDown?.(e);
+  };
+
+  // Live preview while typing: % mode shows the resulting price, sum mode the
+  // implied markup vs cost.
+  let bubble = "";
+  if (focused && value.trim()) {
+    if (mode === "pct") {
+      bubble = computed != null ? `= ${formatMoney(computed)}` : noBaseHint;
+    } else if (base > 0 && sumValue > 0) {
+      const pct = impliedPct(sumValue, base);
+      bubble = `${pct >= 0 ? "+" : ""}${pct}%`;
+    }
+  }
+
+  return (
+    <div className="relative">
+      {bubble && (
+        <div className="pointer-events-none absolute bottom-full right-0 z-20 mb-1 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1 text-theme-xs font-medium text-white shadow-theme-lg dark:bg-gray-600">
+          {bubble}
+        </div>
+      )}
+      <Input
+        ref={setRef}
+        type="text"
+        inputMode={mode === "pct" ? "decimal" : "numeric"}
+        className="pr-14"
+        placeholder="0"
+        value={display}
+        onChange={(e) =>
+          onChange(
+            mode === "pct" ? sanitizePct(e.target.value) : digitsOnly(e.target.value),
+            mode,
+          )
+        }
+        onKeyDown={handleKeyDown}
+        onFocus={(e) => {
+          setFocused(true);
+          // The displayed price flips to the raw percent — select it so typing
+          // replaces the old markup in one go.
+          if (mode === "pct") e.target.select();
+        }}
+        onBlur={() => setFocused(false)}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        title={toggleTitle}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={toggleMode}
+        className={`absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-theme-xs font-semibold transition-colors ${
+          mode === "pct"
+            ? "bg-brand-50 text-brand-600 hover:bg-brand-100 dark:bg-brand-500/15 dark:text-brand-400 dark:hover:bg-brand-500/25"
+            : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+        }`}
+      >
+        {mode === "pct" ? (focused || !value.trim() ? "%" : `${value}%`) : currencyLabel}
+      </button>
+    </div>
+  );
 }
 
 /** Small keyboard-key chip for the shortcuts legend. */
@@ -57,8 +219,11 @@ const newLine = (): Line => ({
   quantity: "1",
   priceIn: "",
   priceOut: "",
+  priceOutMode: "sum",
   priceWholesale: "",
+  priceWholesaleMode: "sum",
   priceBundle: "",
+  priceBundleMode: "sum",
 });
 
 export default function CreateReceipt() {
@@ -162,6 +327,11 @@ export default function CreateReceipt() {
     return opts;
   };
 
+  // Chip label for the tier inputs' sum mode; % markup is always vs priceIn.
+  const currencyLabel = currency === "USD" ? "$" : t("goodsReceipt.som") || "so'm";
+  const noBaseHint = t("goodsReceipt.pctNeedsCost") || "Avval kirim narxini kiriting";
+  const priceModeTitle = t("goodsReceipt.priceModeToggle") || "so'm / %";
+
   const total = useMemo(
     () =>
       lines.reduce((sum, l) => {
@@ -178,20 +348,24 @@ export default function CreateReceipt() {
 
   const onPickProduct = (key: string, productId: string) => {
     const product = productCache.current.get(productId);
-    // Prefill cost + selling tiers from the product's current values.
+    // Prefill cost + selling tiers from the product's current values (as
+    // absolute amounts — the % mode is an explicit per-field choice).
     updateLine(key, {
       productId,
       quantityType: product?.quantityType ?? null,
       priceIn: product ? String(Math.round(Number(product.priceIn))) : "",
       priceOut: product ? String(Math.round(Number(product.priceOut))) : "",
+      priceOutMode: "sum",
       priceWholesale:
         product?.priceWholesale != null
           ? String(Math.round(Number(product.priceWholesale)))
           : "",
+      priceWholesaleMode: "sum",
       priceBundle:
         product?.priceBundle != null
           ? String(Math.round(Number(product.priceBundle)))
           : "",
+      priceBundleMode: "sum",
     });
     // Move straight to the quantity field so the row fills with the keyboard.
     requestAnimationFrame(() => qtyRefs.current.get(key)?.focus());
@@ -248,20 +422,24 @@ export default function CreateReceipt() {
   const submit = async (draft: boolean) => {
     const items = lines
       .filter((l) => l.productId)
-      .map((l) => ({
-        productId: l.productId,
-        // Weighed goods keep a fractional kg (rounded to whole grams); piece
-        // products stay whole numbers.
-        quantity:
-          l.quantityType === "kg"
-            ? Math.round((Number(l.quantity) || 0) * 1000) / 1000
-            : Math.trunc(Number(l.quantity) || 0),
-        priceIn: Number(l.priceIn) || 0,
-        // Omit when blank so the backend keeps the product's current price/tier.
-        priceOut: l.priceOut.trim() ? Number(l.priceOut) : undefined,
-        priceWholesale: l.priceWholesale.trim() ? Number(l.priceWholesale) : undefined,
-        priceBundle: l.priceBundle.trim() ? Number(l.priceBundle) : undefined,
-      }));
+      .map((l) => {
+        const base = Number(l.priceIn) || 0;
+        return {
+          productId: l.productId,
+          // Weighed goods keep a fractional kg (rounded to whole grams); piece
+          // products stay whole numbers.
+          quantity:
+            l.quantityType === "kg"
+              ? Math.round((Number(l.quantity) || 0) * 1000) / 1000
+              : Math.trunc(Number(l.quantity) || 0),
+          priceIn: base,
+          // % fields resolve to amounts here — the API never sees a percent.
+          // Blank → undefined so the backend keeps the current price/tier.
+          priceOut: tierToNumber(l.priceOut, l.priceOutMode, base),
+          priceWholesale: tierToNumber(l.priceWholesale, l.priceWholesaleMode, base),
+          priceBundle: tierToNumber(l.priceBundle, l.priceBundleMode, base),
+        };
+      });
 
     if (items.length === 0) {
       return setError(t("goodsReceipt.errors.noItems") || "Add at least one product");
@@ -483,14 +661,19 @@ export default function CreateReceipt() {
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
                     {t("goodsReceipt.priceOut") || "Цена продажи"}
                   </span>
-                  <Input
-                    ref={(el) => {
+                  <SmartPriceInput
+                    inputRef={(el) => {
                       priceOutRefs.current.set(l.key, el);
                     }}
-                    type="text"
-                    inputMode="numeric"
-                    value={formatNumberInput(l.priceOut)}
-                    onChange={(e) => updateLine(l.key, { priceOut: digitsOnly(e.target.value) })}
+                    value={l.priceOut}
+                    mode={l.priceOutMode}
+                    base={Number(l.priceIn) || 0}
+                    currencyLabel={currencyLabel}
+                    noBaseHint={noBaseHint}
+                    toggleTitle={priceModeTitle}
+                    onChange={(value, mode) =>
+                      updateLine(l.key, { priceOut: value, priceOutMode: mode })
+                    }
                     onKeyDown={(e) => onPriceOutKeyDown(e, index)}
                   />
                 </div>
@@ -498,24 +681,32 @@ export default function CreateReceipt() {
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
                     {t("goodsReceipt.priceBundle") || "To'plam"}
                   </span>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="0"
-                    value={formatNumberInput(l.priceBundle)}
-                    onChange={(e) => updateLine(l.key, { priceBundle: digitsOnly(e.target.value) })}
+                  <SmartPriceInput
+                    value={l.priceBundle}
+                    mode={l.priceBundleMode}
+                    base={Number(l.priceIn) || 0}
+                    currencyLabel={currencyLabel}
+                    noBaseHint={noBaseHint}
+                    toggleTitle={priceModeTitle}
+                    onChange={(value, mode) =>
+                      updateLine(l.key, { priceBundle: value, priceBundleMode: mode })
+                    }
                   />
                 </div>
                 <div>
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
                     {t("goodsReceipt.priceWholesale") || "Ulgurji"}
                   </span>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="0"
-                    value={formatNumberInput(l.priceWholesale)}
-                    onChange={(e) => updateLine(l.key, { priceWholesale: digitsOnly(e.target.value) })}
+                  <SmartPriceInput
+                    value={l.priceWholesale}
+                    mode={l.priceWholesaleMode}
+                    base={Number(l.priceIn) || 0}
+                    currencyLabel={currencyLabel}
+                    noBaseHint={noBaseHint}
+                    toggleTitle={priceModeTitle}
+                    onChange={(value, mode) =>
+                      updateLine(l.key, { priceWholesale: value, priceWholesaleMode: mode })
+                    }
                   />
                 </div>
                 <div className="text-sm font-medium text-gray-800 dark:text-white/90 sm:text-right">
@@ -555,6 +746,9 @@ export default function CreateReceipt() {
         <div className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-theme-xs text-gray-500 dark:text-gray-400 md:flex">
           <span className="flex items-center gap-1.5">
             <Kbd>↵</Kbd> {t("goodsReceipt.shortcuts.nextField")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Kbd>%</Kbd> {t("goodsReceipt.shortcuts.pct")}
           </span>
           <span className="flex items-center gap-1.5">
             <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>

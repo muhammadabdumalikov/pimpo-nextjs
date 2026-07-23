@@ -1506,8 +1506,12 @@
     "shortcuts": {
       "nextField": "Next field",
       "save": "Save",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "pct": "Markup % mode"
     },
+    "som": "UZS",
+    "priceModeToggle": "Amount or % — the percent is a markup on the cost price",
+    "pctNeedsCost": "Enter the cost price first",
     "paid": "Paid",
     "remaining": "Remaining",
     "paymentStatus": "Payment status",

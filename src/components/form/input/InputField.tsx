@@ -10,6 +10,7 @@ interface InputProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
   className?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   min?: string;
@@ -34,6 +35,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     onChange,
     onKeyDown,
     onBlur,
+    onFocus,
     className = "",
     inputMode,
     min,
@@ -77,6 +79,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         onChange={onChange}
         onKeyDown={onKeyDown}
         onBlur={onBlur}
+        onFocus={onFocus}
         inputMode={inputMode}
         min={min}
         max={max}

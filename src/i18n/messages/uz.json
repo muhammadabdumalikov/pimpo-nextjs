@@ -1506,8 +1506,12 @@
     "shortcuts": {
       "nextField": "Keyingi maydon",
       "save": "Saqlash",
-      "cancel": "Bekor qilish"
+      "cancel": "Bekor qilish",
+      "pct": "Ustama % rejimi"
     },
+    "som": "so'm",
+    "priceModeToggle": "So'm yoki % — foiz kirim narxiga ustama sifatida hisoblanadi",
+    "pctNeedsCost": "Avval kirim narxini kiriting",
     "paid": "To'langan",
     "remaining": "Qolgan",
     "paymentStatus": "To'lov holati",
