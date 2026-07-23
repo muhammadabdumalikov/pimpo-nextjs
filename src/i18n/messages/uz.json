@@ -109,7 +109,10 @@
     "TRANSFER_EXCEEDS_STOCK": "\"{name}\" dan {qty} ta ko'chirib bo'lmaydi; manba do'konda faqat {available} ta bor.",
     "TRANSFER_NOT_FOUND": "Ko'chirish topilmadi.",
     "STORE_INSUFFICIENT_STOCK": "«{name}» yetarli emas — omborda {available} ta qoldi",
-    "ORDER_CANCELLED_IMMUTABLE": "Bekor qilingan buyurtma holatini o'zgartirib bo'lmaydi"
+    "ORDER_CANCELLED_IMMUTABLE": "Bekor qilingan buyurtma holatini o'zgartirib bo'lmaydi",
+    "STORE_NOT_FOUND": "Do'kon topilmadi",
+    "STORE_SLUG_TAKEN": "Bu do'kon manzili band",
+    "STORE_SLUG_INVALID": "Manzil faqat kichik lotin harflari, raqamlar va chiziqchadan iborat bo'lsin (3-63 belgi)"
   },
   "landing": {
     "nav": {
@@ -885,7 +888,8 @@
     "reportsTransfers": "Transferlar",
     "reportsTransferSuggestions": "Transfer tavsiyasi",
     "reportsTarget": "Reja / fakt",
-    "onlineOrders": "Onlayn buyurtmalar"
+    "onlineOrders": "Onlayn buyurtmalar",
+    "onlineStore": "Onlayn do'kon"
   },
   "stockTakes": {
     "title": "Inventarizatsiya",
@@ -2161,5 +2165,19 @@
     "statusUpdated": "Buyurtma holati yangilandi",
     "loadMore": "Yana yuklash",
     "guest": "Mehmon"
+  },
+  "onlineStore": {
+    "title": "Onlayn do'kon",
+    "description": "Do'koningiz uchun subdomen manzilini tanlang va onlayn do'konni yoqing. Mijozlar shu manzil orqali mahsulotlarni ko'radi va buyurtma beradi.",
+    "slugLabel": "Do'kon manzili (subdomen)",
+    "slugHint": "Faqat kichik lotin harflari, raqamlar va chiziqcha. Masalan: salom-market",
+    "enableLabel": "Onlayn do'konni yoqish",
+    "enableHint": "O'chirilgan bo'lsa, manzil ochilmaydi",
+    "save": "Saqlash",
+    "saving": "Saqlanmoqda...",
+    "saved": "Saqlandi",
+    "yourAddress": "Sizning do'kon manzilingiz",
+    "statusOn": "Faol",
+    "statusOff": "O'chirilgan"
   }
 }

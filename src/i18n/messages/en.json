@@ -109,7 +109,10 @@
     "TRANSFER_EXCEEDS_STOCK": "Cannot transfer {qty} of \"{name}\"; only {available} in the source store.",
     "TRANSFER_NOT_FOUND": "Transfer not found.",
     "STORE_INSUFFICIENT_STOCK": "Not enough “{name}” — only {available} left in stock",
-    "ORDER_CANCELLED_IMMUTABLE": "A cancelled order cannot change status"
+    "ORDER_CANCELLED_IMMUTABLE": "A cancelled order cannot change status",
+    "STORE_NOT_FOUND": "Store not found",
+    "STORE_SLUG_TAKEN": "This store address is already taken",
+    "STORE_SLUG_INVALID": "The address may use only lowercase letters, digits and hyphens (3-63 chars)"
   },
   "landing": {
     "nav": {
@@ -885,7 +888,8 @@
     "reportsTransfers": "Transfers",
     "reportsTransferSuggestions": "Transfer suggestions",
     "reportsTarget": "Plan / actual",
-    "onlineOrders": "Online orders"
+    "onlineOrders": "Online orders",
+    "onlineStore": "Online store"
   },
   "stockTakes": {
     "title": "Stock-take",
@@ -2161,5 +2165,19 @@
     "statusUpdated": "Order status updated",
     "loadMore": "Load more",
     "guest": "Guest"
+  },
+  "onlineStore": {
+    "title": "Online store",
+    "description": "Pick a subdomain for your store and switch the storefront on. Customers browse products and place orders at this address.",
+    "slugLabel": "Store address (subdomain)",
+    "slugHint": "Only lowercase letters, digits and hyphens. For example: salom-market",
+    "enableLabel": "Enable the online store",
+    "enableHint": "When off, the address will not open",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "yourAddress": "Your store address",
+    "statusOn": "Active",
+    "statusOff": "Disabled"
   }
 }

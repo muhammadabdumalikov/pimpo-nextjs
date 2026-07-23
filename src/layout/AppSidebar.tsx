@@ -168,6 +168,7 @@ const AppSidebar: React.FC = () => {
         { name: t('sidebar.paymentMethods'), path: "/settings/payment-methods", pro: false },
         { name: t('sidebar.units'), path: "/settings/units", pro: false },
         { name: t('sidebar.catalogSettings'), path: "/settings/catalog", pro: false },
+        { name: t('sidebar.onlineStore'), path: "/settings/online-store", pro: false },
         { name: t('sidebar.profileSettings'), path: "/settings/profile", pro: false },
         { name: t('sidebar.subscriptionManagement'), path: "/subscription-management", pro: false },
       ],

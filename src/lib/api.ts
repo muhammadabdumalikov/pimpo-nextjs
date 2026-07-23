@@ -88,10 +88,41 @@ export interface CurrentUserResponse {
     email: string;
     login: string;
     isActive: boolean;
+    /** Online-store subdomain slug (null until set). */
+    storeSlug?: string | null;
+    /** Whether the online storefront is publicly reachable. */
+    storeEnabled?: boolean;
     createdAt: string;
     updatedAt: string;
   };
   account: AccountInfo;
+}
+
+/** Set the online-store subdomain slug and on/off flag (owner). */
+export async function updateStoreSettings(data: {
+  storeSlug?: string | null;
+  storeEnabled?: boolean;
+}): Promise<{ storeSlug: string | null; storeEnabled: boolean }> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const response = await fetch(`${API_BASE_URL}/businesses/me/store`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const error = await response
+      .json()
+      .catch(() => ({ message: 'Failed to update store settings' }));
+    throw makeApiError(error, 'Failed to update store settings');
+  }
+  return response.json();
 }
 
 // Re-fetch the acting account (owner or staff) with its CURRENT permissions.
