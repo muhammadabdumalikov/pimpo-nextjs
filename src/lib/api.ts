@@ -4154,3 +4154,210 @@ export async function sendDocumentToTelegram(
   if (!response.ok) await parseError(response, 'Failed to send to Telegram');
   return response.json();
 }
+
+// ── BiLLZ migration (MIGRATSIYA.md) ──────────────────────────────────────────
+
+export interface BillzStatus {
+  connected: boolean;
+  verifiedAt: string | null;
+}
+
+/** Whether a verified BiLLZ secret token is already stored for the business. */
+export async function getBillzStatus(): Promise<BillzStatus> {
+  const response = await fetch(`${API_BASE_URL}/billz/status`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch BiLLZ status');
+  return response.json();
+}
+
+/**
+ * Verify a BiLLZ 2.0 secret token by logging in through the backend's
+ * rate-limited client; the backend stores the token pair on success.
+ * Invalid keys surface as BILLZ_TOKEN_INVALID (400, localized via apiErrors).
+ */
+export async function verifyBillzToken(
+  secretToken: string,
+): Promise<{ ok: boolean; expiresIn: number }> {
+  const response = await fetch(`${API_BASE_URL}/billz/verify`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ secretToken }),
+  });
+  if (!response.ok) await parseError(response, 'Failed to verify BiLLZ token');
+  return response.json();
+}
+
+export type BillzImportEntity = 'products' | 'customers' | 'images';
+export type BillzImportJobStatus =
+  | 'queued'
+  | 'running'
+  | 'paused'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+// Two-phase import: 'fetch' pulls raw records from BiLLZ into staging (rate-
+// limited), 'load' writes staging into the real KPOS tables.
+export type BillzImportPhase = 'fetch' | 'load';
+
+export interface BillzPhaseCounter {
+  total: number | null;
+  done: number;
+  failed: number;
+}
+
+export interface BillzImportCounters {
+  [entity: string]: { fetch: BillzPhaseCounter; load: BillzPhaseCounter };
+}
+
+export interface BillzImportJob {
+  id: string;
+  status: BillzImportJobStatus;
+  phase: BillzImportPhase;
+  entities: BillzImportEntity[];
+  currentEntity: BillzImportEntity | null;
+  counters: BillzImportCounters;
+  error: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+/**
+ * Imports run through a single global worker (one store at a time — BiLLZ
+ * rate-limits per server IP), so a job may sit in a queue behind other
+ * businesses; queuePosition is 1-based among queued jobs.
+ */
+export interface BillzImportStatus {
+  job: BillzImportJob | null;
+  queuePosition: number | null;
+  queueLength: number;
+}
+
+export interface BillzImportItem {
+  id: string;
+  entity: BillzImportEntity;
+  name: string;
+  billzId: string | null;
+  status: 'success' | 'failed';
+  error: string | null;
+  createdAt: string;
+}
+
+export async function startBillzImport(
+  entities: BillzImportEntity[],
+): Promise<{ job: BillzImportJob }> {
+  const response = await fetch(`${API_BASE_URL}/billz/import/start`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ entities }),
+  });
+  if (!response.ok) await parseError(response, 'Failed to start BiLLZ import');
+  return response.json();
+}
+
+export async function getBillzImportStatus(): Promise<BillzImportStatus> {
+  const response = await fetch(`${API_BASE_URL}/billz/import/status`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch BiLLZ import status');
+  return response.json();
+}
+
+async function postBillzImportAction(
+  action: 'pause' | 'resume' | 'cancel',
+): Promise<{ job: BillzImportJob }> {
+  const response = await fetch(`${API_BASE_URL}/billz/import/${action}`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, `Failed to ${action} BiLLZ import`);
+  return response.json();
+}
+
+export const pauseBillzImport = () => postBillzImportAction('pause');
+export const resumeBillzImport = () => postBillzImportAction('resume');
+export const cancelBillzImport = () => postBillzImportAction('cancel');
+
+/** Cumulative migrated-record log, newest first, business-scoped. */
+export async function getBillzImportItems(params: {
+  entity: BillzImportEntity;
+  status?: 'success' | 'failed' | 'all';
+  page?: number;
+  limit?: number;
+}): Promise<{
+  items: BillzImportItem[];
+  total: number;
+  page: number;
+  limit: number;
+}> {
+  const qs = new URLSearchParams({
+    entity: params.entity,
+    status: params.status ?? 'all',
+    page: String(params.page ?? 1),
+    limit: String(params.limit ?? 50),
+  });
+  const response = await fetch(`${API_BASE_URL}/billz/import/items?${qs}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch BiLLZ import items');
+  return response.json();
+}
+
+// ── MG2 probe (data preview) ─────────────────────────────────────────────────
+// Fetches one small page from BiLLZ and shows the raw JSON alongside how KPOS
+// maps each field — so the still-unconfirmed field-name guesses can be checked
+// against real data before running a real import. Read-only, no import.
+
+export type BillzProbeEntity = 'products' | 'customers';
+
+export interface BillzProbeProductMapped {
+  name: string | null;
+  sku: string | null;
+  barcode: string | null;
+  // Prices come back as decimal strings (e.g. "50.00"); missing → "0.00".
+  priceIn: string | number | null;
+  priceOut: string | number | null;
+  stock: number | null;
+  brandName: string | null;
+  categoryName: string | null;
+  unitName: string | null;
+}
+
+export interface BillzProbeCustomerMapped {
+  name: string | null;
+  phone: string | null;
+}
+
+export interface BillzProbeSample {
+  billzId: string | null;
+  raw: Record<string, unknown>;
+  mapped: BillzProbeProductMapped | BillzProbeCustomerMapped;
+}
+
+export interface BillzProbeResult {
+  entity: BillzProbeEntity;
+  totalReported: number | null;
+  envelopeKeys: string[];
+  recordKeys: string[];
+  samples: BillzProbeSample[];
+  warnings: string[];
+}
+
+export async function probeBillzData(
+  entity: BillzProbeEntity,
+): Promise<BillzProbeResult> {
+  const qs = new URLSearchParams({ entity });
+  const response = await fetch(`${API_BASE_URL}/billz/probe?${qs}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to probe BiLLZ data');
+  return response.json();
+}

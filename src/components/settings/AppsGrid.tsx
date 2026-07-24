@@ -16,6 +16,8 @@ interface AppEntry {
   descriptionKey: string;
   href: string;
   icon: React.ReactNode;
+  /** Show the connected/not-connected badge (apps with a live status). */
+  hasStatus?: boolean;
 }
 
 const APPS: AppEntry[] = [
@@ -24,9 +26,21 @@ const APPS: AppEntry[] = [
     name: "Telegram",
     descriptionKey: "integrations.telegramSubtitle",
     href: "/settings/applications/telegram",
+    hasStatus: true,
     icon: (
       <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-light-50 text-blue-light-500 dark:bg-blue-light-500/10">
         <RiTelegram2Fill className="h-7 w-7" />
+      </span>
+    ),
+  },
+  {
+    id: "billz",
+    name: "BiLLZ",
+    descriptionKey: "integrations.billz.subtitle",
+    href: "/settings/applications/billz",
+    icon: (
+      <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-theme-purple-500/10 text-xl font-bold text-theme-purple-500">
+        B
       </span>
     ),
   },
@@ -89,19 +103,20 @@ export default function AppsGrid() {
                 <LuSettings className="h-4 w-4" />
                 {t("integrations.manage")}
               </span>
-              {statusLoaded ? (
-                connected[app.id] ? (
-                  <Badge size="sm" color="success">
-                    {t("integrations.statusConnected")}
-                  </Badge>
+              {app.hasStatus &&
+                (statusLoaded ? (
+                  connected[app.id] ? (
+                    <Badge size="sm" color="success">
+                      {t("integrations.statusConnected")}
+                    </Badge>
+                  ) : (
+                    <Badge size="sm" color="light">
+                      {t("integrations.statusNotConnected")}
+                    </Badge>
+                  )
                 ) : (
-                  <Badge size="sm" color="light">
-                    {t("integrations.statusNotConnected")}
-                  </Badge>
-                )
-              ) : (
-                <span className="h-5 w-20 animate-pulse rounded-full bg-gray-100 dark:bg-white/5" />
-              )}
+                  <span className="h-5 w-20 animate-pulse rounded-full bg-gray-100 dark:bg-white/5" />
+                ))}
             </div>
           </Link>
         ))}
