@@ -2220,7 +2220,10 @@
     "disconnectTitle": "Disconnect chat",
     "disconnectConfirm": "Reports will no longer be delivered to this chat. Continue?",
     "disconnected": "Chat disconnected",
-    "empty": "No connected chats yet. Open the bot and sign in with your account."
+    "empty": "No connected chats yet. Open the bot and sign in with your account.",
+    "manage": "Manage",
+    "statusConnected": "Connected",
+    "statusNotConnected": "Not connected"
   },
   "telegramSend": {
     "title": "Send to Telegram",

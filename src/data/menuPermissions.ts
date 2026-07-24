@@ -68,37 +68,15 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'settings.receipts', allowedTiers: FREE },
 ];
 
-// Versioned so the tier-plan rework ships clean: a stale array saved under the
-// old key (with the previous free-sees-everything mapping, and missing the new
-// reports.extended / reports.multibranch items) would otherwise keep gating the
-// UI by the old rules. Bump this whenever the default shape changes.
-const STORAGE_KEY = 'menuPermissions.v2';
-
-// Helper function to get menu permissions
-export const getMenuPermissions = (): MenuPermission[] => {
-  // In production, this would fetch from API or database
-  if (typeof window === 'undefined') {
-    // Server-side: return default permissions
-    return defaultMenuPermissions;
-  }
-
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch {
-      return defaultMenuPermissions;
-    }
-  }
-  return defaultMenuPermissions;
-};
-
-// Helper function to save menu permissions
-export const saveMenuPermissions = (permissions: MenuPermission[]) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(permissions));
-  }
-};
+// Menu gating rules are a STATIC mirror of the backend tier gating
+// (pimpo-backend: @MinTier + PlanTierGuard). The backend is the AUTHORITATIVE
+// gate — it returns 403 PLAN_UPGRADE_REQUIRED regardless of what the UI shows.
+// These rules only decide what the sidebar / route guard / search reveal, so they
+// are intentionally hardcoded and NOT read from localStorage: a client can no
+// longer self-unlock menus by editing stored permissions. The acting tier itself
+// comes from the server (SubscriptionContext → GET /subscriptions/current), and
+// falls back to the `free` floor on error.
+export const getMenuPermissions = (): MenuPermission[] => defaultMenuPermissions;
 
 // Helper function to check if a menu item is allowed for a tier
 export const isMenuAllowed = (menuItem: string, tier: SubscriptionTier, permissions: MenuPermission[]): boolean => {

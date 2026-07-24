@@ -102,10 +102,10 @@ export default function IntegrationsManagement() {
     <div className="min-h-fill overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-5 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
       <div className="mb-6">
         <h3 className="mb-2 text-lg font-semibold text-gray-800 dark:text-white/90">
-          {t("settingsPages.integrations.title")}
+          Telegram
         </h3>
         <p className="text-theme-sm text-gray-500 dark:text-gray-400">
-          {t("settingsPages.integrations.description")}
+          {t("integrations.telegramSubtitle")}
         </p>
       </div>
 

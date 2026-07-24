@@ -2220,7 +2220,10 @@
     "disconnectTitle": "Chatni uzish",
     "disconnectConfirm": "Bu chatga boshqa hisobot yuborilmaydi. Davom etasizmi?",
     "disconnected": "Chat uzildi",
-    "empty": "Hozircha ulangan chatlar yo'q. Botni ochib, hisobingiz bilan kiring."
+    "empty": "Hozircha ulangan chatlar yo'q. Botni ochib, hisobingiz bilan kiring.",
+    "manage": "Boshqarish",
+    "statusConnected": "Ulangan",
+    "statusNotConnected": "Ulanmagan"
   },
   "telegramSend": {
     "title": "Telegramga yuborish",

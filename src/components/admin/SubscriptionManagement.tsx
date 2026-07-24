@@ -34,6 +34,10 @@ export default function SubscriptionManagement() {
   const router = useRouter();
   const [monthly, setMonthly] = useState(true);
 
+  // NOTE: prices hardcoded here — must stay in sync with the backend seed
+  // (pimpo-backend/src/subscription/seed-plans.ts → 119/299/499). Unlike
+  // UpgradePlan (which fetches via getSubscriptionPlans), this comparison table
+  // does not read the API, so update these if plan prices change on the backend.
   const plans = useMemo<Plan[]>(
     () => [
       { tier: "basic", name: t("upgradePlan.basic"), monthlyPrice: 119000 },
