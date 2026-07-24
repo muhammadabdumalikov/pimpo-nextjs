@@ -8,8 +8,10 @@ import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import SelectField from "@/components/form/SelectField";
 import Button from "@/components/ui/button/Button";
+import Drawer from "@/components/ui/drawer";
+import AddProductForm from "@/components/ecommerce/AddProductForm";
 import { PlusIcon, TrashBinIcon } from "@/icons/index";
-import { formatNumberInput, digitsOnly } from "@/lib/number";
+import { formatNumberInput, digitsOnly, stripLeadingZeros } from "@/lib/number";
 import {
   getProducts,
   getSuppliers,
@@ -20,9 +22,10 @@ import {
   type Branch,
 } from "@/lib/api";
 
-// Selling-price tiers accept either an absolute amount or a percent markup on
-// the line's cost (priceIn). Percent is a UI convenience only — the API always
-// receives the computed amount.
+// Each selling-price tier is a twin pair: the absolute amount (the only thing
+// submitted) and its markup-% vs the line's cost (priceIn), kept in sync both
+// ways. The driver records which side the user last typed — that side wins
+// when the cost price changes.
 type PriceMode = "sum" | "pct";
 
 interface Line {
@@ -34,13 +37,16 @@ interface Line {
   priceIn: string;
   // Selling price for this batch. Blank → keep the product's current price.
   priceOut: string;
-  priceOutMode: PriceMode;
+  priceOutPct: string;
+  priceOutDriver: PriceMode;
   // Optional wholesale ("ulgurji") + bundle ("to'plam") tiers. Blank → keep the
   // product's current tier.
   priceWholesale: string;
-  priceWholesaleMode: PriceMode;
+  priceWholesalePct: string;
+  priceWholesaleDriver: PriceMode;
   priceBundle: string;
-  priceBundleMode: PriceMode;
+  priceBundlePct: string;
+  priceBundleDriver: PriceMode;
 }
 
 function formatMoney(n: number): string {
@@ -57,148 +63,121 @@ function sanitizePct(value: string): string {
   return cleaned.slice(0, dot + 1) + cleaned.slice(dot + 1).replace(/\./g, "");
 }
 
-/**
- * Resolve a tier field to the amount sent to the API. Blank → undefined (keep
- * the product's current price). Percent without a cost price → undefined too.
- */
-function tierToNumber(raw: string, mode: PriceMode, base: number): number | undefined {
-  if (!raw.trim()) return undefined;
-  if (mode === "pct") {
-    const pct = Number(raw);
-    if (base <= 0 || !Number.isFinite(pct)) return undefined;
-    return Math.round(base * (1 + pct / 100));
-  }
-  return Number(raw) || 0;
-}
-
 /** Markup implied by an absolute amount vs the cost, rounded to one decimal. */
 function impliedPct(sum: number, base: number): number {
   return Math.round((sum / base - 1) * 1000) / 10;
 }
 
-interface SmartPriceInputProps {
+/** Amount produced by a markup-% on the cost; null when it can't be computed. */
+function pctToSum(pct: string, base: number): number | null {
+  const p = Number(pct);
+  if (!pct.trim() || !Number.isFinite(p) || base <= 0) return null;
+  return Math.round(base * (1 + p / 100));
+}
+
+/** Re-sync one tier pair to a new cost price, honoring the side last typed. */
+function rebaseTier(
+  value: string,
+  pct: string,
+  driver: PriceMode,
+  base: number,
+): { value: string; pct: string } {
+  if (driver === "pct" && pct.trim()) {
+    const sum = pctToSum(pct, base);
+    return { value: sum != null ? String(sum) : "", pct };
+  }
+  const v = Number(value) || 0;
+  return { value, pct: base > 0 && v > 0 ? String(impliedPct(v, base)) : "" };
+}
+
+interface PricePairProps {
+  /** Absolute amount — the only thing submitted. */
   value: string;
-  mode: PriceMode;
-  /** The line's cost price — the base a percent markup is computed from. */
+  /** Markup-% twin vs the line's cost price. */
+  pct: string;
   base: number;
-  currencyLabel: string;
-  noBaseHint: string;
-  toggleTitle: string;
-  onChange: (value: string, mode: PriceMode) => void;
+  onChange: (patch: { value: string; pct: string; driver: PriceMode }) => void;
   inputRef?: (el: HTMLInputElement | null) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 /**
- * Price input with a so'm/% mode chip. In % mode the field edits the markup
- * while focused and shows the resulting price when blurred (the chip keeps the
- * percent visible), so the row always reads as real prices. Typing "%" in the
- * field, or clicking the chip, toggles the mode and converts the value both
- * ways — 15 000 with cost 12 000 becomes 25%, and back.
+ * Twin inputs for one selling-price tier: amount + markup-%. Typing either
+ * side fills the other live (15 000 with cost 12 000 shows 25, and typing 30
+ * in the % box writes 15 600). Pressing "%" in the amount field jumps to the
+ * % box. Only the amount reaches the API.
  */
-function SmartPriceInput({
-  value,
-  mode,
-  base,
-  currencyLabel,
-  noBaseHint,
-  toggleTitle,
-  onChange,
-  inputRef,
-  onKeyDown,
-}: SmartPriceInputProps) {
-  const [focused, setFocused] = useState(false);
-  const innerRef = useRef<HTMLInputElement | null>(null);
+function PricePair({ value, pct, base, onChange, inputRef, onKeyDown }: PricePairProps) {
+  const pctRef = useRef<HTMLInputElement | null>(null);
 
-  const computed = tierToNumber(value, mode, base);
-  const sumValue = mode === "sum" ? Number(value) || 0 : 0;
-
-  const display =
-    mode === "pct"
-      ? focused || computed == null
-        ? value
-        : formatNumberInput(String(computed))
-      : formatNumberInput(value);
-
-  const setRef = (el: HTMLInputElement | null) => {
-    innerRef.current = el;
-    inputRef?.(el);
+  const onSumChange = (raw: string) => {
+    const v = digitsOnly(raw);
+    const n = Number(v) || 0;
+    onChange({
+      value: v,
+      pct: base > 0 && n > 0 ? String(impliedPct(n, base)) : "",
+      driver: "sum",
+    });
   };
 
-  const toggleMode = () => {
-    if (mode === "sum") {
-      const pct = base > 0 && sumValue > 0 ? impliedPct(sumValue, base) : null;
-      onChange(pct != null ? String(pct) : "", "pct");
-    } else {
-      onChange(computed != null ? String(computed) : "", "sum");
-    }
-    requestAnimationFrame(() => innerRef.current?.focus());
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "%") {
-      e.preventDefault();
-      if (mode === "sum") toggleMode();
+  const onPctChange = (raw: string) => {
+    // stripLeadingZeros keeps "0.5"/"0." intact but turns "05" → "5" — the % box
+    // sits at "0" on a 0% markup, so typing a digit shouldn't strand the zero.
+    const p = stripLeadingZeros(sanitizePct(raw));
+    if (!p.trim()) {
+      // Clearing the % just detaches it — the typed amount survives.
+      onChange({ value, pct: "", driver: "sum" });
       return;
     }
-    onKeyDown?.(e);
+    const sum = pctToSum(p, base);
+    onChange({ value: sum != null ? String(sum) : "", pct: p, driver: "pct" });
   };
 
-  // Live preview while typing: % mode shows the resulting price, sum mode the
-  // implied markup vs cost.
-  let bubble = "";
-  if (focused && value.trim()) {
-    if (mode === "pct") {
-      bubble = computed != null ? `= ${formatMoney(computed)}` : noBaseHint;
-    } else if (base > 0 && sumValue > 0) {
-      const pct = impliedPct(sumValue, base);
-      bubble = `${pct >= 0 ? "+" : ""}${pct}%`;
-    }
-  }
-
   return (
-    <div className="relative">
-      {bubble && (
-        <div className="pointer-events-none absolute bottom-full right-0 z-20 mb-1 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1 text-theme-xs font-medium text-white shadow-theme-lg dark:bg-gray-600">
-          {bubble}
-        </div>
-      )}
-      <Input
-        ref={setRef}
-        type="text"
-        inputMode={mode === "pct" ? "decimal" : "numeric"}
-        className="pr-14"
-        placeholder="0"
-        value={display}
-        onChange={(e) =>
-          onChange(
-            mode === "pct" ? sanitizePct(e.target.value) : digitsOnly(e.target.value),
-            mode,
-          )
-        }
-        onKeyDown={handleKeyDown}
-        onFocus={(e) => {
-          setFocused(true);
-          // The displayed price flips to the raw percent — select it so typing
-          // replaces the old markup in one go.
-          if (mode === "pct") e.target.select();
-        }}
-        onBlur={() => setFocused(false)}
-      />
-      <button
-        type="button"
-        tabIndex={-1}
-        title={toggleTitle}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={toggleMode}
-        className={`absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-theme-xs font-semibold transition-colors ${
-          mode === "pct"
-            ? "bg-brand-50 text-brand-600 hover:bg-brand-100 dark:bg-brand-500/15 dark:text-brand-400 dark:hover:bg-brand-500/25"
-            : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
-        }`}
-      >
-        {mode === "pct" ? (focused || !value.trim() ? "%" : `${value}%`) : currencyLabel}
-      </button>
+    <div className="flex gap-1.5">
+      <div className="min-w-0 flex-1">
+        <Input
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          placeholder="0"
+          value={formatNumberInput(value)}
+          onChange={(e) => onSumChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "%") {
+              e.preventDefault();
+              pctRef.current?.focus();
+              pctRef.current?.select();
+              return;
+            }
+            onKeyDown?.(e);
+          }}
+        />
+      </div>
+      {/* Raw input (not the shared Input) — needs tighter padding than px-4
+          allows, plus the fixed % suffix. Styles mirror InputField's normal
+          state. */}
+      <div className="relative w-16 shrink-0">
+        <input
+          ref={pctRef}
+          type="text"
+          inputMode="decimal"
+          placeholder="0"
+          value={pct}
+          onChange={(e) => onPctChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "%") {
+              e.preventDefault();
+              return;
+            }
+            onKeyDown?.(e);
+          }}
+          className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent py-2.5 pl-2 pr-5 text-right text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+        />
+        <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-theme-xs text-gray-400 dark:text-gray-500">
+          %
+        </span>
+      </div>
     </div>
   );
 }
@@ -219,11 +198,14 @@ const newLine = (): Line => ({
   quantity: "1",
   priceIn: "",
   priceOut: "",
-  priceOutMode: "sum",
+  priceOutPct: "",
+  priceOutDriver: "sum",
   priceWholesale: "",
-  priceWholesaleMode: "sum",
+  priceWholesalePct: "",
+  priceWholesaleDriver: "sum",
   priceBundle: "",
-  priceBundleMode: "sum",
+  priceBundlePct: "",
+  priceBundleDriver: "sum",
 });
 
 export default function CreateReceipt() {
@@ -250,6 +232,11 @@ export default function CreateReceipt() {
   // The line whose product picker should open on mount (just-added row).
   const [autoFocusKey, setAutoFocusKey] = useState<string | null>(null);
   const [isMac, setIsMac] = useState(false);
+  // "New product" drawer: a fresh arrival gets created right here and dropped
+  // into the receipt without leaving the page. The seq remounts the form fresh
+  // on every open (and defers mounting until the first one).
+  const [productDrawerOpen, setProductDrawerOpen] = useState(false);
+  const [productDrawerSeq, setProductDrawerSeq] = useState(0);
 
   // Per-line input refs so shortcuts can move focus across fields.
   const qtyRefs = useRef<Map<string, HTMLInputElement | null>>(new Map());
@@ -327,11 +314,6 @@ export default function CreateReceipt() {
     return opts;
   };
 
-  // Chip label for the tier inputs' sum mode; % markup is always vs priceIn.
-  const currencyLabel = currency === "USD" ? "$" : t("goodsReceipt.som") || "so'm";
-  const noBaseHint = t("goodsReceipt.pctNeedsCost") || "Avval kirim narxini kiriting";
-  const priceModeTitle = t("goodsReceipt.priceModeToggle") || "so'm / %";
-
   const total = useMemo(
     () =>
       lines.reduce((sum, l) => {
@@ -346,26 +328,54 @@ export default function CreateReceipt() {
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   };
 
+  // Cost price changed → re-sync every tier pair: %-driven tiers recompute
+  // their amount, amount-driven tiers refresh their implied %.
+  const onPriceInChange = (l: Line, raw: string) => {
+    const priceIn = digitsOnly(raw);
+    const base = Number(priceIn) || 0;
+    const out = rebaseTier(l.priceOut, l.priceOutPct, l.priceOutDriver, base);
+    const who = rebaseTier(l.priceWholesale, l.priceWholesalePct, l.priceWholesaleDriver, base);
+    const bun = rebaseTier(l.priceBundle, l.priceBundlePct, l.priceBundleDriver, base);
+    updateLine(l.key, {
+      priceIn,
+      priceOut: out.value,
+      priceOutPct: out.pct,
+      priceWholesale: who.value,
+      priceWholesalePct: who.pct,
+      priceBundle: bun.value,
+      priceBundlePct: bun.pct,
+    });
+  };
+
   const onPickProduct = (key: string, productId: string) => {
     const product = productCache.current.get(productId);
-    // Prefill cost + selling tiers from the product's current values (as
-    // absolute amounts — the % mode is an explicit per-field choice).
+    // Prefill cost + selling tiers from the product's current values. The %
+    // twins fill from the implied markups so current margins show right away.
+    const base = product ? Math.round(Number(product.priceIn)) : 0;
+    const tier = (v: number | null): { value: string; pct: string } => {
+      if (v == null) return { value: "", pct: "" };
+      const sum = Math.round(v);
+      return {
+        value: String(sum),
+        pct: base > 0 && sum > 0 ? String(impliedPct(sum, base)) : "",
+      };
+    };
+    const out = tier(product ? Number(product.priceOut) : null);
+    const who = tier(product?.priceWholesale != null ? Number(product.priceWholesale) : null);
+    const bun = tier(product?.priceBundle != null ? Number(product.priceBundle) : null);
     updateLine(key, {
       productId,
       quantityType: product?.quantityType ?? null,
-      priceIn: product ? String(Math.round(Number(product.priceIn))) : "",
-      priceOut: product ? String(Math.round(Number(product.priceOut))) : "",
-      priceOutMode: "sum",
-      priceWholesale:
-        product?.priceWholesale != null
-          ? String(Math.round(Number(product.priceWholesale)))
-          : "",
-      priceWholesaleMode: "sum",
-      priceBundle:
-        product?.priceBundle != null
-          ? String(Math.round(Number(product.priceBundle)))
-          : "",
-      priceBundleMode: "sum",
+      priceIn: product ? String(base) : "",
+      priceOut: out.value,
+      priceOutPct: out.pct,
+      priceOutDriver: "sum",
+      priceWholesale: who.value,
+      priceWholesalePct: who.pct,
+      priceWholesaleDriver: "sum",
+      priceBundle: bun.value,
+      priceBundlePct: bun.pct,
+      priceBundleDriver: "sum",
     });
     // Move straight to the quantity field so the row fills with the keyboard.
     requestAnimationFrame(() => qtyRefs.current.get(key)?.focus());
@@ -378,6 +388,23 @@ export default function CreateReceipt() {
     setAutoFocusKey(line.key);
     return line.key;
   }, []);
+
+  const openProductDrawer = () => {
+    setProductDrawerSeq((s) => s + 1);
+    setProductDrawerOpen(true);
+  };
+
+  // Product created in the drawer: cache it, then drop it into the first empty
+  // line (or a fresh one) exactly as if it was picked from the dropdown.
+  const onProductCreated = (p: Product) => {
+    productCache.current.set(p.id, p);
+    setProductDrawerOpen(false);
+    const empty = lines.find((l) => !l.productId);
+    const key = empty ? empty.key : addLine();
+    // Filled programmatically — don't pop the new row's product picker open.
+    if (!empty) setAutoFocusKey(null);
+    onPickProduct(key, p.id);
+  };
 
   const removeLine = (key: string) => {
     qtyRefs.current.delete(key);
@@ -422,24 +449,22 @@ export default function CreateReceipt() {
   const submit = async (draft: boolean) => {
     const items = lines
       .filter((l) => l.productId)
-      .map((l) => {
-        const base = Number(l.priceIn) || 0;
-        return {
-          productId: l.productId,
-          // Weighed goods keep a fractional kg (rounded to whole grams); piece
-          // products stay whole numbers.
-          quantity:
-            l.quantityType === "kg"
-              ? Math.round((Number(l.quantity) || 0) * 1000) / 1000
-              : Math.trunc(Number(l.quantity) || 0),
-          priceIn: base,
-          // % fields resolve to amounts here — the API never sees a percent.
-          // Blank → undefined so the backend keeps the current price/tier.
-          priceOut: tierToNumber(l.priceOut, l.priceOutMode, base),
-          priceWholesale: tierToNumber(l.priceWholesale, l.priceWholesaleMode, base),
-          priceBundle: tierToNumber(l.priceBundle, l.priceBundleMode, base),
-        };
-      });
+      .map((l) => ({
+        productId: l.productId,
+        // Weighed goods keep a fractional kg (rounded to whole grams); piece
+        // products stay whole numbers.
+        quantity:
+          l.quantityType === "kg"
+            ? Math.round((Number(l.quantity) || 0) * 1000) / 1000
+            : Math.trunc(Number(l.quantity) || 0),
+        priceIn: Number(l.priceIn) || 0,
+        // The % twins are already materialized into these amounts — the API
+        // never sees a percent. Blank → undefined so the backend keeps the
+        // current price/tier.
+        priceOut: l.priceOut.trim() ? Number(l.priceOut) : undefined,
+        priceWholesale: l.priceWholesale.trim() ? Number(l.priceWholesale) : undefined,
+        priceBundle: l.priceBundle.trim() ? Number(l.priceBundle) : undefined,
+      }));
 
     if (items.length === 0) {
       return setError(t("goodsReceipt.errors.noItems") || "Add at least one product");
@@ -485,16 +510,17 @@ export default function CreateReceipt() {
   };
 
   // Esc cancels (back to the list). An open product picker swallows Esc first,
-  // so the first press closes the dropdown and the second leaves the page.
+  // so the first press closes the dropdown and the second leaves the page. With
+  // the product drawer open, Esc belongs to the drawer (it closes itself).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || isSubmitting) return;
+      if (e.key !== "Escape" || isSubmitting || productDrawerOpen) return;
       if (document.querySelector('[role="listbox"]')) return;
       router.push("/receipts");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isSubmitting, router]);
+  }, [isSubmitting, productDrawerOpen, router]);
 
   // Ctrl/Cmd+Enter submits from anywhere in the form.
   const onFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
@@ -513,6 +539,7 @@ export default function CreateReceipt() {
   }
 
   return (
+    <>
     <form
       onSubmit={handleSubmit}
       onKeyDown={onFormKeyDown}
@@ -591,13 +618,13 @@ export default function CreateReceipt() {
           product dropdown can overlay freely without being clipped. */}
       <div className="mb-3">
         {/* Column headers (desktop only) */}
-        <div className="hidden grid-cols-[minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,2fr)_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
+        <div className="hidden grid-cols-[minmax(0,2.6fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,2.3fr)_minmax(0,2.3fr)_minmax(0,2.3fr)_minmax(0,1.5fr)_44px] gap-3 border-b border-gray-200 pb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800 sm:grid">
           <div>{t("goodsReceipt.product")}</div>
           <div>{t("goodsReceipt.quantity")}</div>
           <div>{t("goodsReceipt.priceIn")}</div>
           <div>{t("goodsReceipt.priceOut") || "Цена продажи"}</div>
-          <div>{t("goodsReceipt.priceBundle") || "To'plam"}</div>
-          <div>{t("goodsReceipt.priceWholesale") || "Ulgurji"}</div>
+          <div>{t("goodsReceipt.priceBundle") || "To'plam narxi"}</div>
+          <div>{t("goodsReceipt.priceWholesale") || "Ulgurji narxi"}</div>
           <div className="text-right">{t("goodsReceipt.lineTotal")}</div>
           <div />
         </div>
@@ -608,7 +635,7 @@ export default function CreateReceipt() {
             return (
               <div
                 key={l.key}
-                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,2fr)_44px] sm:items-center"
+                className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-[minmax(0,2.6fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,2.3fr)_minmax(0,2.3fr)_minmax(0,2.3fr)_minmax(0,1.5fr)_44px] sm:items-center"
               >
                 <div className="min-w-0">
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
@@ -638,7 +665,9 @@ export default function CreateReceipt() {
                     min={l.quantityType === "kg" ? "0" : "1"}
                     step={l.quantityType === "kg" ? 0.001 : 1}
                     value={l.quantity}
-                    onChange={(e) => updateLine(l.key, { quantity: e.target.value })}
+                    onChange={(e) =>
+                      updateLine(l.key, { quantity: stripLeadingZeros(e.target.value) })
+                    }
                     onKeyDown={(e) => onQtyKeyDown(e, l.key)}
                   />
                 </div>
@@ -653,7 +682,7 @@ export default function CreateReceipt() {
                     type="text"
                     inputMode="numeric"
                     value={formatNumberInput(l.priceIn)}
-                    onChange={(e) => updateLine(l.key, { priceIn: digitsOnly(e.target.value) })}
+                    onChange={(e) => onPriceInChange(l, e.target.value)}
                     onKeyDown={(e) => onPriceKeyDown(e, l.key)}
                   />
                 </div>
@@ -661,51 +690,54 @@ export default function CreateReceipt() {
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
                     {t("goodsReceipt.priceOut") || "Цена продажи"}
                   </span>
-                  <SmartPriceInput
+                  <PricePair
                     inputRef={(el) => {
                       priceOutRefs.current.set(l.key, el);
                     }}
                     value={l.priceOut}
-                    mode={l.priceOutMode}
+                    pct={l.priceOutPct}
                     base={Number(l.priceIn) || 0}
-                    currencyLabel={currencyLabel}
-                    noBaseHint={noBaseHint}
-                    toggleTitle={priceModeTitle}
-                    onChange={(value, mode) =>
-                      updateLine(l.key, { priceOut: value, priceOutMode: mode })
+                    onChange={({ value, pct, driver }) =>
+                      updateLine(l.key, {
+                        priceOut: value,
+                        priceOutPct: pct,
+                        priceOutDriver: driver,
+                      })
                     }
                     onKeyDown={(e) => onPriceOutKeyDown(e, index)}
                   />
                 </div>
                 <div>
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
-                    {t("goodsReceipt.priceBundle") || "To'plam"}
+                    {t("goodsReceipt.priceBundle") || "To'plam narxi"}
                   </span>
-                  <SmartPriceInput
+                  <PricePair
                     value={l.priceBundle}
-                    mode={l.priceBundleMode}
+                    pct={l.priceBundlePct}
                     base={Number(l.priceIn) || 0}
-                    currencyLabel={currencyLabel}
-                    noBaseHint={noBaseHint}
-                    toggleTitle={priceModeTitle}
-                    onChange={(value, mode) =>
-                      updateLine(l.key, { priceBundle: value, priceBundleMode: mode })
+                    onChange={({ value, pct, driver }) =>
+                      updateLine(l.key, {
+                        priceBundle: value,
+                        priceBundlePct: pct,
+                        priceBundleDriver: driver,
+                      })
                     }
                   />
                 </div>
                 <div>
                   <span className="mb-1 block text-theme-xs text-gray-500 dark:text-gray-400 sm:hidden">
-                    {t("goodsReceipt.priceWholesale") || "Ulgurji"}
+                    {t("goodsReceipt.priceWholesale") || "Ulgurji narxi"}
                   </span>
-                  <SmartPriceInput
+                  <PricePair
                     value={l.priceWholesale}
-                    mode={l.priceWholesaleMode}
+                    pct={l.priceWholesalePct}
                     base={Number(l.priceIn) || 0}
-                    currencyLabel={currencyLabel}
-                    noBaseHint={noBaseHint}
-                    toggleTitle={priceModeTitle}
-                    onChange={(value, mode) =>
-                      updateLine(l.key, { priceWholesale: value, priceWholesaleMode: mode })
+                    onChange={({ value, pct, driver }) =>
+                      updateLine(l.key, {
+                        priceWholesale: value,
+                        priceWholesalePct: pct,
+                        priceWholesaleDriver: driver,
+                      })
                     }
                   />
                 </div>
@@ -733,14 +765,26 @@ export default function CreateReceipt() {
       </div>
 
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button
-          type="button"
-          onClick={() => addLine()}
-          className="inline-flex items-center gap-2 self-start rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-        >
-          <PlusIcon />
-          {t("goodsReceipt.addLine")}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => addLine()}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+          >
+            <PlusIcon />
+            {t("goodsReceipt.addLine")}
+          </button>
+          {/* A product that just arrived isn't in the catalog yet — create it in
+              a drawer without leaving the receipt. */}
+          <button
+            type="button"
+            onClick={openProductDrawer}
+            className="inline-flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-theme-sm font-medium text-brand-600 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/15"
+          >
+            <PlusIcon />
+            {t("goodsReceipt.newProduct") || "Yangi mahsulot"}
+          </button>
+        </div>
 
         {/* Keyboard shortcuts legend (desktop) */}
         <div className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-theme-xs text-gray-500 dark:text-gray-400 md:flex">
@@ -789,5 +833,25 @@ export default function CreateReceipt() {
         </div>
       </div>
     </form>
+
+    {/* New-product drawer. Outside the receipt <form> (the product form is a
+        form itself). Mounts on first open; the seq key resets it per open. */}
+    <Drawer
+      isOpen={productDrawerOpen}
+      onClose={() => setProductDrawerOpen(false)}
+      title={t("goodsReceipt.newProduct") || "Yangi mahsulot"}
+      widthClass="max-w-5xl"
+    >
+      {productDrawerSeq > 0 && (
+        <AddProductForm
+          key={productDrawerSeq}
+          onCreated={onProductCreated}
+          onCancel={() => setProductDrawerOpen(false)}
+          defaultSupplierId={supplierId || undefined}
+          defaultBranchId={branchId || undefined}
+        />
+      )}
+    </Drawer>
+    </>
   );
 }

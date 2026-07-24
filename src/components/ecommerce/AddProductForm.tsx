@@ -15,10 +15,20 @@ import { createProduct, updateProduct, generateProductCode, generateBarcode, get
 import { useToast } from "@/context/ToastContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useSidebar } from "@/context/SidebarContext";
-import { formatNumberInput, digitsOnly } from "@/lib/number";
+import { formatNumberInput, digitsOnly, stripLeadingZeros } from "@/lib/number";
 
 interface AddProductFormProps {
   productId?: string;
+  /**
+   * Embedded (drawer) mode: called with the created product instead of
+   * navigating to /products. Hides the sticky section nav (its scroll-spy
+   * tracks window scroll, not the drawer's) and routes Cancel to onCancel.
+   */
+  onCreated?: (product: Product) => void;
+  onCancel?: () => void;
+  /** Create-mode preselects (e.g. the receipt's supplier/branch). */
+  defaultSupplierId?: string;
+  defaultBranchId?: string;
 }
 
 // Category ids are client-generated slugs (mirrors AddCategoryModal). Cyrillic is
@@ -44,7 +54,13 @@ function prettifyCategoryName(raw: string): string {
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
-export default function AddProductForm({ productId }: AddProductFormProps) {
+export default function AddProductForm({
+  productId,
+  onCreated,
+  onCancel,
+  defaultSupplierId,
+  defaultBranchId,
+}: AddProductFormProps) {
   const { t } = useTranslations();
   const router = useRouter();
   const { showToast } = useToast();
@@ -53,6 +69,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   // it so the nav doesn't hang 96px down (leaving a gap) when the header is closed.
   const { headerOpen } = useSidebar();
   const isEditMode = !!productId;
+  const embedded = !!onCreated;
   // Product images are a Business (pro) plan feature.
   const canUseImages = currentTier === "pro" || currentTier === "proplus";
   const [formData, setFormData] = useState({
@@ -62,14 +79,16 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     priceOut: "",
     // Optional bundle/set ("to'plam") selling price. "" = no bundle tier.
     priceBundle: "",
+    // Optional wholesale ("ulgurji") selling price. "" = no wholesale tier.
+    priceWholesale: "",
     quantity: 0,
     // Reorder point (kept as a string for the input; "" = no threshold).
     lowStockThreshold: "",
     quantityType: "",
     unitId: "",
     brandId: "",
-    supplierId: "",
-    branchId: "",
+    supplierId: defaultSupplierId ?? "",
+    branchId: defaultBranchId ?? "",
     code: "",
     barcode: "",
   });
@@ -174,6 +193,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         priceIn: product.priceIn,
         priceOut: product.priceOut,
         priceBundle: product.priceBundle ?? "",
+        priceWholesale: product.priceWholesale ?? "",
         quantity: product.quantity,
         lowStockThreshold:
           product.lowStockThreshold != null ? String(product.lowStockThreshold) : "",
@@ -240,7 +260,10 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
 
   // Reorder point: digits only ("" = no threshold).
   const handleLowStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, lowStockThreshold: digitsOnly(e.target.value) }));
+    setFormData((prev) => ({
+      ...prev,
+      lowStockThreshold: stripLeadingZeros(digitsOnly(e.target.value)),
+    }));
   };
 
   // Fraction digits the quantity input accepts: driven by the selected unit's
@@ -267,6 +290,8 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
     } else {
       text = digitsOnly(e.target.value);
     }
+    // The field starts at "0"; drop it when a real digit follows ("0"+"5"→"5").
+    text = stripLeadingZeros(text);
     setQtyText(text);
     const n = Number(text);
     setFormData((prev) => ({
@@ -489,7 +514,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
   // their top never reaches the highlight offset otherwise. The page scrolls on
   // the window (admin layout is min-h-screen, no inner scroll container).
   useEffect(() => {
-    if (isLoadingProduct) return;
+    if (isLoadingProduct || embedded) return;
     const ids = sectionNav.map((s) => s.id);
 
     // Sticky offset the section nav sits at: below the header when it's shown,
@@ -616,6 +641,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         priceIn: priceIn,
         priceOut: priceOut,
         priceBundle: formData.priceBundle.trim() ? parsePrice(formData.priceBundle) : undefined,
+        priceWholesale: formData.priceWholesale.trim() ? parsePrice(formData.priceWholesale) : undefined,
         // Round to whole grams (max 3 decimals) — matches the backend guard.
         quantity: Math.round(formData.quantity * 1000) / 1000,
         lowStockThreshold: formData.lowStockThreshold.trim()
@@ -637,10 +663,15 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         await updateProduct(productId, productData);
         showToast('success', t('addProduct.updateSuccess') || 'Product updated successfully!', 'Success');
       } else {
-        await createProduct(productData);
+        const created = await createProduct(productData);
         showToast('success', t('addProduct.success') || 'Product created successfully!', 'Success');
+        if (embedded) {
+          // Drawer flow: hand the product back to the host instead of leaving.
+          onCreated?.(created);
+          return;
+        }
       }
-      
+
       // Redirect to products list
       router.push('/products');
     } catch (error: any) {
@@ -687,26 +718,31 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
           </Link>
         </div>
       )}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
-        {/* Sticky section navigation (BiLLZ-style) */}
-        <nav className={`lg:sticky lg:self-start ${headerOpen ? "lg:top-24" : "lg:top-6"}`}>
-          <div className="flex gap-1 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-white/[0.03] lg:flex-col lg:overflow-visible">
-            {sectionNav.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => handleNavClick(s.id)}
-                className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-left text-sm font-medium transition ${
-                  activeSection === s.id
-                    ? "bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400"
-                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/[0.03]"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </nav>
+      <div
+        className={`grid grid-cols-1 gap-6 ${embedded ? "" : "lg:grid-cols-[220px_1fr]"}`}
+      >
+        {/* Sticky section navigation (BiLLZ-style). Hidden in embedded mode —
+            its scroll-spy follows window scroll, not the drawer's container. */}
+        {!embedded && (
+          <nav className={`lg:sticky lg:self-start ${headerOpen ? "lg:top-24" : "lg:top-6"}`}>
+            <div className="flex gap-1 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-white/[0.03] lg:flex-col lg:overflow-visible">
+              {sectionNav.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => handleNavClick(s.id)}
+                  className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-left text-sm font-medium transition ${
+                    activeSection === s.id
+                      ? "bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400"
+                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+        )}
 
         <form className="space-y-6">
           {/* ── Asosiy (Basic) ── */}
@@ -954,6 +990,19 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
                   required
                   error={errors.priceOut}
                   hint={errors.priceOut ? (t('addProduct.errors.priceOutRequired') || 'Price out is required and must be greater than 0') : undefined}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="priceWholesale">{t('addProduct.priceWholesale') || 'Wholesale price'}</Label>
+                <Input
+                  id="priceWholesale"
+                  name="priceWholesale"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={formatNumberInput(formData.priceWholesale)}
+                  onChange={handlePriceChange}
                 />
               </div>
 
@@ -1235,7 +1284,7 @@ export default function AddProductForm({ productId }: AddProductFormProps) {
         <Button
           variant="outline"
           size="md"
-          onClick={() => router.back()}
+          onClick={() => (embedded ? onCancel?.() : router.back())}
           disabled={isSubmitting}
         >
           {t('addProduct.cancel') || 'Cancel'}

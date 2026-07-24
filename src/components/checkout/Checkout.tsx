@@ -7,7 +7,7 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { useToast } from "@/context/ToastContext";
 import { useSidebar } from "@/context/SidebarContext";
 import { formatPhone } from "@/lib/phone";
-import { formatNumberInput, digitsOnly } from "@/lib/number";
+import { formatNumberInput, digitsOnly, stripLeadingZeros } from "@/lib/number";
 import DatePicker from "@/components/form/date-picker";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
@@ -2356,6 +2356,8 @@ export default function Checkout() {
                                 const [whole, frac] = v.split(".");
                                 if (frac !== undefined)
                                   v = `${whole}.${frac.slice(0, line.unitPrecision || 1)}`;
+                                // "0" + "5" → "5" (keeps "0.5"/"0." intact).
+                                v = stripLeadingZeros(v);
                                 setQtyDraft({ id: line.productId, value: v });
                                 const n = Number(v);
                                 if (v === "" || v === "." || Number.isNaN(n)) return;
@@ -2703,7 +2705,7 @@ export default function Checkout() {
                           inputMode="numeric"
                           min="0"
                           value={discountInput}
-                          onChange={(e) => setDiscountInput(e.target.value)}
+                          onChange={(e) => setDiscountInput(stripLeadingZeros(e.target.value))}
                           placeholder="0"
                           className="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-2 text-right text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90"
                         />

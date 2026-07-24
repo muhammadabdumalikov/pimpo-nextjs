@@ -11,6 +11,7 @@ import * as XLSX from "xlsx";
 import { RiFileExcel2Line } from "react-icons/ri";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
+import Checkbox from "@/components/form/input/Checkbox";
 import SelectField from "@/components/form/SelectField";
 import { Modal } from "@/components/ui/modal";
 import ConfirmModal from "@/components/ui/confirm-modal/ConfirmModal";
@@ -20,6 +21,7 @@ import { useToast } from "@/context/ToastContext";
 import {
   getStockTake,
   countStockTake,
+  checkStockTake,
   completeStockTake,
   cancelStockTake,
   getProducts,
@@ -27,6 +29,9 @@ import {
   type StockTakeItem,
   type Product,
 } from "@/lib/api";
+
+// Review-state filter for the count table ("tekshirildi/tekshirilmadi").
+type CheckFilter = "all" | "unchecked" | "checked";
 
 const CARD =
   "overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6";
@@ -58,6 +63,9 @@ interface CountRow {
   // Current unit cost — used to show a running diff value while counting (the
   // exact COGS is computed on completion).
   unitCost: number;
+  // Whether the counter has reviewed this product ("tekshirildi"). Manual flag,
+  // independent of countedQty; drives the review filter + progress.
+  checked: boolean;
 }
 
 function diffClass(n: number): string {
@@ -130,6 +138,9 @@ export default function StockTakeCount({ id }: { id: string }) {
 
   const isCompleted = stockTake?.status === "completed";
 
+  // Review filter ("Barchasi / Tekshirilmagan / Tekshirilgan").
+  const [checkFilter, setCheckFilter] = useState<CheckFilter>("all");
+
   // `silent` refreshes the data WITHOUT flipping the full-screen loading state —
   // used after an Excel import so the progress dialog isn't yanked away by the
   // page spinner mid-flow.
@@ -150,6 +161,7 @@ export default function StockTakeCount({ id }: { id: string }) {
               bookQty: it.bookQty,
               countedQty: it.countedQty,
               unitCost: Number(it.unitCost ?? 0),
+              checked: it.checked,
             })),
         );
       } catch (e) {
@@ -259,6 +271,7 @@ export default function StockTakeCount({ id }: { id: string }) {
             bookQty: 0,
             countedQty: 1,
             unitCost: product.unitCost ?? 0,
+            checked: false,
           },
           ...prev,
         ];
@@ -288,6 +301,29 @@ export default function StockTakeCount({ id }: { id: string }) {
     // Debounced auto-save so an unsaved edit survives a closed tab / lost network.
     scheduleSave(productId, value);
   };
+
+  // Toggle a product's reviewed flag. Optimistic — persisted immediately (a
+  // toggle is rare, so no debounce); reverts + toasts if the save fails.
+  const setRowChecked = useCallback(
+    (productId: string, nextChecked: boolean) => {
+      setRows((prev) =>
+        prev.map((r) =>
+          r.productId === productId ? { ...r, checked: nextChecked } : r,
+        ),
+      );
+      void checkStockTake(id, [{ productId, checked: nextChecked }]).catch(
+        (e) => {
+          showToast("error", (e as Error).message, "Error");
+          setRows((prev) =>
+            prev.map((r) =>
+              r.productId === productId ? { ...r, checked: !nextChecked } : r,
+            ),
+          );
+        },
+      );
+    },
+    [id, showToast],
+  );
 
   // ── Excel round-trip ────────────────────────────────────────────────────────
   // Download the current rows so a worker can fill/correct the counts offline,
@@ -388,6 +424,19 @@ export default function StockTakeCount({ id }: { id: string }) {
     }
     return { surplus, shortage, changed };
   }, [rows]);
+
+  // Review progress ("X / Y tekshirildi") across all rows, regardless of filter.
+  const checkedCount = useMemo(
+    () => rows.reduce((n, r) => n + (r.checked ? 1 : 0), 0),
+    [rows],
+  );
+
+  // Rows shown under the active review filter.
+  const visibleRows = useMemo(() => {
+    if (checkFilter === "checked") return rows.filter((r) => r.checked);
+    if (checkFilter === "unchecked") return rows.filter((r) => !r.checked);
+    return rows;
+  }, [rows, checkFilter]);
 
   const doComplete = async () => {
     setCompleting(true);
@@ -549,13 +598,85 @@ export default function StockTakeCount({ id }: { id: string }) {
       )}
 
       <div className={CARD}>
-        {rows.length > 0 ? (
+        {rows.length > 0 && (
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* Review filter — Barchasi / Tekshirilmagan / Tekshirilgan */}
+            <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-gray-800 dark:bg-white/[0.03]">
+              {(
+                [
+                  {
+                    key: "all",
+                    label: t("stockTakes.filterAll"),
+                    count: rows.length,
+                  },
+                  {
+                    key: "unchecked",
+                    label: t("stockTakes.filterUnchecked"),
+                    count: rows.length - checkedCount,
+                  },
+                  {
+                    key: "checked",
+                    label: t("stockTakes.filterChecked"),
+                    count: checkedCount,
+                  },
+                ] as { key: CheckFilter; label: string; count: number }[]
+              ).map((seg) => (
+                <button
+                  key={seg.key}
+                  type="button"
+                  onClick={() => setCheckFilter(seg.key)}
+                  className={`rounded-md px-3 py-1.5 text-theme-xs font-medium transition ${
+                    checkFilter === seg.key
+                      ? "bg-white text-gray-800 shadow-theme-xs dark:bg-gray-800 dark:text-white/90"
+                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  }`}
+                >
+                  {seg.label}
+                  <span className="ml-1 text-gray-400 dark:text-gray-500">
+                    {seg.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {/* Review progress across all rows */}
+            <div className="flex items-center gap-2 text-theme-xs text-gray-500 dark:text-gray-400">
+              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                <div
+                  className="h-full rounded-full bg-brand-500 transition-all"
+                  style={{
+                    width: `${rows.length ? Math.round((checkedCount / rows.length) * 100) : 0}%`,
+                  }}
+                />
+              </div>
+              <span>
+                {checkedCount}/{rows.length} {t("stockTakes.checked")}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {rows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-12 dark:border-gray-800">
+            <p className="text-center text-theme-sm text-gray-500 dark:text-gray-400">
+              {t("stockTakes.empty")}
+            </p>
+          </div>
+        ) : visibleRows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-12 dark:border-gray-800">
+            <p className="text-center text-theme-sm text-gray-500 dark:text-gray-400">
+              {t("stockTakes.noneInFilter")}
+            </p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-theme-xs uppercase tracking-wide text-gray-400 dark:border-gray-800">
                   <th className="px-3 py-3 font-medium">
                     {t("stockTakes.product")}
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    {t("stockTakes.checkStatus")}
                   </th>
                   <th className="px-3 py-3 font-medium">
                     {t("stockTakes.book")}
@@ -572,7 +693,7 @@ export default function StockTakeCount({ id }: { id: string }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => {
+                {visibleRows.map((r) => {
                   const diffQty = r.countedQty - r.bookQty;
                   const saved = completedById.current.get(r.productId);
                   // Running "farq summasi": the exact stored COGS once completed,
@@ -596,6 +717,41 @@ export default function StockTakeCount({ id }: { id: string }) {
                     >
                       <td className="px-3 py-3 font-medium text-gray-800 dark:text-white/90">
                         {r.productName}
+                      </td>
+                      <td
+                        className="px-3 py-3"
+                        title={
+                          r.checked
+                            ? t("stockTakes.checkedLabel")
+                            : t("stockTakes.uncheckedLabel")
+                        }
+                      >
+                        {isCompleted ? (
+                          r.checked ? (
+                            <svg
+                              className="h-5 w-5 text-success-500"
+                              viewBox="0 0 20 20"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M4 10.5l4 4 8-9" />
+                            </svg>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600">
+                              —
+                            </span>
+                          )
+                        ) : (
+                          <Checkbox
+                            checked={r.checked}
+                            onChange={(checked) =>
+                              setRowChecked(r.productId, checked)
+                            }
+                          />
+                        )}
                       </td>
                       <td className="px-3 py-3 text-gray-700 dark:text-gray-300">
                         {r.bookQty}
@@ -639,12 +795,6 @@ export default function StockTakeCount({ id }: { id: string }) {
                 })}
               </tbody>
             </table>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-12 dark:border-gray-800">
-            <p className="text-center text-theme-sm text-gray-500 dark:text-gray-400">
-              {t("stockTakes.empty")}
-            </p>
           </div>
         )}
 

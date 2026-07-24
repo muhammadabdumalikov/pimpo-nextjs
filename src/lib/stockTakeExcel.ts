@@ -1,14 +1,20 @@
 import XLSX from "xlsx-js-style";
+import {
+  EXCEL_BODY_TEXT,
+  EXCEL_BORDER,
+  EXCEL_HEADER_FILL,
+} from "@/lib/exportExcel";
 
 // Styled stock-take Excel (uses xlsx-js-style — a drop-in fork of xlsx with cell
 // styling). Fixed 4 columns: ID (hidden, used to match rows on re-upload),
-// Mahsulot, Hisob, Sanalgan (the worker fills this one). The plain shared
-// exportAoaToExcel can't style cells, so this file owns the stock-take look.
+// Mahsulot, Hisob, Sanalgan (the worker fills this one). This is the reference
+// "custom styled" look; it shares the dashboard palette (exportExcel.ts) and
+// adds the larger fill-by-hand fonts + the editable-column tint on top.
 
-const HEADER_GREEN = "217346"; // Excel/spreadsheet green
+const HEADER_GREEN = EXCEL_HEADER_FILL; // Excel/spreadsheet green
 const COUNTED_FILL = "FFF7DB"; // pale amber — signals "fill this column"
-const BORDER = "D0D5DD";
-const TEXT = "1D2939";
+const BORDER = EXCEL_BORDER;
+const TEXT = EXCEL_BODY_TEXT;
 
 const thin = { style: "thin", color: { rgb: BORDER } };
 const border = { top: thin, bottom: thin, left: thin, right: thin };

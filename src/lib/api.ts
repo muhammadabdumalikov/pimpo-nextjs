@@ -495,6 +495,7 @@ export interface CreateProductRequest {
   image?: string;
   categoryId?: string;
   priceBundle?: string;
+  priceWholesale?: string;
   lowStockThreshold?: number;
   brandId?: string;
   supplierId?: string;
@@ -513,6 +514,7 @@ export interface UpdateProductRequest {
   image?: string;
   categoryId?: string;
   priceBundle?: string;
+  priceWholesale?: string;
   lowStockThreshold?: number;
   brandId?: string;
   supplierId?: string;
@@ -3154,6 +3156,10 @@ export interface StockTake {
   startedAt: string;
   completedAt: string | null;
   createdAt: string;
+  // Review progress, populated by the list endpoint only (undefined on detail).
+  // itemCount = rows in the count; checkedCount = rows marked "tekshirildi".
+  itemCount?: number;
+  checkedCount?: number;
 }
 
 export interface StockTakeItem {
@@ -3168,6 +3174,9 @@ export interface StockTakeItem {
   unitCost: string | null;
   diffValue: string | null;
   reason: string | null;
+  // Whether the counter has reviewed this product ("tekshirildi"). Independent
+  // of countedQty — a 0-count can still be marked checked.
+  checked: boolean;
   createdAt: string;
 }
 
@@ -3231,6 +3240,19 @@ export async function countStockTake(
     body: JSON.stringify({ items }),
   });
   if (!response.ok) await parseError(response, 'Failed to save count');
+  return response.json();
+}
+
+export async function checkStockTake(
+  id: string,
+  items: { productId: string; checked: boolean }[],
+): Promise<{ updated: number }> {
+  const response = await fetch(`${API_BASE_URL}/stock-takes/${id}/check`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ items }),
+  });
+  if (!response.ok) await parseError(response, 'Failed to save checked state');
   return response.json();
 }
 

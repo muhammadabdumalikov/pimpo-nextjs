@@ -10,7 +10,7 @@ import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import SelectField from "@/components/form/SelectField";
 import { PlusIcon } from "@/icons/index";
-import { digitsOnly, formatNumberInput } from "@/lib/number";
+import { digitsOnly, formatNumberInput, stripLeadingZeros } from "@/lib/number";
 import {
   getReceipt,
   getAccounts,
@@ -328,8 +328,8 @@ export default function ReceiptDetail({ id }: { id: string }) {
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.quantity")}</th>
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceIn")}</th>
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceOut")}</th>
-                <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceBundle") || "To'plam"}</th>
-                <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceWholesale") || "Ulgurji"}</th>
+                <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceBundle") || "To'plam narxi"}</th>
+                <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.priceWholesale") || "Ulgurji narxi"}</th>
                 <th className="px-3 py-3 font-medium text-right">{t("goodsReceipt.lineTotal")}</th>
               </tr>
             </thead>
@@ -525,7 +525,10 @@ export default function ReceiptDetail({ id }: { id: string }) {
                 max={String(p.qty)}
                 value={returnQtys[p.productId] ?? ""}
                 onChange={(e) =>
-                  setReturnQtys((q) => ({ ...q, [p.productId]: e.target.value }))
+                  setReturnQtys((q) => ({
+                    ...q,
+                    [p.productId]: stripLeadingZeros(e.target.value),
+                  }))
                 }
                 placeholder="0"
                 className="w-24"

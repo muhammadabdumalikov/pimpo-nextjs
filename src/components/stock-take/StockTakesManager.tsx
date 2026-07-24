@@ -1,7 +1,9 @@
 "use client";
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { RiFileExcel2Line } from "react-icons/ri";
 import { Drawer } from "@/components/ui/drawer";
+import { exportAoaToExcel } from "@/lib/exportExcel";
 import Button from "@/components/ui/button/Button";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
@@ -11,6 +13,7 @@ import { useToast } from "@/context/ToastContext";
 import { PlusIcon, TrashBinIcon } from "@/icons/index";
 import {
   getStockTakes,
+  getStockTake,
   createStockTake,
   createWriteOff,
   getProducts,
@@ -56,7 +59,45 @@ function DiffValue({ value }: { value: string | null }) {
         ? "text-error-600 dark:text-error-400"
         : "text-gray-500 dark:text-gray-400";
   const text = n > 0 ? `+${n.toLocaleString()}` : n.toLocaleString();
-  return <span className={`font-medium ${cls}`}>{text}</span>;
+  return (
+    <span className={`font-medium tabular-nums ${cls}`}>{text}</span>
+  );
+}
+
+// Review progress ("tekshirildi") for a stock-take row: checked/total with a
+// mini bar. Write-offs never go through the count/review flow, so they show "—".
+function ReviewProgress({
+  type,
+  checked,
+  total,
+}: {
+  type: StockTake["type"];
+  checked: number;
+  total: number;
+}) {
+  if (type === "writeoff" || total === 0)
+    return <span className="text-gray-400 dark:text-gray-500">—</span>;
+  const pct = Math.round((checked / total) * 100);
+  const done = checked >= total;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+        <div
+          className={`h-full rounded-full transition-[width] ${done ? "bg-success-500" : "bg-brand-500"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span
+        className={`whitespace-nowrap text-theme-xs tabular-nums ${
+          done
+            ? "font-medium text-success-600 dark:text-success-400"
+            : "text-gray-500 dark:text-gray-400"
+        }`}
+      >
+        {checked}/{total}
+      </span>
+    </div>
+  );
 }
 
 export default function StockTakesManager() {
@@ -230,13 +271,75 @@ export default function StockTakesManager() {
     }
   };
 
+  // Per-row Excel: fetch that stock-take's counted rows and download them as a
+  // self-describing sheet (meta block on top, then the item table). Labels
+  // reuse the screen's translations so the file matches the UI language.
+  const [exportingId, setExportingId] = useState<string | null>(null);
+
+  const exportRow = async (s: StockTake) => {
+    if (exportingId) return;
+    setExportingId(s.id);
+    try {
+      const data = await getStockTake(s.id);
+      const aoa: (string | number)[][] = [
+        [t("stockTakes.name"), s.name],
+        [t("stockTakes.date"), formatDateTime(s.startedAt)],
+        [t("stockTakes.type"), typeLabel(s.type)],
+        [t("stockTakes.status"), statusLabel(s.status)],
+        [],
+        [
+          t("stockTakes.product"),
+          t("stockTakes.checkStatus"),
+          t("stockTakes.book"),
+          t("stockTakes.counted"),
+          t("stockTakes.diff"),
+          t("stockTakes.diffValue"),
+          t("stockTakes.reason"),
+        ],
+        ...data.items.map((it) => {
+          // Completed takes carry the exact stored COGS; in-progress ones get a
+          // live estimate from the product's current cost (same as the screen).
+          const diffValue =
+            it.diffValue != null
+              ? Number(it.diffValue)
+              : it.diffQty * Number(it.unitCost ?? 0);
+          return [
+            it.productName,
+            it.checked
+              ? t("stockTakes.checkedLabel")
+              : t("stockTakes.uncheckedLabel"),
+            it.bookQty,
+            it.countedQty,
+            it.diffQty,
+            Math.round(diffValue),
+            it.reason ?? "",
+          ];
+        }),
+      ];
+      exportAoaToExcel(
+        `inventarizatsiya-${s.name}`.slice(0, 60),
+        aoa,
+        t("stockTakes.title"),
+      );
+    } catch (e) {
+      showToast("error", (e as Error).message, "Error");
+    } finally {
+      setExportingId(null);
+    }
+  };
+
   return (
     <div className={`${CARD} min-h-fill`}>
-      <div className="mb-6 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-          {t("stockTakes.title")}
-        </h3>
-        <div className="flex items-center gap-2">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="mb-1 text-lg font-semibold text-gray-800 dark:text-white/90">
+            {t("stockTakes.title")}
+          </h3>
+          <p className="text-theme-sm text-gray-500 dark:text-gray-400">
+            {t("stockTakes.description")}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             size="sm"
             variant="outline"
@@ -262,8 +365,14 @@ export default function StockTakesManager() {
               <tr className="border-b border-gray-200 text-theme-xs uppercase tracking-wide text-gray-400 dark:border-gray-800">
                 <th className="px-3 py-3 font-medium">{t("stockTakes.name")}</th>
                 <th className="px-3 py-3 font-medium">{t("stockTakes.type")}</th>
-                <th className="px-3 py-3 font-medium">{t("stockTakes.diffValue")}</th>
                 <th className="px-3 py-3 font-medium">{t("stockTakes.status")}</th>
+                <th className="px-3 py-3 font-medium">{t("stockTakes.checkedLabel")}</th>
+                <th className="px-6 py-3 text-right font-medium">
+                  {t("stockTakes.diffValue")}
+                </th>
+                <th className="w-12 px-3 py-3">
+                  <span className="sr-only">Excel</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -271,7 +380,7 @@ export default function StockTakesManager() {
                 <tr
                   key={s.id}
                   onClick={() => router.push(`/stock-takes/${s.id}`)}
-                  className="cursor-pointer border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800/60 dark:hover:bg-white/[0.03]"
+                  className="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-50 dark:border-gray-800/60 dark:hover:bg-white/[0.03]"
                 >
                   <td className="px-3 py-3">
                     <div className="font-medium text-gray-800 dark:text-white/90">
@@ -285,16 +394,43 @@ export default function StockTakesManager() {
                     {typeLabel(s.type)}
                   </td>
                   <td className="px-3 py-3">
-                    <DiffValue value={s.diffValue} />
-                  </td>
-                  <td className="px-3 py-3">
                     <span
-                      className={`inline-flex rounded-full px-2.5 py-0.5 text-theme-xs font-medium ${statusClass(
+                      className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-theme-xs font-medium ${statusClass(
                         s.status,
                       )}`}
                     >
                       {statusLabel(s.status)}
                     </span>
+                  </td>
+                  <td className="px-3 py-3">
+                    <ReviewProgress
+                      type={s.type}
+                      checked={s.checkedCount ?? 0}
+                      total={s.itemCount ?? 0}
+                    />
+                  </td>
+                  <td className="px-6 py-3 text-right">
+                    <DiffValue value={s.diffValue} />
+                  </td>
+                  <td className="px-6 py-3 text-right">
+                    {/* Row action — swallow the click so it doesn't navigate. */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void exportRow(s);
+                      }}
+                      disabled={exportingId === s.id}
+                      title="Excel"
+                      aria-label="Excel"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-success-600 transition hover:bg-success-50 disabled:opacity-50 dark:border-gray-800 dark:text-success-500 dark:hover:bg-success-500/10"
+                    >
+                      {exportingId === s.id ? (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <RiFileExcel2Line className="h-5 w-5" />
+                      )}
+                    </button>
                   </td>
                 </tr>
               ))}

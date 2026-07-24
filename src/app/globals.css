@@ -369,6 +369,20 @@ select:focus {
     display: none;
     -webkit-appearance: none;
   }
+
+  /* Hide native number-input spinners (the up/down arrows) app-wide. We enter
+     quantities/prices with plain numeric typing or explicit +/- steppers, so
+     the built-in arrows are just visual noise. Keeps the numeric keypad on
+     mobile (type="number" is preserved). */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
 
 /* third-party libraries CSS */

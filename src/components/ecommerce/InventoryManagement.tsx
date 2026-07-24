@@ -14,6 +14,7 @@ import { useToast } from "@/context/ToastContext";
 import Badge from "../ui/badge/Badge";
 import Pagination from "../ui/pagination/Pagination";
 import SelectField from "@/components/form/SelectField";
+import { exportAoaToExcel } from "@/lib/exportExcel";
 import {
   getProducts,
   getProductStats,
@@ -170,23 +171,19 @@ export default function InventoryManagement() {
         branchId || undefined,
         statusFilter || undefined,
       );
-      const header = ["Name", "Code", "Barcode", "Quantity"];
+      const header = [
+        t("inventory.product"),
+        t("inventory.code"),
+        t("inventory.barcode"),
+        t("inventory.stock"),
+      ];
       const rows = res.products.map((p) => [
         p.name,
         p.code ?? "",
         p.barcode ?? "",
-        String(p.quantity),
+        p.quantity,
       ]);
-      const csv = [header, ...rows]
-        .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-        .join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "inventory.csv";
-      a.click();
-      URL.revokeObjectURL(url);
+      exportAoaToExcel("inventory", [header, ...rows], "Inventory");
     } catch (err: unknown) {
       showToast("error", (err as Error)?.message || "Failed to export inventory", "Error");
     } finally {

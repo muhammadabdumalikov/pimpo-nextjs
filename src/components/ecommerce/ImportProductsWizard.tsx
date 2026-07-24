@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import Button from "../ui/button/Button";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
+import { exportAoaToExcel } from "@/lib/exportExcel";
 import { bulkCreateProducts, type BulkImportItem, type BulkImportResult } from "@/lib/api";
 
 // Our importable (scalar) product fields and the label to show for each. Field
@@ -167,10 +168,8 @@ export default function ImportProductsWizard() {
   const downloadTemplate = () => {
     const headerRow = FIELDS.map((f) => t(f.labelKey));
     const sample = ["Namuna mahsulot", "10000", "15000", "PRD-0001", "2000000000017", "5", "dona", "50", "2"];
-    const ws = XLSX.utils.aoa_to_sheet([headerRow, sample]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Mahsulotlar");
-    XLSX.writeFile(wb, "mahsulotlar-shablon.xlsx");
+    // Shared styled export → the template wears the same green-header look.
+    exportAoaToExcel("mahsulotlar-shablon", [headerRow, sample], "Mahsulotlar");
   };
 
   const cellValue = (field: keyof BulkImportItem, row: unknown[]) => {
