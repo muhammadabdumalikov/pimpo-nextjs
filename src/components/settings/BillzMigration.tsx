@@ -191,7 +191,7 @@ export default function BillzMigration() {
       } catch {
         // Transient network error — keep the last known state.
       }
-    }, 2500);
+    }, 8000);
     return () => clearInterval(timer);
   }, [step, jobActive]);
 
@@ -806,11 +806,18 @@ export default function BillzMigration() {
                     </div>
                   </div>
 
-                  {/* Per-entity result summary (records written to KPOS) */}
-                  <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                  {/* Per-entity result summary. Completed jobs show LOAD counts
+                      (what actually landed in KPOS); a job that died in the
+                      FETCH phase shows what was pulled into staging instead. */}
+                  {phase === "fetch" && job.status !== "completed" && (
+                    <p className="mt-4 text-theme-xs text-gray-400 dark:text-gray-500">
+                      {t("integrations.billz.fetchOnlyNote")}
+                    </p>
+                  )}
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
                     {jobEntities.map((id) => {
                       const meta = ENTITIES.find((e) => e.id === id);
-                      const c = counters[id]?.load;
+                      const c = counters[id]?.[phase];
                       if (!meta || !c) return null;
                       return (
                         <div
@@ -839,6 +846,11 @@ export default function BillzMigration() {
                       {t("integrations.billz.failedHint")}
                     </p>
                   )}
+                  {job.status === "failed" && (
+                    <p className="mt-3 text-theme-sm text-gray-500 dark:text-gray-400">
+                      {t("integrations.billz.failedResumeHint")}
+                    </p>
+                  )}
                   {job.status === "completed" && (
                     <p className="mt-3 text-theme-sm text-gray-500 dark:text-gray-400">
                       {t("integrations.billz.validateHint")}
@@ -846,6 +858,19 @@ export default function BillzMigration() {
                   )}
 
                   <div className="mt-5 flex flex-wrap items-center gap-3">
+                    {/* A failed job resumes from its checkpoint — nothing already
+                        staged/loaded is re-done. Restart (new job) stays as the
+                        secondary option. */}
+                    {job.status === "failed" && (
+                      <Button
+                        size="sm"
+                        onClick={() => runAction(resumeBillzImport)}
+                        disabled={actionBusy}
+                        startIcon={<LuPlay className="h-4 w-4" />}
+                      >
+                        {t("integrations.billz.resume")}
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -856,7 +881,9 @@ export default function BillzMigration() {
                     </Button>
                     <Button
                       size="sm"
-                      variant={job.status === "completed" ? "outline" : "primary"}
+                      variant={
+                        job.status === "cancelled" ? "primary" : "outline"
+                      }
                       onClick={() => setStep("select")}
                       startIcon={
                         job.status !== "completed" ? (

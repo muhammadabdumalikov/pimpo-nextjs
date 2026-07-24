@@ -2308,7 +2308,9 @@
         "fCategory": "Category",
         "fUnit": "Unit",
         "fPhone": "Phone"
-      }
+      },
+      "failedResumeHint": "Fetched data is saved — “Resume” continues from where it stopped, not from the beginning.",
+      "fetchOnlyNote": "These are fetched records — loading into the database hasn't started yet, so the log may be empty."
     }
   },
   "telegramSend": {
