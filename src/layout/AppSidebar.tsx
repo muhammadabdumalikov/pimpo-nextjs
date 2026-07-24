@@ -170,6 +170,7 @@ const AppSidebar: React.FC = () => {
         { name: t('sidebar.catalogSettings'), path: "/settings/catalog", pro: false },
         { name: t('sidebar.onlineStore'), path: "/settings/online-store", pro: false },
         { name: t('sidebar.profileSettings'), path: "/settings/profile", pro: false },
+        { name: t('sidebar.integrations'), path: "/settings/applications", pro: false },
         { name: t('sidebar.subscriptionManagement'), path: "/subscription-management", pro: false },
       ],
     },

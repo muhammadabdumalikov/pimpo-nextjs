@@ -480,7 +480,8 @@
     "reportsTransferSuggestions": "Трансфер тавсияси",
     "reportsTarget": "Режа / факт",
     "onlineOrders": "Онлайн буюртмалар",
-    "onlineStore": "Онлайн дўкон"
+    "onlineStore": "Онлайн дўкон",
+    "integrations": "Иловалар"
   },
   "stockTakes": {
     "title": "Инвентаризация",
@@ -1459,6 +1460,10 @@
     "profile": {
       "title": "Профил",
       "description": "Шахсий маълумотлар, парол ва фаол сессиялар"
+    },
+    "integrations": {
+      "title": "Иловалар",
+      "description": "Ташқи иловалар билан интеграция — ҳисоботларни Telegram орқали юбориш"
     }
   },
   "branches": {
@@ -1854,7 +1859,11 @@
     "ORDER_CANCELLED_IMMUTABLE": "Бекор қилинган буюртма ҳолатини ўзгартириб бўлмайди",
     "STORE_NOT_FOUND": "Дўкон топилмади",
     "STORE_SLUG_TAKEN": "Бу дўкон манзили банд",
-    "STORE_SLUG_INVALID": "Манзил фақат кичик лотин ҳарфлари, рақамлар ва чизиқчадан иборат бўлсин (3-63 белги)"
+    "STORE_SLUG_INVALID": "Манзил фақат кичик лотин ҳарфлари, рақамлар ва чизиқчадан иборат бўлсин (3-63 белги)",
+    "TELEGRAM_NOT_CONFIGURED": "Telegram бот созланмаган.",
+    "TELEGRAM_LINK_NOT_FOUND": "Telegram чат топилмади ёки аллақачон узилган.",
+    "TELEGRAM_NO_TARGETS": "Юбориш учун Telegram чат танланмаган.",
+    "TELEGRAM_SEND_FAILED": "Telegramга юбориб бўлмади. Қайта уриниб кўринг."
   },
   "landing": {
     "nav": {
@@ -2192,5 +2201,38 @@
     "yourAddress": "Сизнинг дўкон манзилингиз",
     "statusOn": "Фаол",
     "statusOff": "Ўчирилган"
+  },
+  "integrations": {
+    "telegramSubtitle": "Ҳисоботларни тўғридан-тўғри Telegram чатга юборинг",
+    "connectTitle": "Telegramни улаш",
+    "connectStep1": "Ботни очинг",
+    "connectStep2": "Start тугмасини босинг",
+    "connectStep3": "Логин ва паролингиз билан киринг",
+    "openBot": "Ботни очиш",
+    "notConfigured": "Telegram бот ҳали созланмаган. Администраторга мурожаат қилинг.",
+    "connectedChats": "Уланган чатлар",
+    "chat": "Чат",
+    "account": "Ким улаган",
+    "connectedAt": "Уланган сана",
+    "lastSentAt": "Охирги юборилган",
+    "never": "Ҳали юборилмаган",
+    "disconnect": "Узиш",
+    "disconnectTitle": "Чатни узиш",
+    "disconnectConfirm": "Бу чатга бошқа ҳисобот юборилмайди. Давом этасизми?",
+    "disconnected": "Чат узилди",
+    "empty": "Ҳозирча уланган чатлар йўқ. Ботни очиб, ҳисобингиз билан киринг."
+  },
+  "telegramSend": {
+    "title": "Telegramга юбориш",
+    "selectChats": "Чатларни танланг",
+    "note": "Изоҳ (ихтиёрий)",
+    "notePlaceholder": "Хабарга изоҳ қўшинг…",
+    "send": "Юбориш",
+    "sending": "Юборилмоқда...",
+    "success": "{sent} та чатга юборилди",
+    "partial": "{sent} та юборилди, {failed} та хато",
+    "noChats": "Уланган Telegram чатлар йўқ",
+    "noChatsHint": "Аввал Созламалар → Иловалар бўлимида Telegram ботни уланг.",
+    "goToSettings": "Созламаларга ўтиш"
   }
 }

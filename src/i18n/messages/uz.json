@@ -112,7 +112,11 @@
     "ORDER_CANCELLED_IMMUTABLE": "Bekor qilingan buyurtma holatini o'zgartirib bo'lmaydi",
     "STORE_NOT_FOUND": "Do'kon topilmadi",
     "STORE_SLUG_TAKEN": "Bu do'kon manzili band",
-    "STORE_SLUG_INVALID": "Manzil faqat kichik lotin harflari, raqamlar va chiziqchadan iborat bo'lsin (3-63 belgi)"
+    "STORE_SLUG_INVALID": "Manzil faqat kichik lotin harflari, raqamlar va chiziqchadan iborat bo'lsin (3-63 belgi)",
+    "TELEGRAM_NOT_CONFIGURED": "Telegram bot sozlanmagan.",
+    "TELEGRAM_LINK_NOT_FOUND": "Telegram chat topilmadi yoki allaqachon uzilgan.",
+    "TELEGRAM_NO_TARGETS": "Yuborish uchun Telegram chat tanlanmagan.",
+    "TELEGRAM_SEND_FAILED": "Telegramga yuborib bo'lmadi. Qayta urinib ko'ring."
   },
   "landing": {
     "nav": {
@@ -890,7 +894,8 @@
     "reportsTransferSuggestions": "Transfer tavsiyasi",
     "reportsTarget": "Reja / fakt",
     "onlineOrders": "Onlayn buyurtmalar",
-    "onlineStore": "Onlayn do'kon"
+    "onlineStore": "Onlayn do'kon",
+    "integrations": "Ilovalar"
   },
   "stockTakes": {
     "title": "Inventarizatsiya",
@@ -1869,6 +1874,10 @@
     "profile": {
       "title": "Profil",
       "description": "Shaxsiy ma'lumotlar, parol va faol sessiyalar"
+    },
+    "integrations": {
+      "title": "Ilovalar",
+      "description": "Tashqi ilovalar bilan integratsiya — hisobotlarni Telegram orqali yuborish"
     }
   },
   "branches": {
@@ -2192,5 +2201,38 @@
     "yourAddress": "Sizning do'kon manzilingiz",
     "statusOn": "Faol",
     "statusOff": "O'chirilgan"
+  },
+  "integrations": {
+    "telegramSubtitle": "Hisobotlarni to'g'ridan-to'g'ri Telegram chatga yuboring",
+    "connectTitle": "Telegramni ulash",
+    "connectStep1": "Botni oching",
+    "connectStep2": "Start tugmasini bosing",
+    "connectStep3": "Login va parolingiz bilan kiring",
+    "openBot": "Botni ochish",
+    "notConfigured": "Telegram bot hali sozlanmagan. Administratorga murojaat qiling.",
+    "connectedChats": "Ulangan chatlar",
+    "chat": "Chat",
+    "account": "Kim ulagan",
+    "connectedAt": "Ulangan sana",
+    "lastSentAt": "Oxirgi yuborilgan",
+    "never": "Hali yuborilmagan",
+    "disconnect": "Uzish",
+    "disconnectTitle": "Chatni uzish",
+    "disconnectConfirm": "Bu chatga boshqa hisobot yuborilmaydi. Davom etasizmi?",
+    "disconnected": "Chat uzildi",
+    "empty": "Hozircha ulangan chatlar yo'q. Botni ochib, hisobingiz bilan kiring."
+  },
+  "telegramSend": {
+    "title": "Telegramga yuborish",
+    "selectChats": "Chatlarni tanlang",
+    "note": "Izoh (ixtiyoriy)",
+    "notePlaceholder": "Xabarga izoh qo'shing…",
+    "send": "Yuborish",
+    "sending": "Yuborilmoqda...",
+    "success": "{sent} ta chatga yuborildi",
+    "partial": "{sent} ta yuborildi, {failed} ta xato",
+    "noChats": "Ulangan Telegram chatlar yo'q",
+    "noChatsHint": "Avval Sozlamalar → Ilovalar bo'limida Telegram botni ulang.",
+    "goToSettings": "Sozlamalarga o'tish"
   }
 }

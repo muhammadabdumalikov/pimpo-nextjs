@@ -1,12 +1,14 @@
 "use client";
 import React, { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RiFileExcel2Line } from "react-icons/ri";
+import { RiFileExcel2Line, RiTelegram2Line } from "react-icons/ri";
 import { Drawer } from "@/components/ui/drawer";
-import { exportAoaToExcel } from "@/lib/exportExcel";
+import { exportAoaToExcel, aoaToXlsxBlob } from "@/lib/exportExcel";
 import Button from "@/components/ui/button/Button";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
+import Checkbox from "@/components/form/input/Checkbox";
 import SelectField from "@/components/form/SelectField";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
@@ -18,8 +20,12 @@ import {
   createWriteOff,
   getProducts,
   getBranches,
+  getTelegramLinks,
+  sendDocumentToTelegram,
   type StockTake,
+  type StockTakeItem,
   type Branch,
+  type TelegramLink,
 } from "@/lib/api";
 
 // A pending write-off line in the drawer.
@@ -271,9 +277,52 @@ export default function StockTakesManager() {
     }
   };
 
-  // Per-row Excel: fetch that stock-take's counted rows and download them as a
-  // self-describing sheet (meta block on top, then the item table). Labels
-  // reuse the screen's translations so the file matches the UI language.
+  // The row's Excel sheet as an array-of-arrays: a self-describing meta block
+  // on top, then the item table. Labels reuse the screen's translations so the
+  // file matches the UI language. Shared by the download AND the Telegram send
+  // so both produce the exact same workbook.
+  const buildRowAoa = (
+    s: StockTake,
+    items: StockTakeItem[],
+  ): (string | number)[][] => [
+    [t("stockTakes.name"), s.name],
+    [t("stockTakes.date"), formatDateTime(s.startedAt)],
+    [t("stockTakes.type"), typeLabel(s.type)],
+    [t("stockTakes.status"), statusLabel(s.status)],
+    [],
+    [
+      t("stockTakes.product"),
+      t("stockTakes.checkStatus"),
+      t("stockTakes.book"),
+      t("stockTakes.counted"),
+      t("stockTakes.diff"),
+      t("stockTakes.diffValue"),
+      t("stockTakes.reason"),
+    ],
+    ...items.map((it) => {
+      // Completed takes carry the exact stored COGS; in-progress ones get a
+      // live estimate from the product's current cost (same as the screen).
+      const diffValue =
+        it.diffValue != null
+          ? Number(it.diffValue)
+          : it.diffQty * Number(it.unitCost ?? 0);
+      return [
+        it.productName,
+        it.checked
+          ? t("stockTakes.checkedLabel")
+          : t("stockTakes.uncheckedLabel"),
+        it.bookQty,
+        it.countedQty,
+        it.diffQty,
+        Math.round(diffValue),
+        it.reason ?? "",
+      ];
+    }),
+  ];
+
+  const rowFileBase = (s: StockTake) => `inventarizatsiya-${s.name}`.slice(0, 60);
+
+  // Per-row Excel download.
   const [exportingId, setExportingId] = useState<string | null>(null);
 
   const exportRow = async (s: StockTake) => {
@@ -281,44 +330,9 @@ export default function StockTakesManager() {
     setExportingId(s.id);
     try {
       const data = await getStockTake(s.id);
-      const aoa: (string | number)[][] = [
-        [t("stockTakes.name"), s.name],
-        [t("stockTakes.date"), formatDateTime(s.startedAt)],
-        [t("stockTakes.type"), typeLabel(s.type)],
-        [t("stockTakes.status"), statusLabel(s.status)],
-        [],
-        [
-          t("stockTakes.product"),
-          t("stockTakes.checkStatus"),
-          t("stockTakes.book"),
-          t("stockTakes.counted"),
-          t("stockTakes.diff"),
-          t("stockTakes.diffValue"),
-          t("stockTakes.reason"),
-        ],
-        ...data.items.map((it) => {
-          // Completed takes carry the exact stored COGS; in-progress ones get a
-          // live estimate from the product's current cost (same as the screen).
-          const diffValue =
-            it.diffValue != null
-              ? Number(it.diffValue)
-              : it.diffQty * Number(it.unitCost ?? 0);
-          return [
-            it.productName,
-            it.checked
-              ? t("stockTakes.checkedLabel")
-              : t("stockTakes.uncheckedLabel"),
-            it.bookQty,
-            it.countedQty,
-            it.diffQty,
-            Math.round(diffValue),
-            it.reason ?? "",
-          ];
-        }),
-      ];
       exportAoaToExcel(
-        `inventarizatsiya-${s.name}`.slice(0, 60),
-        aoa,
+        rowFileBase(s),
+        buildRowAoa(s, data.items),
         t("stockTakes.title"),
       );
     } catch (e) {
@@ -327,6 +341,88 @@ export default function StockTakesManager() {
       setExportingId(null);
     }
   };
+
+  // ── Send-to-Telegram picker ───────────────────────────────────────────────
+  // Opens a drawer listing the business's connected chats (all pre-checked);
+  // Send builds the SAME xlsx as the download and uploads it for forwarding.
+  const [tgTarget, setTgTarget] = useState<StockTake | null>(null);
+  const [tgLinks, setTgLinks] = useState<TelegramLink[] | null>(null); // null = loading
+  const [tgSelected, setTgSelected] = useState<Set<string>>(new Set());
+  const [tgNote, setTgNote] = useState("");
+  const [tgSending, setTgSending] = useState(false);
+
+  const openTgPicker = async (s: StockTake) => {
+    setTgTarget(s);
+    setTgLinks(null);
+    setTgSelected(new Set());
+    setTgNote(""); // never leak a note from a previous send
+    try {
+      const links = await getTelegramLinks();
+      setTgLinks(links);
+      setTgSelected(new Set(links.map((l) => l.id)));
+    } catch (e) {
+      setTgTarget(null);
+      showToast("error", (e as Error).message, "Error");
+    }
+  };
+
+  const toggleTgLink = (id: string) =>
+    setTgSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const sendToTelegram = async () => {
+    if (!tgTarget || tgSelected.size === 0) return;
+    setTgSending(true);
+    try {
+      const data = await getStockTake(tgTarget.id);
+      const blob = aoaToXlsxBlob(
+        buildRowAoa(tgTarget, data.items),
+        t("stockTakes.title"),
+      );
+      // Optional note goes on its own line; the backend appends the sender.
+      const res = await sendDocumentToTelegram(
+        blob,
+        `${rowFileBase(tgTarget)}.xlsx`,
+        [...tgSelected],
+        [
+          `${tgTarget.name} — ${formatDateTime(tgTarget.startedAt)}`,
+          tgNote.trim() ? `💬 Xabar: ${tgNote.trim()}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+      if (res.failed.length === 0) {
+        showToast(
+          "success",
+          t("telegramSend.success").replace("{sent}", String(res.sent)),
+          "Success",
+        );
+      } else if (res.sent > 0) {
+        showToast(
+          "warning",
+          t("telegramSend.partial")
+            .replace("{sent}", String(res.sent))
+            .replace("{failed}", String(res.failed.length)),
+          "Warning",
+        );
+      } else {
+        showToast("error", t("apiErrors.TELEGRAM_SEND_FAILED"), "Error");
+      }
+      setTgTarget(null);
+    } catch (e) {
+      showToast("error", (e as Error).message, "Error");
+    } finally {
+      setTgSending(false);
+    }
+  };
+
+  // Chat display name: first name, then @username, then the raw chat id.
+  const tgChatLabel = (l: TelegramLink) =>
+    l.tgFirstName ?? (l.tgUsername ? `@${l.tgUsername}` : l.chatId);
 
   return (
     <div className={`${CARD} min-h-fill`}>
@@ -370,8 +466,8 @@ export default function StockTakesManager() {
                 <th className="px-6 py-3 text-right font-medium">
                   {t("stockTakes.diffValue")}
                 </th>
-                <th className="w-12 px-3 py-3">
-                  <span className="sr-only">Excel</span>
+                <th className="w-24 px-3 py-3">
+                  <span className="sr-only">Excel / Telegram</span>
                 </th>
               </tr>
             </thead>
@@ -413,24 +509,38 @@ export default function StockTakesManager() {
                     <DiffValue value={s.diffValue} />
                   </td>
                   <td className="px-6 py-3 text-right">
-                    {/* Row action — swallow the click so it doesn't navigate. */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void exportRow(s);
-                      }}
-                      disabled={exportingId === s.id}
-                      title="Excel"
-                      aria-label="Excel"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-success-600 transition hover:bg-success-50 disabled:opacity-50 dark:border-gray-800 dark:text-success-500 dark:hover:bg-success-500/10"
-                    >
-                      {exportingId === s.id ? (
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      ) : (
-                        <RiFileExcel2Line className="h-5 w-5" />
-                      )}
-                    </button>
+                    {/* Row actions — swallow the clicks so they don't navigate. */}
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void exportRow(s);
+                        }}
+                        disabled={exportingId === s.id}
+                        title="Excel"
+                        aria-label="Excel"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-success-600 transition hover:bg-success-50 disabled:opacity-50 dark:border-gray-800 dark:text-success-500 dark:hover:bg-success-500/10"
+                      >
+                        {exportingId === s.id ? (
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        ) : (
+                          <RiFileExcel2Line className="h-5 w-5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void openTgPicker(s);
+                        }}
+                        title={t("telegramSend.title")}
+                        aria-label={t("telegramSend.title")}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-blue-light-500 transition hover:bg-blue-light-50 dark:border-gray-800 dark:hover:bg-blue-light-500/10"
+                      >
+                        <RiTelegram2Line className="h-5 w-5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -587,6 +697,118 @@ export default function StockTakesManager() {
             </div>
           )}
         </div>
+      </Drawer>
+
+      {/* Send-to-Telegram picker — builds the same xlsx as the download and
+          uploads it; the backend forwards it to the checked chats. */}
+      <Drawer
+        isOpen={!!tgTarget}
+        onClose={() => !tgSending && setTgTarget(null)}
+        title={t("telegramSend.title")}
+        footer={
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setTgTarget(null)}
+              disabled={tgSending}
+            >
+              {t("stockTakes.cancel")}
+            </Button>
+            <Button
+              onClick={sendToTelegram}
+              disabled={tgSending || !tgLinks || tgSelected.size === 0}
+            >
+              {tgSending
+                ? t("telegramSend.sending")
+                : tgSelected.size > 0
+                  ? `${t("telegramSend.send")} (${tgSelected.size})`
+                  : t("telegramSend.send")}
+            </Button>
+          </div>
+        }
+      >
+        {tgLinks === null ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
+          </div>
+        ) : tgLinks.length === 0 ? (
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-gray-200 px-4 py-10 text-center dark:border-gray-800">
+            <RiTelegram2Line className="h-10 w-10 text-gray-300 dark:text-gray-600" />
+            <div>
+              <p className="font-medium text-gray-800 dark:text-white/90">
+                {t("telegramSend.noChats")}
+              </p>
+              <p className="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">
+                {t("telegramSend.noChatsHint")}
+              </p>
+            </div>
+            <Link
+              href="/settings/applications"
+              className="text-theme-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400"
+            >
+              {t("telegramSend.goToSettings")}
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {tgTarget && (
+              <p className="text-theme-sm text-gray-500 dark:text-gray-400">
+                {tgTarget.name} — {formatDateTime(tgTarget.startedAt)}
+              </p>
+            )}
+            <div>
+              <Label>{t("telegramSend.selectChats")}</Label>
+              <div className="space-y-2">
+                {tgLinks.map((l) => (
+                  <div
+                    key={l.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleTgLink(l.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleTgLink(l.id);
+                      }
+                    }}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${
+                      tgSelected.has(l.id)
+                        ? "border-brand-300 bg-brand-50/50 dark:border-brand-500/40 dark:bg-brand-500/10"
+                        : "border-gray-200 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/[0.03]"
+                    }`}
+                  >
+                    <div className="pointer-events-none">
+                      <Checkbox
+                        checked={tgSelected.has(l.id)}
+                        onChange={() => {}}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-gray-800 dark:text-white/90">
+                        {tgChatLabel(l)}
+                      </div>
+                      <div className="truncate text-theme-xs text-gray-400">
+                        {l.accountName} · {l.accountLogin}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>{t("telegramSend.note")}</Label>
+              <textarea
+                rows={3}
+                maxLength={500}
+                value={tgNote}
+                onChange={(e) => setTgNote(e.target.value)}
+                placeholder={t("telegramSend.notePlaceholder")}
+                disabled={tgSending}
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+          </div>
+        )}
       </Drawer>
     </div>
   );

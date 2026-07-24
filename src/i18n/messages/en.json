@@ -112,7 +112,11 @@
     "ORDER_CANCELLED_IMMUTABLE": "A cancelled order cannot change status",
     "STORE_NOT_FOUND": "Store not found",
     "STORE_SLUG_TAKEN": "This store address is already taken",
-    "STORE_SLUG_INVALID": "The address may use only lowercase letters, digits and hyphens (3-63 chars)"
+    "STORE_SLUG_INVALID": "The address may use only lowercase letters, digits and hyphens (3-63 chars)",
+    "TELEGRAM_NOT_CONFIGURED": "Telegram bot is not configured.",
+    "TELEGRAM_LINK_NOT_FOUND": "Telegram chat not found or already disconnected.",
+    "TELEGRAM_NO_TARGETS": "No Telegram chat selected to send to.",
+    "TELEGRAM_SEND_FAILED": "Failed to send to Telegram. Please try again."
   },
   "landing": {
     "nav": {
@@ -890,7 +894,8 @@
     "reportsTransferSuggestions": "Transfer suggestions",
     "reportsTarget": "Plan / actual",
     "onlineOrders": "Online orders",
-    "onlineStore": "Online store"
+    "onlineStore": "Online store",
+    "integrations": "Apps"
   },
   "stockTakes": {
     "title": "Stock-take",
@@ -1858,6 +1863,10 @@
     "profile": {
       "title": "Profile",
       "description": "Personal details, password and active sessions"
+    },
+    "integrations": {
+      "title": "Apps",
+      "description": "Integrations with external apps — send reports to Telegram"
     }
   },
   "branches": {
@@ -2192,5 +2201,38 @@
     "yourAddress": "Your store address",
     "statusOn": "Active",
     "statusOff": "Disabled"
+  },
+  "integrations": {
+    "telegramSubtitle": "Send reports straight to a Telegram chat",
+    "connectTitle": "Connect Telegram",
+    "connectStep1": "Open the bot",
+    "connectStep2": "Press Start",
+    "connectStep3": "Sign in with your login and password",
+    "openBot": "Open bot",
+    "notConfigured": "The Telegram bot is not configured yet. Contact your administrator.",
+    "connectedChats": "Connected chats",
+    "chat": "Chat",
+    "account": "Connected by",
+    "connectedAt": "Connected",
+    "lastSentAt": "Last sent",
+    "never": "Never sent",
+    "disconnect": "Disconnect",
+    "disconnectTitle": "Disconnect chat",
+    "disconnectConfirm": "Reports will no longer be delivered to this chat. Continue?",
+    "disconnected": "Chat disconnected",
+    "empty": "No connected chats yet. Open the bot and sign in with your account."
+  },
+  "telegramSend": {
+    "title": "Send to Telegram",
+    "selectChats": "Select chats",
+    "note": "Note (optional)",
+    "notePlaceholder": "Add a note to the message…",
+    "send": "Send",
+    "sending": "Sending...",
+    "success": "Sent to {sent} chat(s)",
+    "partial": "Sent: {sent}, failed: {failed}",
+    "noChats": "No connected Telegram chats",
+    "noChatsHint": "Connect the Telegram bot first in Settings → Apps.",
+    "goToSettings": "Go to settings"
   }
 }

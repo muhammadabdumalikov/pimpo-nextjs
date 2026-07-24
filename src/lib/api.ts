@@ -4061,3 +4061,96 @@ export const setMonthlyTarget = async (
   if (!response.ok) await parseError(response, 'Failed to set target');
   return response.json();
 };
+
+// ---------------------------------------------------------------------------
+// Telegram integration (report delivery to connected chats)
+// ---------------------------------------------------------------------------
+
+// A Telegram chat connected to the business. Created by the bot when an owner
+// or staff member signs in from Telegram; `accountType`/`accountId` say whose
+// credentials were used, `chatId` is where documents get delivered.
+export interface TelegramLink {
+  id: string;
+  accountType: 'business' | 'staff';
+  accountId: string;
+  accountLogin: string;
+  accountName: string;
+  tgUsername: string | null;
+  tgFirstName: string | null;
+  chatId: string;
+  createdAt: string;
+  lastSentAt: string | null;
+  lastSentBy: string | null;
+}
+
+// Bot identity for the "connect" card. Both fields are null when the server
+// has no bot token configured (the UI shows a muted "not configured" state).
+export interface TelegramConnectInfo {
+  botUsername: string | null;
+  deepLink: string | null;
+}
+
+export interface TelegramSendResult {
+  sent: number;
+  failed: { linkId: string; error: string }[];
+}
+
+export async function getTelegramLinks(): Promise<TelegramLink[]> {
+  const response = await fetch(`${API_BASE_URL}/telegram/links`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch Telegram links');
+  return (await response.json()).links ?? [];
+}
+
+export async function deleteTelegramLink(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/telegram/links/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to disconnect Telegram chat');
+}
+
+export async function getTelegramConnectInfo(): Promise<TelegramConnectInfo> {
+  const response = await fetch(`${API_BASE_URL}/telegram/connect-info`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch Telegram bot info');
+  return response.json();
+}
+
+/**
+ * Upload a browser-generated document (e.g. an .xlsx Blob) and have the
+ * backend forward it to the selected connected chats. Multipart, so no
+ * Content-Type header — the browser sets the boundary itself (same as
+ * uploadStorageFile above).
+ */
+export async function sendDocumentToTelegram(
+  file: Blob,
+  filename: string,
+  linkIds: string[],
+  caption?: string,
+): Promise<TelegramSendResult> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const formData = new FormData();
+  formData.append('file', file, filename);
+  formData.append('linkIds', JSON.stringify(linkIds));
+  if (caption) formData.append('caption', caption);
+
+  const response = await fetch(`${API_BASE_URL}/telegram/send-document`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  if (!response.ok) await parseError(response, 'Failed to send to Telegram');
+  return response.json();
+}

@@ -113,6 +113,20 @@ export function styleSheet(
   }
 }
 
+// Build the styled single-sheet workbook shared by the download and the
+// in-memory (Blob) exports, so both produce byte-identical content.
+function aoaToWorkbook(
+  aoa: (string | number)[][],
+  sheetName: string,
+): XLSX.WorkBook {
+  const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+  styleSheet(worksheet);
+  const workbook = XLSX.utils.book_new();
+  // Sheet names are capped at 31 chars by the format.
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName.slice(0, 31));
+  return workbook;
+}
+
 /**
  * Shared Excel (.xlsx) export used by every report. Takes an array-of-arrays
  * (first row = headers) and streams a real, styled workbook to the browser.
@@ -122,15 +136,27 @@ export function exportAoaToExcel(
   aoa: (string | number)[][],
   sheetName = "Report",
 ): void {
-  const worksheet = XLSX.utils.aoa_to_sheet(aoa);
-  styleSheet(worksheet);
-  const workbook = XLSX.utils.book_new();
-  // Sheet names are capped at 31 chars by the format.
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName.slice(0, 31));
   XLSX.writeFile(
-    workbook,
+    aoaToWorkbook(aoa, sheetName),
     filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`,
   );
+}
+
+/**
+ * Same workbook as exportAoaToExcel, but returned as an in-memory Blob instead
+ * of a browser download — for uploads (e.g. sending a report to Telegram).
+ */
+export function aoaToXlsxBlob(
+  aoa: (string | number)[][],
+  sheetName = "Report",
+): Blob {
+  const out = XLSX.write(aoaToWorkbook(aoa, sheetName), {
+    type: "array",
+    bookType: "xlsx",
+  }) as ArrayBuffer;
+  return new Blob([out], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
 }
 
 /** Round a number for a spreadsheet cell (keeps them numeric, not strings). */

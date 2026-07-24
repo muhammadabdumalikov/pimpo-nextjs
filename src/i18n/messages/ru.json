@@ -112,7 +112,11 @@
     "ORDER_CANCELLED_IMMUTABLE": "Статус отменённого заказа изменить нельзя",
     "STORE_NOT_FOUND": "Магазин не найден",
     "STORE_SLUG_TAKEN": "Этот адрес магазина уже занят",
-    "STORE_SLUG_INVALID": "Адрес может содержать только строчные латинские буквы, цифры и дефис (3-63 символа)"
+    "STORE_SLUG_INVALID": "Адрес может содержать только строчные латинские буквы, цифры и дефис (3-63 символа)",
+    "TELEGRAM_NOT_CONFIGURED": "Telegram-бот не настроен.",
+    "TELEGRAM_LINK_NOT_FOUND": "Telegram-чат не найден или уже отключён.",
+    "TELEGRAM_NO_TARGETS": "Не выбран Telegram-чат для отправки.",
+    "TELEGRAM_SEND_FAILED": "Не удалось отправить в Telegram. Попробуйте ещё раз."
   },
   "landing": {
     "nav": {
@@ -890,7 +894,8 @@
     "reportsTransferSuggestions": "Рекомендации перемещений",
     "reportsTarget": "План / факт",
     "onlineOrders": "Онлайн-заказы",
-    "onlineStore": "Онлайн-магазин"
+    "onlineStore": "Онлайн-магазин",
+    "integrations": "Приложения"
   },
   "stockTakes": {
     "title": "Инвентаризация",
@@ -1869,6 +1874,10 @@
     "profile": {
       "title": "Профиль",
       "description": "Личные данные, пароль и активные сессии"
+    },
+    "integrations": {
+      "title": "Приложения",
+      "description": "Интеграции с внешними приложениями — отправка отчётов в Telegram"
     }
   },
   "branches": {
@@ -2192,5 +2201,38 @@
     "yourAddress": "Адрес вашего магазина",
     "statusOn": "Активен",
     "statusOff": "Выключен"
+  },
+  "integrations": {
+    "telegramSubtitle": "Отправляйте отчёты прямо в Telegram-чат",
+    "connectTitle": "Подключить Telegram",
+    "connectStep1": "Откройте бота",
+    "connectStep2": "Нажмите Start",
+    "connectStep3": "Войдите со своим логином и паролем",
+    "openBot": "Открыть бота",
+    "notConfigured": "Telegram-бот ещё не настроен. Обратитесь к администратору.",
+    "connectedChats": "Подключённые чаты",
+    "chat": "Чат",
+    "account": "Кто подключил",
+    "connectedAt": "Дата подключения",
+    "lastSentAt": "Последняя отправка",
+    "never": "Ещё не отправлялось",
+    "disconnect": "Отключить",
+    "disconnectTitle": "Отключить чат",
+    "disconnectConfirm": "Отчёты больше не будут приходить в этот чат. Продолжить?",
+    "disconnected": "Чат отключён",
+    "empty": "Пока нет подключённых чатов. Откройте бота и войдите со своим аккаунтом."
+  },
+  "telegramSend": {
+    "title": "Отправить в Telegram",
+    "selectChats": "Выберите чаты",
+    "note": "Комментарий (необязательно)",
+    "notePlaceholder": "Добавьте комментарий к сообщению…",
+    "send": "Отправить",
+    "sending": "Отправка...",
+    "success": "Отправлено в чатов: {sent}",
+    "partial": "Отправлено: {sent}, с ошибкой: {failed}",
+    "noChats": "Нет подключённых Telegram-чатов",
+    "noChatsHint": "Сначала подключите Telegram-бота в разделе Настройки → Приложения.",
+    "goToSettings": "Перейти в настройки"
   }
 }
