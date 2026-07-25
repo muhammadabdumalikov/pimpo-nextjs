@@ -16,6 +16,12 @@ import { useToast } from "@/context/ToastContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useSidebar } from "@/context/SidebarContext";
 import { formatNumberInput, digitsOnly, stripLeadingZeros } from "@/lib/number";
+import {
+  PricePair,
+  impliedPct,
+  rebaseTier,
+  type PriceMode,
+} from "@/components/form/PricePair";
 
 interface AddProductFormProps {
   productId?: string;
@@ -97,6 +103,25 @@ export default function AddProductForm({
   // (a number) so a weighed product's decimal can be typed digit-by-digit
   // ("0.", "0.2", "0.25") without the controlled number clobbering it.
   const [qtyText, setQtyText] = useState("0");
+
+  // Markup-% twins for the three selling tiers (priceOut/Wholesale/Bundle) vs
+  // priceIn — UI-only, never submitted (the amounts in formData are). `driver`
+  // records the side last typed so a cost change re-syncs the right way.
+  const [priceTwins, setPriceTwins] = useState<{
+    priceOutPct: string;
+    priceOutDriver: PriceMode;
+    priceWholesalePct: string;
+    priceWholesaleDriver: PriceMode;
+    priceBundlePct: string;
+    priceBundleDriver: PriceMode;
+  }>({
+    priceOutPct: "",
+    priceOutDriver: "sum",
+    priceWholesalePct: "",
+    priceWholesaleDriver: "sum",
+    priceBundlePct: "",
+    priceBundleDriver: "sum",
+  });
 
   const [image, setImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -214,6 +239,21 @@ export default function AddProductForm({
         barcode: product.barcode || "",
       });
       setQtyText(String(product.quantity));
+      // Prefill the markup-% twins from the loaded amounts so current margins
+      // show right away (amount-driven — editing the cost refreshes them).
+      const base = Number(product.priceIn) || 0;
+      const pctOf = (amount?: string | null) => {
+        const v = Number(amount) || 0;
+        return base > 0 && v > 0 ? String(impliedPct(v, base)) : "";
+      };
+      setPriceTwins({
+        priceOutPct: pctOf(product.priceOut),
+        priceOutDriver: "sum",
+        priceWholesalePct: pctOf(product.priceWholesale),
+        priceWholesaleDriver: "sum",
+        priceBundlePct: pctOf(product.priceBundle),
+        priceBundleDriver: "sum",
+      });
       setImage(product.image ?? null);
     } catch (error: any) {
       console.error('Failed to load product:', error);
@@ -247,15 +287,64 @@ export default function AddProductForm({
     });
   };
 
-  // Price fields (priceIn / priceOut / priceBundle): digits only, stored raw and
-  // shown grouped ("65 000"). Each tier is entered independently.
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    const digits = digitsOnly(value);
-    if ((name === 'priceIn' || name === 'priceOut') && parseFloat(digits) > 0) {
-      setErrors((prev) => ({ ...prev, [name]: false }));
+  // Cost (priceIn) changed → re-sync the three selling tiers: %-driven tiers
+  // recompute their amount, amount-driven tiers refresh their implied %.
+  const handlePriceInChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const priceIn = digitsOnly(e.target.value);
+    const base = Number(priceIn) || 0;
+    if (base > 0) setErrors((prev) => ({ ...prev, priceIn: false }));
+    setFormData((prev) => {
+      const out = rebaseTier(
+        prev.priceOut,
+        priceTwins.priceOutPct,
+        priceTwins.priceOutDriver,
+        base,
+      );
+      const who = rebaseTier(
+        prev.priceWholesale,
+        priceTwins.priceWholesalePct,
+        priceTwins.priceWholesaleDriver,
+        base,
+      );
+      const bun = rebaseTier(
+        prev.priceBundle,
+        priceTwins.priceBundlePct,
+        priceTwins.priceBundleDriver,
+        base,
+      );
+      setPriceTwins((tw) => ({
+        ...tw,
+        priceOutPct: out.pct,
+        priceWholesalePct: who.pct,
+        priceBundlePct: bun.pct,
+      }));
+      if (out.value && parseFloat(out.value) > 0) {
+        setErrors((er) => ({ ...er, priceOut: false }));
+      }
+      return {
+        ...prev,
+        priceIn,
+        priceOut: out.value,
+        priceWholesale: who.value,
+        priceBundle: bun.value,
+      };
+    });
+  };
+
+  // One PricePair tier changed → write its amount into formData + its %/driver
+  // into priceTwins. `field` is the formData amount key; `pctKey`/`driverKey`
+  // the twin keys.
+  const onTierChange = (
+    field: "priceOut" | "priceWholesale" | "priceBundle",
+    pctKey: "priceOutPct" | "priceWholesalePct" | "priceBundlePct",
+    driverKey: "priceOutDriver" | "priceWholesaleDriver" | "priceBundleDriver",
+    patch: { value: string; pct: string; driver: PriceMode },
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: patch.value }));
+    setPriceTwins((tw) => ({ ...tw, [pctKey]: patch.pct, [driverKey]: patch.driver }));
+    if (field === "priceOut" && patch.value && parseFloat(patch.value) > 0) {
+      setErrors((er) => ({ ...er, priceOut: false }));
     }
-    setFormData((prev) => ({ ...prev, [name]: digits }));
   };
 
   // Reorder point: digits only ("" = no threshold).
@@ -969,7 +1058,7 @@ export default function AddProductForm({
                   inputMode="numeric"
                   placeholder="0"
                   value={formatNumberInput(formData.priceIn)}
-                  onChange={handlePriceChange}
+                  onChange={handlePriceInChange}
                   required
                   error={errors.priceIn}
                   hint={errors.priceIn ? (t('addProduct.errors.priceInRequired') || 'Price in is required and must be greater than 0') : undefined}
@@ -978,44 +1067,46 @@ export default function AddProductForm({
 
               <div>
                 <Label htmlFor="priceOut" required>{t('addProduct.priceOut')}</Label>
-                <Input
-                  ref={priceOutRef}
-                  id="priceOut"
-                  name="priceOut"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={formatNumberInput(formData.priceOut)}
-                  onChange={handlePriceChange}
-                  required
+                <PricePair
+                  inputRef={(el) => {
+                    priceOutRef.current = el;
+                  }}
+                  value={formData.priceOut}
+                  pct={priceTwins.priceOutPct}
+                  base={Number(digitsOnly(formData.priceIn)) || 0}
                   error={errors.priceOut}
-                  hint={errors.priceOut ? (t('addProduct.errors.priceOutRequired') || 'Price out is required and must be greater than 0') : undefined}
+                  onChange={(patch) =>
+                    onTierChange("priceOut", "priceOutPct", "priceOutDriver", patch)
+                  }
                 />
+                {errors.priceOut && (
+                  <p className="mt-1.5 text-xs text-error-450">
+                    {t('addProduct.errors.priceOutRequired') || 'Price out is required and must be greater than 0'}
+                  </p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="priceWholesale">{t('addProduct.priceWholesale') || 'Wholesale price'}</Label>
-                <Input
-                  id="priceWholesale"
-                  name="priceWholesale"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={formatNumberInput(formData.priceWholesale)}
-                  onChange={handlePriceChange}
+                <PricePair
+                  value={formData.priceWholesale}
+                  pct={priceTwins.priceWholesalePct}
+                  base={Number(digitsOnly(formData.priceIn)) || 0}
+                  onChange={(patch) =>
+                    onTierChange("priceWholesale", "priceWholesalePct", "priceWholesaleDriver", patch)
+                  }
                 />
               </div>
 
               <div>
                 <Label htmlFor="priceBundle">{t('addProduct.priceBundle') || 'Bundle price'}</Label>
-                <Input
-                  id="priceBundle"
-                  name="priceBundle"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={formatNumberInput(formData.priceBundle)}
-                  onChange={handlePriceChange}
+                <PricePair
+                  value={formData.priceBundle}
+                  pct={priceTwins.priceBundlePct}
+                  base={Number(digitsOnly(formData.priceIn)) || 0}
+                  onChange={(patch) =>
+                    onTierChange("priceBundle", "priceBundlePct", "priceBundleDriver", patch)
+                  }
                 />
               </div>
 
