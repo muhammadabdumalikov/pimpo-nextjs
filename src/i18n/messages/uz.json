@@ -542,7 +542,32 @@
     "next": "Keyingi",
     "limitReached": "Limitga yetildi (maks. {limit} mahsulot)",
     "limitInfo": "{current}/{limit} mahsulot",
-    "upgradeCta": "Tarifni yangilash"
+    "upgradeCta": "Tarifni yangilash",
+    "statsCatalog": "Katalog",
+    "statsNames": "nom",
+    "statsUnitsSuffix": "birlik jami",
+    "statsValue": "Ombor qiymati",
+    "statsSupply": "Tannarx bo'yicha",
+    "statsRetail": "Sotuv narxida",
+    "statsProfit": "kutilayotgan foyda",
+    "statsHealth": "Qoldiq holati",
+    "statsInStock": "Sotuvda",
+    "statsLowStock": "Kam qoldiq",
+    "statsOutOfStock": "Tugagan",
+    "statsBillion": "mlrd",
+    "statsMillion": "mln",
+    "statsThousand": "ming",
+    "hideStats": "Statistikani yashirish",
+    "showStats": "Statistikani ko'rsatish",
+    "filters": "Filtrlar",
+    "clearFilters": "Tozalash",
+    "showResults": "Natijalarni ko'rish",
+    "filterBranch": "Do'kon",
+    "allBranches": "Barcha do'konlar",
+    "filterCategory": "Toifa",
+    "allCategories": "Barcha toifalar",
+    "filterStock": "Qoldiq holati",
+    "allStock": "Barchasi"
   },
   "categories": {
     "title": "Kategoriyalar",
@@ -968,7 +993,8 @@
     "procCompleted": "Import yakunlandi",
     "store": "Do'kon",
     "selectStore": "Do'konni tanlang",
-    "storeRequired": "Do'kon tanlanishi shart"
+    "storeRequired": "Do'kon tanlanishi shart",
+    "changedProducts": "O'zgargan mahsulotlar"
   },
   "transfers": {
     "title": "Filiallararo ko'chirish",
@@ -1391,7 +1417,8 @@
     "retry": "Qayta urinish",
     "previous": "Oldingi",
     "next": "Keyingi",
-    "close": "Yopish"
+    "close": "Yopish",
+    "perPage": "ta sahifada"
   },
   "auth": {
     "backToDashboard": "Boshqaruv paneliga qaytish",

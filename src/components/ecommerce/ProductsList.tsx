@@ -12,11 +12,24 @@ import Image from "next/image";
 import { PlusIcon, ChevronLeftIcon, PencilIcon, TrashBinIcon } from "@/icons/index";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
-import { getProducts, getProductCount, deleteProduct, type Product } from "@/lib/api";
+import {
+  getProducts,
+  getProductStats,
+  getBranches,
+  getCategories,
+  deleteProduct,
+  type Product,
+  type ProductStats,
+  type Branch,
+  type Category,
+  type StockStatusFilter,
+} from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useRouter } from "next/navigation";
 import Pagination from "@/components/ui/pagination/Pagination";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import CatalogStats from "./CatalogStats";
+import SelectField from "@/components/form/SelectField";
 
 // Format a UZS price string as grouped so'm (matches the rest of the dashboard).
 // Returns "—" for empty/unset optional tiers (wholesale, bundle).
@@ -35,50 +48,112 @@ export default function ProductsList() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
-  const itemsPerPage = 7;
+  // Whole-catalogue stats (respect search + filters, not the visible page).
+  const [stats, setStats] = useState<ProductStats | null>(null);
+  // Filters — the stock chips live in the stats panel; branch/category/stock
+  // also live in the filter drawer next to the search box.
+  const [stockFilter, setStockFilter] = useState<StockStatusFilter | "">("");
+  const [branchId, setBranchId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  // Inline filter panel under the search row (UserDebtList pattern) — selects
+  // apply live, since the table stays visible right below while filtering.
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  // Bumped after a delete so both the list and the stats refetch.
+  const [reloadKey, setReloadKey] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Check product limit
   const productLimit = getLimit('products');
   const productLimitReached = productLimit !== null && isLimitReached('products', totalProducts);
 
-  const loadProducts = async () => {
-    try {
-      setIsLoading(true);
-      const response = await getProducts(currentPage, itemsPerPage, searchQuery || undefined);
-      setProducts(response.products);
-      setTotalProducts(response.total);
-    } catch (error: any) {
-      console.error('Failed to load products:', error);
-      showToast('error', error.message || 'Failed to load products', 'Error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const activeFilterCount = [branchId, categoryId, stockFilter].filter(Boolean).length;
 
-  // Fetch products from API when page changes
+  // Filter-drawer option sources (fail quietly — the selects just stay empty).
   useEffect(() => {
-    loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
+    getBranches()
+      .then((res) => setBranches(res.branches))
+      .catch(() => setBranches([]));
+    getCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
+  }, []);
 
-  // Debounce search and reset to page 1
+  // Debounce the search box and restart paging when the query settles.
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (currentPage === 1) {
-        loadProducts();
-      } else {
-        setCurrentPage(1);
-      }
-    }, 500);
-
+      setDebouncedSearch(searchQuery.trim());
+      setCurrentPage(1);
+    }, 400);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
+
+  // Current page of rows (server-side search + filters + pagination).
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        setIsLoading(true);
+        const response = await getProducts(
+          currentPage,
+          itemsPerPage,
+          debouncedSearch || undefined,
+          branchId || undefined,
+          stockFilter || undefined,
+          categoryId || undefined,
+        );
+        if (active) {
+          setProducts(response.products);
+          setTotalProducts(response.total);
+        }
+      } catch (error: any) {
+        console.error('Failed to load products:', error);
+        showToast('error', error.message || 'Failed to load products', 'Error');
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, itemsPerPage, debouncedSearch, branchId, categoryId, stockFilter, reloadKey]);
+
+  // Catalogue stats for the pulse panel — independent of the stock filter so
+  // all three chips keep their counts while one is selected.
+  useEffect(() => {
+    let active = true;
+    getProductStats(debouncedSearch || undefined, branchId || undefined, categoryId || undefined)
+      .then((s) => {
+        if (active) setStats(s);
+      })
+      .catch(() => {
+        if (active) setStats(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [debouncedSearch, branchId, categoryId, reloadKey]);
+
+  // Toggle a stock bucket (clicking the active chip clears it) and restart paging.
+  const toggleStockFilter = (s: StockStatusFilter) => {
+    setStockFilter((prev) => (prev === s ? "" : s));
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setBranchId("");
+    setCategoryId("");
+    setStockFilter("");
+    setCurrentPage(1);
+  };
 
   // Calculate pagination
   const totalPages = Math.ceil(totalProducts / itemsPerPage);
@@ -124,8 +199,8 @@ export default function ProductsList() {
       await deleteProduct(productToDelete);
       showToast('success', t('products.deleteSuccess') || 'Product deleted successfully', 'Success');
       setProductToDelete(null);
-      // Reload products
-      await loadProducts();
+      // Refetch the list and the stats panel.
+      setReloadKey((k) => k + 1);
     } catch (error: any) {
       console.error('Failed to delete product:', error);
       showToast('error', error.message || t('products.deleteError') || 'Failed to delete product', 'Error');
@@ -179,8 +254,15 @@ export default function ProductsList() {
         </div>
       </div>
 
+      {/* Catalog pulse — size, value rail, stock health (chips filter the table) */}
+      <CatalogStats
+        stats={stats}
+        activeStock={stockFilter}
+        onToggleStock={toggleStockFilter}
+      />
+
       {/* Search and Filter Bar */}
-      <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-md">
           <span className="absolute -translate-y-1/2 left-4 top-1/2 pointer-events-none">
             <svg
@@ -208,7 +290,129 @@ export default function ProductsList() {
           />
         </div>
 
+        {/* Toggles the inline filter panel — badge shows active filter count */}
+        <button
+          type="button"
+          onClick={() => setIsFilterOpen((v) => !v)}
+          aria-expanded={isFilterOpen}
+          className={`inline-flex h-11 items-center gap-2 rounded-lg border px-4 text-theme-sm font-medium shadow-theme-xs transition-colors ${
+            activeFilterCount > 0 || isFilterOpen
+              ? "border-brand-300 bg-brand-50 text-brand-600 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/15"
+              : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+          }`}
+        >
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M4 6h16M7 12h10M10 18h4" />
+          </svg>
+          {t('products.filters')}
+          {activeFilterCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1 text-xs font-semibold text-white">
+              {activeFilterCount}
+            </span>
+          )}
+          <svg
+            className={`h-3.5 w-3.5 transition-transform duration-200 ${isFilterOpen ? "rotate-180" : ""}`}
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M5 8l5 5 5-5" />
+          </svg>
+        </button>
       </div>
+
+      {/* Inline filter panel — selects apply live; the table updates below */}
+      {isFilterOpen && (
+        <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {branches.length > 0 && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                  {t('products.filterBranch')}
+                </label>
+                <SelectField
+                  className="w-full"
+                  buttonClassName="h-10"
+                  value={branchId}
+                  onChange={(v) => {
+                    setBranchId(v);
+                    setCurrentPage(1);
+                  }}
+                  options={[
+                    { value: "", label: t('products.allBranches') },
+                    ...branches.map((b) => ({ value: b.id, label: b.name })),
+                  ]}
+                  placeholder={t('products.allBranches')}
+                />
+              </div>
+            )}
+            {categories.length > 0 && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                  {t('products.filterCategory')}
+                </label>
+                <SelectField
+                  className="w-full"
+                  buttonClassName="h-10"
+                  value={categoryId}
+                  onChange={(v) => {
+                    setCategoryId(v);
+                    setCurrentPage(1);
+                  }}
+                  options={[
+                    { value: "", label: t('products.allCategories') },
+                    ...categories.map((c) => ({ value: c.id, label: c.name })),
+                  ]}
+                  placeholder={t('products.allCategories')}
+                />
+              </div>
+            )}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                {t('products.filterStock')}
+              </label>
+              <SelectField
+                className="w-full"
+                buttonClassName="h-10"
+                value={stockFilter}
+                onChange={(v) => {
+                  setStockFilter(v as StockStatusFilter | "");
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: "", label: t('products.allStock') },
+                  { value: "in", label: t('products.statsInStock') },
+                  { value: "low", label: t('products.statsLowStock') },
+                  { value: "out", label: t('products.statsOutOfStock') },
+                ]}
+                placeholder={t('products.allStock')}
+              />
+            </div>
+          </div>
+          {activeFilterCount > 0 && (
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-theme-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                {t('products.clearFilters')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Products Table */}
       <div className="w-full overflow-x-auto -mx-4 sm:-mx-6" style={{ scrollbarGutter: 'stable' }}>
@@ -462,6 +666,10 @@ export default function ProductsList() {
         totalItems={totalProducts}
         itemsPerPage={itemsPerPage}
         onPageChange={handlePageChange}
+        onItemsPerPageChange={(n) => {
+          setItemsPerPage(n);
+          setCurrentPage(1);
+        }}
       />
 
       <ConfirmModal

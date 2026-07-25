@@ -542,7 +542,32 @@
     "next": "Следующая",
     "limitReached": "Достигнут лимит ({limit} товаров макс.)",
     "limitInfo": "{current}/{limit} товаров",
-    "upgradeCta": "Повысить тариф"
+    "upgradeCta": "Повысить тариф",
+    "statsCatalog": "Каталог",
+    "statsNames": "наим.",
+    "statsUnitsSuffix": "единиц всего",
+    "statsValue": "Стоимость склада",
+    "statsSupply": "По себестоимости",
+    "statsRetail": "В розничных ценах",
+    "statsProfit": "ожидаемая прибыль",
+    "statsHealth": "Состояние остатков",
+    "statsInStock": "В наличии",
+    "statsLowStock": "Мало",
+    "statsOutOfStock": "Нет в наличии",
+    "statsBillion": "млрд",
+    "statsMillion": "млн",
+    "statsThousand": "тыс.",
+    "hideStats": "Скрыть статистику",
+    "showStats": "Показать статистику",
+    "filters": "Фильтры",
+    "clearFilters": "Сбросить",
+    "showResults": "Показать результаты",
+    "filterBranch": "Магазин",
+    "allBranches": "Все магазины",
+    "filterCategory": "Категория",
+    "allCategories": "Все категории",
+    "filterStock": "Статус остатка",
+    "allStock": "Все"
   },
   "categories": {
     "title": "Категории",
@@ -968,7 +993,8 @@
     "procCompleted": "Импорт завершён",
     "store": "Магазин",
     "selectStore": "Выберите магазин",
-    "storeRequired": "Необходимо выбрать магазин"
+    "storeRequired": "Необходимо выбрать магазин",
+    "changedProducts": "Изменённых товаров"
   },
   "transfers": {
     "title": "Перемещение между магазинами",
@@ -1391,7 +1417,8 @@
     "retry": "Повторить",
     "previous": "Назад",
     "next": "Вперёд",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "perPage": "на странице"
   },
   "auth": {
     "backToDashboard": "Назад в панель",

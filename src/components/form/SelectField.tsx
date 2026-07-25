@@ -56,6 +56,12 @@ interface SelectFieldProps {
    * cart/table row. Off by default (menu is absolutely positioned inline).
    */
   portal?: boolean;
+  /**
+   * Open the menu above the trigger instead of below — for controls near the
+   * bottom of the page/card (e.g. the pagination page-size select) where a
+   * downward menu would be clipped or run off-screen.
+   */
+  dropUp?: boolean;
 }
 
 /**
@@ -82,6 +88,7 @@ export default function SelectField({
   autoFocus = false,
   onOpen,
   portal = false,
+  dropUp = false,
 }: SelectFieldProps) {
   const { t } = useTranslations();
   const [open, setOpen] = useState(false);
@@ -89,7 +96,8 @@ export default function SelectField({
   // Portal menu position (fixed coords derived from the trigger). Null until the
   // trigger has been measured; only used when `portal` is on.
   const [menuPos, setMenuPos] = useState<{
-    top: number;
+    top?: number;
+    bottom?: number;
     left: number;
     width: number;
   } | null>(null);
@@ -164,8 +172,14 @@ export default function SelectField({
     const el = buttonRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    setMenuPos({ top: r.bottom + 6, left: r.left, width: r.width });
-  }, []);
+    // dropUp anchors the menu's bottom edge above the trigger, so it grows
+    // upward regardless of its (unknown) height.
+    setMenuPos(
+      dropUp
+        ? { bottom: window.innerHeight - r.top + 6, left: r.left, width: r.width }
+        : { top: r.bottom + 6, left: r.left, width: r.width },
+    );
+  }, [dropUp]);
 
   useLayoutEffect(() => {
     if (open && portal) updateMenuPos();
@@ -302,13 +316,16 @@ export default function SelectField({
                   ? {
                       position: "fixed",
                       top: menuPos.top,
+                      bottom: menuPos.bottom,
                       left: menuPos.left,
                       width: menuPos.width,
                     }
                   : undefined
               }
               className={`${
-                portal ? "z-[70]" : "absolute left-0 right-0 z-40 mt-1.5"
+                portal
+                  ? "z-[70]"
+                  : `absolute left-0 right-0 z-40 ${dropUp ? "bottom-full mb-1.5" : "mt-1.5"}`
               } rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark`}
             >
           {showSearch && (

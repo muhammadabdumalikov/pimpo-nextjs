@@ -34,10 +34,11 @@ export default function SuppliersManagement() {
   const [toDelete, setToDelete] = useState<Supplier | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
 
-  const totalPages = Math.max(1, Math.ceil(suppliers.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(suppliers.length / itemsPerPage));
   const page = Math.min(currentPage, totalPages);
-  const paginated = suppliers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const paginated = suppliers.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const load = async () => {
     try {
@@ -209,8 +210,12 @@ export default function SuppliersManagement() {
         currentPage={page}
         totalPages={totalPages}
         totalItems={suppliers.length}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={itemsPerPage}
         onPageChange={(p) => setCurrentPage(Math.min(Math.max(1, p), totalPages))}
+        onItemsPerPageChange={(n) => {
+          setItemsPerPage(n);
+          setCurrentPage(1);
+        }}
       />
 
       <Modal isOpen={isModalOpen} onClose={closeModal} className="max-w-lg w-full mx-4 p-6 sm:p-8">

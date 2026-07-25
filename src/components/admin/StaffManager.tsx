@@ -44,10 +44,11 @@ export default function StaffManager() {
   const [toDelete, setToDelete] = useState<Staff | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
 
-  const totalPages = Math.max(1, Math.ceil(staff.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(staff.length / itemsPerPage));
   const page = Math.min(currentPage, totalPages);
-  const paginated = staff.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const paginated = staff.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const load = async () => {
     try {
@@ -253,8 +254,12 @@ export default function StaffManager() {
         currentPage={page}
         totalPages={totalPages}
         totalItems={staff.length}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={itemsPerPage}
         onPageChange={(p) => setCurrentPage(Math.min(Math.max(1, p), totalPages))}
+        onItemsPerPageChange={(n) => {
+          setItemsPerPage(n);
+          setCurrentPage(1);
+        }}
       />
 
       {/* Add / Edit modal */}

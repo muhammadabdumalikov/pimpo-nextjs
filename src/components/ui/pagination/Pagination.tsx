@@ -2,6 +2,9 @@
 
 import React from "react";
 import { useTranslations } from "@/hooks/useTranslations";
+import SelectField from "@/components/form/SelectField";
+
+const DEFAULT_PAGE_SIZES = [10, 20, 50, 100];
 
 interface PaginationProps {
   /** 1-based current page. */
@@ -13,6 +16,13 @@ interface PaginationProps {
   /** Page size, used to compute the "X–Y" range. */
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  /**
+   * When provided, renders a page-size select next to the summary. The parent
+   * owns the size (and should reset to page 1 when it changes).
+   */
+  onItemsPerPageChange?: (size: number) => void;
+  /** Page-size choices (default 10/20/50/100). */
+  pageSizeOptions?: number[];
 }
 
 /**
@@ -25,6 +35,8 @@ export default function Pagination({
   totalItems,
   itemsPerPage,
   onPageChange,
+  onItemsPerPageChange,
+  pageSizeOptions = DEFAULT_PAGE_SIZES,
 }: PaginationProps) {
   const { t } = useTranslations();
   const pages = Math.max(1, totalPages);
@@ -33,9 +45,27 @@ export default function Pagination({
 
   return (
     <div className="flex flex-col gap-4 pt-4 mt-4 -mx-4 sm:-mx-6 px-4 sm:px-6 border-t border-gray-100 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-sm text-gray-500 dark:text-gray-400">
-        {t("common.showing")} {from} {t("common.to")} {to} {t("common.of")}{" "}
-        {totalItems} {t("common.results")}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
+        <span>
+          {t("common.showing")} {from} {t("common.to")} {to} {t("common.of")}{" "}
+          {totalItems} {t("common.results")}
+        </span>
+        {onItemsPerPageChange && (
+          <span className="flex items-center gap-2">
+            <SelectField
+              className="w-[88px] shrink-0"
+              buttonClassName="h-9"
+              dropUp
+              value={String(itemsPerPage)}
+              onChange={(v) => onItemsPerPageChange(Number(v))}
+              options={pageSizeOptions.map((n) => ({
+                value: String(n),
+                label: String(n),
+              }))}
+            />
+            <span className="whitespace-nowrap">{t("common.perPage")}</span>
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <button

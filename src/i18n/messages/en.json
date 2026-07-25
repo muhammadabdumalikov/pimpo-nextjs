@@ -542,7 +542,32 @@
     "next": "Next",
     "limitReached": "Limit reached ({limit} products max)",
     "limitInfo": "{current}/{limit} products",
-    "upgradeCta": "Upgrade plan"
+    "upgradeCta": "Upgrade plan",
+    "statsCatalog": "Catalog",
+    "statsNames": "items",
+    "statsUnitsSuffix": "units total",
+    "statsValue": "Stock value",
+    "statsSupply": "At supply price",
+    "statsRetail": "At retail price",
+    "statsProfit": "expected profit",
+    "statsHealth": "Stock health",
+    "statsInStock": "In stock",
+    "statsLowStock": "Low stock",
+    "statsOutOfStock": "Out of stock",
+    "statsBillion": "bn",
+    "statsMillion": "mln",
+    "statsThousand": "k",
+    "hideStats": "Hide statistics",
+    "showStats": "Show statistics",
+    "filters": "Filters",
+    "clearFilters": "Clear",
+    "showResults": "Show results",
+    "filterBranch": "Store",
+    "allBranches": "All stores",
+    "filterCategory": "Category",
+    "allCategories": "All categories",
+    "filterStock": "Stock status",
+    "allStock": "All"
   },
   "categories": {
     "title": "Categories",
@@ -968,7 +993,8 @@
     "procCompleted": "Import completed",
     "store": "Store",
     "selectStore": "Select a store",
-    "storeRequired": "A store must be selected"
+    "storeRequired": "A store must be selected",
+    "changedProducts": "Changed products"
   },
   "transfers": {
     "title": "Branch transfers",
@@ -1391,7 +1417,8 @@
     "retry": "Try again",
     "previous": "Previous",
     "next": "Next",
-    "close": "Close"
+    "close": "Close",
+    "perPage": "per page"
   },
   "auth": {
     "backToDashboard": "Back to dashboard",

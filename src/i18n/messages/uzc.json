@@ -122,7 +122,32 @@
     "next": "Кейинги",
     "limitReached": "Лимитга етилди (макс. {limit} маҳсулот)",
     "limitInfo": "{current}/{limit} маҳсулот",
-    "upgradeCta": "Тарифни янгилаш"
+    "upgradeCta": "Тарифни янгилаш",
+    "statsCatalog": "Каталог",
+    "statsNames": "ном",
+    "statsUnitsSuffix": "бирлик жами",
+    "statsValue": "Омбор қиймати",
+    "statsSupply": "Таннарх бўйича",
+    "statsRetail": "Сотув нархида",
+    "statsProfit": "кутилаётган фойда",
+    "statsHealth": "Қолдиқ ҳолати",
+    "statsInStock": "Сотувда",
+    "statsLowStock": "Кам қолдиқ",
+    "statsOutOfStock": "Тугаган",
+    "statsBillion": "млрд",
+    "statsMillion": "млн",
+    "statsThousand": "минг",
+    "hideStats": "Статистикани яшириш",
+    "showStats": "Статистикани кўрсатиш",
+    "filters": "Филтрлар",
+    "clearFilters": "Тозалаш",
+    "showResults": "Натижаларни кўриш",
+    "filterBranch": "Дўкон",
+    "allBranches": "Барча дўконлар",
+    "filterCategory": "Тоифа",
+    "allCategories": "Барча тоифалар",
+    "filterStock": "Қолдиқ ҳолати",
+    "allStock": "Барчаси"
   },
   "categories": {
     "title": "Категориялар",
@@ -548,7 +573,8 @@
     "procCompleted": "Импорт якунланди",
     "store": "Дўкон",
     "selectStore": "Дўконни танланг",
-    "storeRequired": "Дўкон танланиши шарт"
+    "storeRequired": "Дўкон танланиши шарт",
+    "changedProducts": "Ўзгарган маҳсулотлар"
   },
   "transfers": {
     "title": "Филиаллараро кўчириш",
@@ -971,7 +997,8 @@
     "retry": "Қайта уриниш",
     "previous": "Олдинги",
     "next": "Кейинги",
-    "close": "Ёпиш"
+    "close": "Ёпиш",
+    "perPage": "та саҳифада"
   },
   "auth": {
     "backToDashboard": "Бошқарув панелига қайтиш",

@@ -58,6 +58,7 @@ export default function ReceiptsManagement() {
   const [payFilter, setPayFilter] = useState("");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
   const [isLoading, setIsLoading] = useState(true);
   const [configOpen, setConfigOpen] = useState(false);
   // Excel export: checkboxes are always visible; the "Excel" button exports the
@@ -96,7 +97,7 @@ export default function ReceiptsManagement() {
         setIsLoading(true);
         const res = await getReceipts(
           page,
-          ITEMS_PER_PAGE,
+          itemsPerPage,
           supplierFilter || undefined,
           undefined,
           undefined,
@@ -118,7 +119,7 @@ export default function ReceiptsManagement() {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, supplierFilter, branchFilter, payFilter]);
+  }, [page, itemsPerPage, supplierFilter, branchFilter, payFilter]);
 
   const payTabs: { key: string; label: string }[] = [
     { key: "", label: t("goodsReceipt.allPayments") },
@@ -200,7 +201,7 @@ export default function ReceiptsManagement() {
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
 
   return (
     <div className="min-h-fill overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
@@ -380,8 +381,12 @@ export default function ReceiptsManagement() {
         currentPage={page}
         totalPages={totalPages}
         totalItems={total}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={itemsPerPage}
         onPageChange={(p) => setPage(Math.min(Math.max(1, p), totalPages))}
+        onItemsPerPageChange={(n) => {
+          setItemsPerPage(n);
+          setPage(1);
+        }}
       />
     </div>
   );

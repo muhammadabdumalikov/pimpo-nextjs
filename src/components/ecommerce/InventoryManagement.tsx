@@ -50,6 +50,7 @@ export default function InventoryManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
   const [isExporting, setIsExporting] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
   // "" = all branches (shows the cross-branch total); a branch id shows that
@@ -112,7 +113,7 @@ export default function InventoryManagement() {
         setIsLoading(true);
         const res = await getProducts(
           currentPage,
-          ITEMS_PER_PAGE,
+          itemsPerPage,
           debouncedSearch || undefined,
           branchId || undefined,
           statusFilter || undefined,
@@ -131,7 +132,7 @@ export default function InventoryManagement() {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearch, branchId, statusFilter]);
+  }, [currentPage, itemsPerPage, debouncedSearch, branchId, statusFilter]);
 
   // Whole-catalogue stock-status counts (independent of the status filter, so
   // the cards keep showing all four buckets while one is selected).
@@ -155,7 +156,7 @@ export default function InventoryManagement() {
     setCurrentPage(1);
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
   const page = Math.min(currentPage, totalPages);
   const paginated = products;
 
@@ -349,8 +350,12 @@ export default function InventoryManagement() {
         currentPage={page}
         totalPages={totalPages}
         totalItems={total}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={itemsPerPage}
         onPageChange={(p) => setCurrentPage(Math.min(Math.max(1, p), totalPages))}
+        onItemsPerPageChange={(n) => {
+          setItemsPerPage(n);
+          setCurrentPage(1);
+        }}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
 import SelectField from "@/components/form/SelectField";
+import Pagination from "@/components/ui/pagination/Pagination";
 import { Modal } from "@/components/ui/modal";
 import ConfirmModal from "@/components/ui/confirm-modal/ConfirmModal";
 import { exportStockTakeExcel } from "@/lib/stockTakeExcel";
@@ -60,12 +61,25 @@ interface CountRow {
   productName: string;
   bookQty: number;
   countedQty: number;
+  // Raw text in the count box. Kept as a string so in-between states while
+  // typing ("", "0.", "0.12") survive the controlled re-render — a numeric
+  // value would snap "" back to 0 and eat the decimal point mid-entry.
+  // countedQty stays the parsed number for diffs/saves.
+  countedInput: string;
   // Current unit cost — used to show a running diff value while counting (the
   // exact COGS is computed on completion).
   unitCost: number;
   // Whether the counter has reviewed this product ("tekshirildi"). Manual flag,
   // independent of countedQty; drives the review filter + progress.
   checked: boolean;
+}
+
+// Parse the count box text: "" / "." → 0; comma accepted as the decimal
+// separator; rounded to whole grams (3 dp) to match the backend convention.
+function parseCount(raw: string): number {
+  const n = Number(raw.replace(",", "."));
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 1000) / 1000;
 }
 
 function diffClass(n: number): string {
@@ -76,10 +90,18 @@ function diffClass(n: number): string {
       : "text-gray-500 dark:text-gray-400";
 }
 
-// Signed number for the diff column: "+4" / "-4" / "0". The value carries its
-// own sign, so no extra sign glyph (that produced a double "-" and a stray icon).
+// Signed number for the diff column: "+4" / "-4" / "0". Rounds to whole grams
+// (3 dp) first — a float subtraction like 16.8 - 16 yields 0.8000000000000007,
+// so String(n) would leak the noise — then groups thousands.
 function signed(n: number): string {
-  return n > 0 ? `+${n}` : String(n);
+  const r = Math.round(n * 1000) / 1000;
+  if (r === 0) return "0";
+  return r > 0 ? `+${fmtQty(r)}` : `-${fmtQty(r)}`;
+}
+
+// Unsigned quantity with grouping, up to whole grams: 196643.108 → "196 643,108".
+function fmtQty(n: number): string {
+  return Math.abs(n).toLocaleString("uz-UZ", { maximumFractionDigits: 3 });
 }
 
 // Small direction arrow paired with the Excel icon (down = download, up = upload).
@@ -141,6 +163,11 @@ export default function StockTakeCount({ id }: { id: string }) {
   // Review filter ("Barchasi / Tekshirilmagan / Tekshirilgan").
   const [checkFilter, setCheckFilter] = useState<CheckFilter>("all");
 
+  // Client-side pagination over the filtered rows (all rows already live in
+  // state — a full count can be hundreds of products).
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   // `silent` refreshes the data WITHOUT flipping the full-screen loading state —
   // used after an Excel import so the progress dialog isn't yanked away by the
   // page spinner mid-flow.
@@ -160,6 +187,7 @@ export default function StockTakeCount({ id }: { id: string }) {
               productName: it.productName,
               bookQty: it.bookQty,
               countedQty: it.countedQty,
+              countedInput: String(it.countedQty),
               unitCost: Number(it.unitCost ?? 0),
               checked: it.checked,
             })),
@@ -261,7 +289,9 @@ export default function StockTakeCount({ id }: { id: string }) {
         if (existing) {
           nextQty = existing.countedQty + 1;
           return prev.map((r) =>
-            r.productId === product.id ? { ...r, countedQty: nextQty } : r,
+            r.productId === product.id
+              ? { ...r, countedQty: nextQty, countedInput: String(nextQty) }
+              : r,
           );
         }
         return [
@@ -270,6 +300,7 @@ export default function StockTakeCount({ id }: { id: string }) {
             productName: product.name,
             bookQty: 0,
             countedQty: 1,
+            countedInput: "1",
             unitCost: product.unitCost ?? 0,
             checked: false,
           },
@@ -286,20 +317,43 @@ export default function StockTakeCount({ id }: { id: string }) {
   const onPickProduct = useCallback(
     async (value: string) => {
       const opt = productOptions.find((o) => o.value === value);
-      if (opt) addProduct({ id: value, name: opt.label, unitCost: opt.priceIn });
+      if (opt) {
+        addProduct({ id: value, name: opt.label, unitCost: opt.priceIn });
+        // The row is prepended (or its count bumped) — jump to page 1 so the
+        // just-picked product is on screen.
+        setCurrentPage(1);
+      }
     },
     [productOptions, addProduct],
   );
 
   const onCountChange = (productId: string, raw: string) => {
-    const value = raw === "" ? 0 : Number(raw);
+    // Digits + one optional decimal separator ("." or ","); anything else —
+    // letters, minus, a second dot — is ignored so the box can't go invalid.
+    if (!/^\d*[.,]?\d*$/.test(raw)) return;
+    const value = parseCount(raw);
     setRows((prev) =>
       prev.map((r) =>
-        r.productId === productId ? { ...r, countedQty: value } : r,
+        r.productId === productId
+          ? { ...r, countedQty: value, countedInput: raw }
+          : r,
       ),
     );
     // Debounced auto-save so an unsaved edit survives a closed tab / lost network.
     scheduleSave(productId, value);
+  };
+
+  // Tidy the box when leaving it ("" / "0." / ",5" → the parsed number) and
+  // land the pending edit.
+  const onCountBlur = (productId: string) => {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.productId === productId
+          ? { ...r, countedInput: String(r.countedQty) }
+          : r,
+      ),
+    );
+    void flush();
   };
 
   // Toggle a product's reviewed flag. Optimistic — persisted immediately (a
@@ -417,12 +471,18 @@ export default function StockTakeCount({ id }: { id: string }) {
     let shortage = 0;
     let changed = 0;
     for (const r of rows) {
-      const d = r.countedQty - r.bookQty;
+      // Round each diff to whole grams so float noise (16.8 - 16 = 0.800…07)
+      // can't accumulate across the sum.
+      const d = Math.round((r.countedQty - r.bookQty) * 1000) / 1000;
       if (d > 0) surplus += d;
       else if (d < 0) shortage += -d;
       if (d !== 0) changed++;
     }
-    return { surplus, shortage, changed };
+    return {
+      surplus: Math.round(surplus * 1000) / 1000,
+      shortage: Math.round(shortage * 1000) / 1000,
+      changed,
+    };
   }, [rows]);
 
   // Review progress ("X / Y tekshirildi") across all rows, regardless of filter.
@@ -437,6 +497,20 @@ export default function StockTakeCount({ id }: { id: string }) {
     if (checkFilter === "unchecked") return rows.filter((r) => !r.checked);
     return rows;
   }, [rows, checkFilter]);
+
+  // Switching the filter restarts paging so you never land on an empty page.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [checkFilter]);
+
+  // Clamp to the last page as the filtered set shrinks (rows checked out of the
+  // "unchecked" view, an Excel re-import, etc.), then slice the current page.
+  const totalPages = Math.max(1, Math.ceil(visibleRows.length / itemsPerPage));
+  const page = Math.min(currentPage, totalPages);
+  const pagedRows = useMemo(
+    () => visibleRows.slice((page - 1) * itemsPerPage, page * itemsPerPage),
+    [visibleRows, page, itemsPerPage],
+  );
 
   const doComplete = async () => {
     setCompleting(true);
@@ -482,39 +556,107 @@ export default function StockTakeCount({ id }: { id: string }) {
   return (
     <div className="space-y-6">
       <div className={CARD}>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              {stockTake.name}
-            </h3>
-            <p className="text-theme-sm text-gray-400">
-              {stockTake.type === "full"
-                ? t("stockTakes.full")
-                : t("stockTakes.partial")}{" "}
-              · {formatDateTime(stockTake.startedAt)}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5">
+              <h3 className="truncate text-xl font-semibold tracking-tight text-gray-800 dark:text-white/90">
+                {stockTake.name}
+              </h3>
+              <span className="shrink-0 rounded-md border border-gray-200 px-1.5 py-0.5 text-theme-xs font-medium text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                {stockTake.type === "full"
+                  ? t("stockTakes.full")
+                  : t("stockTakes.partial")}
+              </span>
+            </div>
+            <p className="mt-1 text-theme-sm tabular-nums text-gray-400">
+              {formatDateTime(stockTake.startedAt)}
             </p>
           </div>
-          <span
-            className={`inline-flex rounded-full px-2.5 py-0.5 text-theme-xs font-medium ${
-              isCompleted
-                ? "bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400"
-                : "bg-warning-50 text-warning-600 dark:bg-warning-500/10 dark:text-warning-400"
-            }`}
-          >
-            {isCompleted
-              ? t("stockTakes.completed")
-              : t("stockTakes.inProgress")}
-          </span>
+
+          {isCompleted ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-theme-xs font-medium text-success-600 dark:bg-success-500/10 dark:text-success-400">
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 10.5l4 4 8-9" />
+              </svg>
+              {t("stockTakes.completed")}
+            </span>
+          ) : (
+            <div className="flex flex-col items-end gap-1.5">
+              {/* Live status: pulsing dot instead of a static pill */}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-50 px-2.5 py-1 text-theme-xs font-medium text-warning-700 dark:bg-warning-500/10 dark:text-warning-400">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning-500 opacity-60" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-warning-500" />
+                </span>
+                {t("stockTakes.inProgress")}
+              </span>
+              {/* The freeze is a state note, not an alarm — a quiet lock line
+                  instead of a shouting full-width banner */}
+              <span className="inline-flex items-center gap-1.5 text-theme-xs text-gray-400 dark:text-gray-500">
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="4" y="11" width="16" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                </svg>
+                {t("stockTakes.salesFrozen")}
+              </span>
+            </div>
+          )}
         </div>
 
-        {!isCompleted && (
-          <div className="mb-4 rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-theme-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-400">
-            {t("stockTakes.salesFrozen")}
+        {/* Running result while counting — the number the counter cares about */}
+        {!isCompleted && rows.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-2 border-t border-gray-100 pt-3.5 text-theme-sm dark:border-gray-800">
+            <span className="text-gray-400 dark:text-gray-500">
+              {t("stockTakes.diff")}:
+            </span>
+            {preview.surplus === 0 && preview.shortage === 0 ? (
+              <span className="font-medium tabular-nums text-gray-500 dark:text-gray-400">
+                0
+              </span>
+            ) : (
+              <>
+                {preview.surplus > 0 && (
+                  <span
+                    className="rounded-md bg-success-50 px-2 py-0.5 font-medium tabular-nums text-success-600 dark:bg-success-500/10 dark:text-success-400"
+                    title={t("stockTakes.surplus")}
+                  >
+                    +{fmtQty(preview.surplus)}
+                  </span>
+                )}
+                {preview.shortage > 0 && (
+                  <span
+                    className="rounded-md bg-error-50 px-2 py-0.5 font-medium tabular-nums text-error-600 dark:bg-error-500/10 dark:text-error-400"
+                    title={t("stockTakes.shortage")}
+                  >
+                    −{fmtQty(preview.shortage)}
+                  </span>
+                )}
+              </>
+            )}
+            <span className="ml-auto tabular-nums text-gray-400 dark:text-gray-500">
+              {preview.changed}/{rows.length}
+            </span>
           </div>
         )}
 
         {isCompleted && (
-          <div className="mb-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mb-2 mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
               <p className="text-theme-xs uppercase tracking-wide text-gray-400">
                 {t("stockTakes.surplus")}
@@ -693,8 +835,9 @@ export default function StockTakeCount({ id }: { id: string }) {
                 </tr>
               </thead>
               <tbody>
-                {visibleRows.map((r) => {
-                  const diffQty = r.countedQty - r.bookQty;
+                {pagedRows.map((r) => {
+                  const diffQty =
+                    Math.round((r.countedQty - r.bookQty) * 1000) / 1000;
                   const saved = completedById.current.get(r.productId);
                   // Running "farq summasi": the exact stored COGS once completed,
                   // otherwise a live estimate from the product's cost.
@@ -763,17 +906,17 @@ export default function StockTakeCount({ id }: { id: string }) {
                           </span>
                         ) : (
                           <div className="w-24">
+                            {/* Text + decimal keyboard (not type="number"): the
+                                raw string keeps "" and "0." alive while typing,
+                                so counts like 0.123 can actually be entered. */}
                             <Input
-                              type="number"
-                              min="0"
-                              value={r.countedQty}
+                              type="text"
+                              inputMode="decimal"
+                              value={r.countedInput}
                               onChange={(e) =>
                                 onCountChange(r.productId, e.target.value)
                               }
-                              onBlur={() => {
-                                scheduleSave(r.productId, r.countedQty);
-                                void flush();
-                              }}
+                              onBlur={() => onCountBlur(r.productId)}
                             />
                           </div>
                         )}
@@ -796,6 +939,20 @@ export default function StockTakeCount({ id }: { id: string }) {
               </tbody>
             </table>
           </div>
+        )}
+
+        {visibleRows.length > 0 && (
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={visibleRows.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={(p) => setCurrentPage(Math.min(Math.max(1, p), totalPages))}
+            onItemsPerPageChange={(n) => {
+              setItemsPerPage(n);
+              setCurrentPage(1);
+            }}
+          />
         )}
 
         {!isCompleted && (
@@ -824,62 +981,60 @@ export default function StockTakeCount({ id }: { id: string }) {
         onClose={() => !completing && setConfirmComplete(false)}
         className="mx-4 w-full max-w-md p-6 sm:p-7"
       >
-        <h2 className="mb-5 pr-10 text-xl font-semibold text-gray-800 dark:text-white/90">
+        <h2 className="pr-10 text-xl font-semibold text-gray-800 dark:text-white/90">
           {t("stockTakes.complete")}
         </h2>
+        <p className="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">
+          {t("stockTakes.confirmComplete")}
+        </p>
 
-        <div className="mb-4 grid grid-cols-2 gap-3">
-          <div
-            className={`rounded-2xl border p-4 ${
-              preview.surplus > 0
-                ? "border-success-200 bg-success-50 dark:border-success-500/30 dark:bg-success-500/10"
-                : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-white/[0.02]"
-            }`}
-          >
-            <p className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+        {/* Ledger-style result: quiet rows, right-aligned tabular figures —
+            the shortage (money leaving) is the dominant line. */}
+        <div className="my-5 rounded-xl border border-gray-200 dark:border-gray-800">
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5 dark:border-gray-800">
+            <span className="text-theme-sm text-gray-500 dark:text-gray-400">
+              {t("stockTakes.changedProducts")}
+            </span>
+            <span className="tabular-nums text-theme-sm font-medium text-gray-700 dark:text-gray-300">
+              {preview.changed}/{rows.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5 dark:border-gray-800">
+            <span className="text-theme-sm text-gray-500 dark:text-gray-400">
               {t("stockTakes.surplus")}
-            </p>
-            <p
-              className={`mt-1 text-2xl font-bold ${
+            </span>
+            <span
+              className={`tabular-nums text-theme-sm font-medium ${
                 preview.surplus > 0
                   ? "text-success-600 dark:text-success-400"
                   : "text-gray-400 dark:text-gray-500"
               }`}
             >
-              +{preview.surplus}
-            </p>
+              {preview.surplus > 0 ? `+${fmtQty(preview.surplus)}` : "0"}
+            </span>
           </div>
-          <div
-            className={`rounded-2xl border p-4 ${
-              preview.shortage > 0
-                ? "border-error-200 bg-error-50 dark:border-error-500/30 dark:bg-error-500/10"
-                : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-white/[0.02]"
-            }`}
-          >
-            <p className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-              {t("stockTakes.shortage")}
-            </p>
-            <p
-              className={`mt-1 text-2xl font-bold ${
-                preview.shortage > 0
-                  ? "text-error-600 dark:text-error-400"
-                  : "text-gray-400 dark:text-gray-500"
-              }`}
-            >
-              −{preview.shortage}
-            </p>
+          <div className="px-4 py-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-theme-sm text-gray-500 dark:text-gray-400">
+                {t("stockTakes.shortage")}
+              </span>
+              <span
+                className={`tabular-nums font-semibold ${
+                  preview.shortage > 0
+                    ? "text-lg text-error-600 dark:text-error-400"
+                    : "text-theme-sm font-medium text-gray-400 dark:text-gray-500"
+                }`}
+              >
+                {preview.shortage > 0 ? `−${fmtQty(preview.shortage)}` : "0"}
+              </span>
+            </div>
+            {preview.shortage > 0 && (
+              <p className="mt-1 text-theme-xs text-gray-400 dark:text-gray-500">
+                {t("stockTakes.shortageWarn")}
+              </p>
+            )}
           </div>
         </div>
-
-        {preview.shortage > 0 && (
-          <div className="mb-4 rounded-xl border border-warning-200 bg-warning-50 px-3 py-2 text-theme-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-400">
-            {t("stockTakes.shortageWarn")}
-          </div>
-        )}
-
-        <p className="mb-6 text-theme-sm text-gray-500 dark:text-gray-400">
-          {t("stockTakes.confirmComplete")}
-        </p>
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button

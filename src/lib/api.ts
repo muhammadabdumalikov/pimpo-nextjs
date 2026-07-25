@@ -530,7 +530,7 @@ export interface ProductsResponse {
 
 export type StockStatusFilter = 'in' | 'low' | 'out';
 
-export async function getProducts(page?: number, limit?: number, search?: string, branchId?: string, stock?: StockStatusFilter): Promise<ProductsResponse> {
+export async function getProducts(page?: number, limit?: number, search?: string, branchId?: string, stock?: StockStatusFilter, categoryId?: string): Promise<ProductsResponse> {
   const token = getAuthToken();
   if (!token) {
     throw new Error('Not authenticated');
@@ -542,6 +542,7 @@ export async function getProducts(page?: number, limit?: number, search?: string
   if (search) params.append('search', search);
   if (branchId) params.append('branchId', branchId);
   if (stock) params.append('stock', stock);
+  if (categoryId) params.append('categoryId', categoryId);
 
   const response = await fetch(`${API_BASE_URL}/products?${params.toString()}`, {
     method: 'GET',
@@ -559,16 +560,22 @@ export async function getProducts(page?: number, limit?: number, search?: string
   return response.json();
 }
 
-// Whole-catalogue stock-status counts (respects search + branch scoping), so
-// the inventory stat cards reflect the full inventory, not the current page.
+// Whole-catalogue stats (respects search + branch + category scoping), so the
+// stat cards reflect the full (filtered) inventory, not the current page.
 export interface ProductStats {
   total: number;
   inStock: number;
   lowStock: number;
   outOfStock: number;
+  /** Total units on hand across the catalogue (negative rows ignored). */
+  units: number;
+  /** Catalogue value at supply (priceIn) prices, so'm. */
+  supplyValue: number;
+  /** Catalogue value at retail (priceOut) prices, so'm. */
+  retailValue: number;
 }
 
-export async function getProductStats(search?: string, branchId?: string): Promise<ProductStats> {
+export async function getProductStats(search?: string, branchId?: string, categoryId?: string): Promise<ProductStats> {
   const token = getAuthToken();
   if (!token) {
     throw new Error('Not authenticated');
@@ -577,6 +584,7 @@ export async function getProductStats(search?: string, branchId?: string): Promi
   const params = new URLSearchParams();
   if (search) params.append('search', search);
   if (branchId) params.append('branchId', branchId);
+  if (categoryId) params.append('categoryId', categoryId);
   const qs = params.toString();
 
   const response = await fetch(`${API_BASE_URL}/products/stats${qs ? `?${qs}` : ''}`, {
