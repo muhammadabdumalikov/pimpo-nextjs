@@ -32,6 +32,7 @@ import {
   pauseBillzImport,
   resumeBillzImport,
   cancelBillzImport,
+  resetBillzImport,
   type BillzImportEntity,
   type BillzImportJob,
   type BillzImportPhase,
@@ -155,6 +156,7 @@ export default function BillzMigration() {
     null,
   );
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [probeOpen, setProbeOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
@@ -174,7 +176,9 @@ export default function BillzMigration() {
         // Backend without import endpoints yet — connect flow still works.
       }
       try {
-        if (imp?.job && ACTIVE_STATUSES.includes(imp.job.status)) {
+        // Any existing job (active OR finished) → the import view: the terminal
+        // states are where the store resets before it can re-import.
+        if (imp?.job) {
           if (active) setStep("import");
         } else {
           const conn = await getBillzStatus();
@@ -252,6 +256,22 @@ export default function BillzMigration() {
   const confirmCancel = async () => {
     setCancelOpen(false);
     await runAction(cancelBillzImport);
+  };
+
+  // Reset clears the import state so a fresh import is allowed, then returns to
+  // entity selection. Products/categories already in KPOS stay (re-synced next run).
+  const confirmReset = async () => {
+    setResetOpen(false);
+    setActionBusy(true);
+    try {
+      await resetBillzImport();
+      setImportStatus(null);
+      setStep("select");
+    } catch (e) {
+      showToast("error", (e as Error).message, "Error");
+    } finally {
+      setActionBusy(false);
+    }
   };
 
   // ── Derived progress (current phase) ───────────────────────────────────────
@@ -762,21 +782,17 @@ export default function BillzMigration() {
                         {t("integrations.billz.resume")}
                       </Button>
                     )}
+                    {/* Re-import is deliberate + secondary: a completed import is
+                        a settled state with no primary action; re-importing first
+                        clears the state (guard against accidental re-imports). */}
                     <Button
                       size="sm"
-                      variant={
-                        job.status === "cancelled" ? "primary" : "outline"
-                      }
-                      onClick={() => setStep("select")}
-                      startIcon={
-                        job.status !== "completed" ? (
-                          <LuRefreshCw className="h-4 w-4" />
-                        ) : undefined
-                      }
+                      variant="outline"
+                      onClick={() => setResetOpen(true)}
+                      disabled={actionBusy}
+                      startIcon={<LuRefreshCw className="h-4 w-4" />}
                     >
-                      {job.status === "completed"
-                        ? t("integrations.billz.newImport")
-                        : t("integrations.billz.restart")}
+                      {t("integrations.billz.resetReimport")}
                     </Button>
                     <button
                       type="button"
@@ -801,6 +817,17 @@ export default function BillzMigration() {
         title={t("integrations.billz.cancelTitle")}
         message={t("integrations.billz.cancelConfirm")}
         confirmLabel={t("integrations.billz.cancelYes")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={resetOpen}
+        onClose={() => setResetOpen(false)}
+        onConfirm={confirmReset}
+        title={t("integrations.billz.resetTitle")}
+        message={t("integrations.billz.resetConfirm")}
+        confirmLabel={t("integrations.billz.resetYes")}
         cancelLabel={t("common.cancel")}
         variant="danger"
       />

@@ -121,7 +121,8 @@
     "BILLZ_UNAVAILABLE": "Could not reach the BiLLZ server. Please try again later.",
     "BILLZ_NOT_CONNECTED": "BiLLZ is not connected. Verify a secret key first.",
     "BILLZ_IMPORT_ALREADY_ACTIVE": "An import is already queued or running.",
-    "BILLZ_IMPORT_NOT_ACTIVE": "There is no active import to control."
+    "BILLZ_IMPORT_NOT_ACTIVE": "There is no active import to control.",
+    "BILLZ_IMPORT_ALREADY_DONE": "An import already exists for this business. Reset it first to re-import."
   },
   "landing": {
     "nav": {
@@ -2313,7 +2314,11 @@
       "fetchOnlyNote": "These are fetched records — loading into the database hasn't started yet, so the log may be empty.",
       "withCategories": "Import together with categories",
       "withCategoriesOnDesc": "BiLLZ categories are created and products linked to them",
-      "withCategoriesOffDesc": "Only the products are imported — categories are untouched"
+      "withCategoriesOffDesc": "Only the products are imported — categories are untouched",
+      "resetReimport": "Reset & re-import",
+      "resetTitle": "Reset the import and start over",
+      "resetConfirm": "The import state (jobs, staging and log) will be cleared so you can import again. Products and categories already in KPOS are NOT deleted — they'll be re-synced on the next import. The connection (key) is kept. Continue?",
+      "resetYes": "Reset & start"
     }
   },
   "telegramSend": {

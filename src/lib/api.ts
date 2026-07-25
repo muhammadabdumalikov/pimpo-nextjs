@@ -4286,6 +4286,20 @@ export const pauseBillzImport = () => postBillzImportAction('pause');
 export const resumeBillzImport = () => postBillzImportAction('resume');
 export const cancelBillzImport = () => postBillzImportAction('cancel');
 
+/**
+ * Clear the business's import state (jobs + staging + audit log) so a new import
+ * is allowed — the deliberate escape hatch behind the one-import-per-business
+ * guard. Does not touch the verified connection or already-imported data.
+ */
+export async function resetBillzImport(): Promise<{ ok: true }> {
+  const response = await fetch(`${API_BASE_URL}/billz/import/reset`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to reset BiLLZ import');
+  return response.json();
+}
+
 /** Cumulative migrated-record log, newest first, business-scoped. */
 export async function getBillzImportItems(params: {
   entity: BillzImportEntity;

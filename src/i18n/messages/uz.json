@@ -121,7 +121,8 @@
     "BILLZ_UNAVAILABLE": "BiLLZ serveriga ulanib bo'lmadi. Birozdan so'ng qayta urinib ko'ring.",
     "BILLZ_NOT_CONNECTED": "BiLLZ ulanmagan. Avval maxfiy kalitni tasdiqlang.",
     "BILLZ_IMPORT_ALREADY_ACTIVE": "Import allaqachon navbatda yoki ishlamoqda.",
-    "BILLZ_IMPORT_NOT_ACTIVE": "Boshqariladigan faol import yo'q."
+    "BILLZ_IMPORT_NOT_ACTIVE": "Boshqariladigan faol import yo'q.",
+    "BILLZ_IMPORT_ALREADY_DONE": "Bu do'kon uchun import allaqachon mavjud. Qayta import qilish uchun avval tozalang."
   },
   "landing": {
     "nav": {
@@ -2313,7 +2314,11 @@
       "fetchOnlyNote": "Quyidagilar yuklab olingan yozuvlar — bazaga yozish hali boshlanmagani uchun jurnal bo'sh bo'lishi mumkin.",
       "withCategories": "Kategoriyalari bilan import qilish",
       "withCategoriesOnDesc": "BiLLZ kategoriyalari yaratiladi va mahsulotlar ularga bog'lanadi",
-      "withCategoriesOffDesc": "Faqat mahsulotlar import qilinadi — kategoriyalarga tegilmaydi"
+      "withCategoriesOffDesc": "Faqat mahsulotlar import qilinadi — kategoriyalarga tegilmaydi",
+      "resetReimport": "Tozalab qayta import",
+      "resetTitle": "Importни tozalab qayta boshlash",
+      "resetConfirm": "Import holati (joblar, staging va jurnal) tozalanadi va yangidan import qilish mumkin bo'ladi. KPOS'dagi mavjud mahsulot va kategoriyalar o'chirilmaydi — keyingi importда yangilanadi. Ulanish (kalit) ham saqlanadi. Davom etasizmi?",
+      "resetYes": "Tozalab boshlash"
     }
   },
   "telegramSend": {
