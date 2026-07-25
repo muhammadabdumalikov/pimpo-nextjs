@@ -15,6 +15,7 @@ import {
   LuChartPie,
   LuChartColumnBig,
   LuBox,
+  LuUsersRound,
 } from "react-icons/lu";
 import { CgProfile } from "react-icons/cg";
 import { useTranslations } from "@/hooks/useTranslations";
@@ -123,9 +124,17 @@ const AppSidebar: React.FC = () => {
         { name: t('sidebar.checkout'), path: "/cart", pro: false },
         { name: t('sidebar.allSales'), path: "/sales", pro: false },
         { name: t('sidebar.onlineOrders'), path: "/online-orders", pro: false, count: pendingStoreOrders },
-        { name: t('sidebar.userDebt'), path: "/user-debt", pro: false },
         { name: t('sidebar.kassaShifts'), path: "/kassa", pro: false },
         { name: t('sidebar.kassaOperations'), path: "/kassa/operations", pro: false },
+      ],
+    },
+    {
+      icon: <LuUsersRound size={24} />,
+      name: t('sidebar.clients'),
+      subItems: [
+        { name: t('sidebar.customers'), path: "/customers", pro: false },
+        { name: t('sidebar.userDebt'), path: "/user-debt", pro: false },
+        { name: t('sidebar.loyalty'), path: "/loyalty", pro: false },
       ],
     },
     {

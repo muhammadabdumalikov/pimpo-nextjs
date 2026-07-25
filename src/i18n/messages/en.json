@@ -926,7 +926,10 @@
     "reportsTarget": "Plan / actual",
     "onlineOrders": "Online orders",
     "onlineStore": "Online store",
-    "integrations": "Apps"
+    "integrations": "Apps",
+    "clients": "Clients",
+    "loyalty": "Loyalty program",
+    "customers": "Customers"
   },
   "stockTakes": {
     "title": "Stock-take",
@@ -1314,7 +1317,12 @@
     "newSale": "New sale",
     "stockTakeFrozenTitle": "Stock-take in progress",
     "stockTakeFrozenBody": "Sales are frozen until the stock-take is completed.",
-    "discountApplied": "Discount applied"
+    "discountApplied": "Discount applied",
+    "usepoints": "Use points",
+    "pointsAvailable": "Available",
+    "max": "Max",
+    "clear": "✕",
+    "pointsCapHint": "Points can't be applied to this check"
   },
   "roles": {
     "title": "Roles",
@@ -2258,6 +2266,19 @@
     "manage": "Manage",
     "statusConnected": "Connected",
     "statusNotConnected": "Not connected",
+    "notifications": {
+      "title": "Notifications",
+      "subtitle": "Choose which bot messages get sent to your connected chats",
+      "saved": "Saved",
+      "checkoutTitle": "Sales",
+      "checkoutDesc": "Send a message for every completed sale",
+      "cashShiftsTitle": "Cash shifts",
+      "cashShiftsDesc": "Notify when a shift is opened or closed",
+      "cashOperationsTitle": "Cash operations",
+      "cashOperationsDesc": "Notify on manual cash in / out movements",
+      "dailySalesTitle": "Daily sales report",
+      "dailySalesDesc": "Send the end-of-day sales summary at 21:00"
+    },
     "billz": {
       "title": "Migrate from BiLLZ",
       "subtitle": "Import products, customers and images from your BiLLZ 2.0 account into KPOS",
@@ -2360,5 +2381,60 @@
     "noChats": "No connected Telegram chats",
     "noChatsHint": "Connect the Telegram bot first in Settings → Apps.",
     "goToSettings": "Go to settings"
+  },
+  "loyalty": {
+    "title": "Loyalty program",
+    "subtitle": "Give customers cashback on every purchase — points are spent on the next one. To keep regulars coming back.",
+    "saved": "Loyalty settings saved",
+    "points": "pts",
+    "previewLabel": "Live preview",
+    "previewPurchase": "Purchase amount",
+    "previewEarns": "Customer earns",
+    "previewRate": "Cashback",
+    "previewBelowMin": "Below minimum — no cashback",
+    "rulesTitle": "Rules",
+    "cashbackPercent": "Cashback rate",
+    "cashbackHint": "Share of each purchase credited to the customer's balance.",
+    "minPurchase": "Minimum purchase",
+    "minPurchaseHint": "No cashback on purchases below this. 0 — always earn.",
+    "redeemMax": "Redemption cap",
+    "redeemMaxHint": "How much of one check can be paid with points.",
+    "expiry": "Points expiry",
+    "expiryHint": "Months until points expire. Empty — never.",
+    "months": "mo",
+    "never": "Never",
+    "tiersTitle": "Tiers",
+    "tiersHint": "Optional: the higher a customer's lifetime spend, the higher their cashback rate.",
+    "addTier": "Add tier",
+    "removeTier": "Remove tier",
+    "noTiers": "No tiers — a single cashback rate for all customers.",
+    "tierName": "Name",
+    "tierMinTotal": "From total spend",
+    "tierRate": "Cashback",
+    "tierNamePlaceholder": "e.g. Silver",
+    "unsaved": "Unsaved changes",
+    "discard": "Discard",
+    "save": "Save",
+    "saving": "Saving..."
+  },
+  "clients": {
+    "title": "Customers",
+    "subtitle": "Customers and their cashback balance. Click a row for details.",
+    "search": "Search by name or phone",
+    "empty": "No customers found",
+    "customer": "Customer",
+    "balance": "Balance",
+    "tier": "Tier",
+    "totalSpent": "Total spent",
+    "lastVisit": "Last visit",
+    "points": "pts",
+    "history": "Cashback history",
+    "noHistory": "No activity yet",
+    "tx": {
+      "earn": "Cashback earned",
+      "redeem": "Points spent",
+      "adjust": "Adjustment",
+      "expire": "Expired"
+    }
   }
 }

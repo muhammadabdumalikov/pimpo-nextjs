@@ -19,6 +19,7 @@ import {
   getOrders,
   getOrder,
   searchCustomers,
+  getLoyaltySettings,
   getOpenShifts,
   getRegisters,
   getShifts,
@@ -262,6 +263,11 @@ export default function Checkout() {
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
   const [customerFocused, setCustomerFocused] = useState(false);
   const [note, setNote] = useState("");
+  // Loyalty: the program's per-check redeem cap (%, 0 when off) and the selected
+  // customer's spendable balance drive how many bonus points this sale can use.
+  const [loyaltyRedeemPct, setLoyaltyRedeemPct] = useState(0);
+  const [customerBalance, setCustomerBalance] = useState(0);
+  const [redeemAmount, setRedeemAmount] = useState(0);
   // Manual whole-receipt discount: a fixed soʻm amount or a percent of subtotal.
   // Hidden behind a toggle so the common no-discount sale stays uncluttered.
   const [discountType, setDiscountType] = useState<"amount" | "percent">("percent");
@@ -573,10 +579,19 @@ export default function Checkout() {
     };
   }, [customerName, customerUserId]);
 
+  // The program's redeem cap (0 = program off, so no redeem UI shows).
+  useEffect(() => {
+    getLoyaltySettings()
+      .then((s) => setLoyaltyRedeemPct(s.enabled ? Number(s.redeemMaxPercent) || 0 : 0))
+      .catch(() => setLoyaltyRedeemPct(0));
+  }, []);
+
   const selectCustomer = (c: Customer) => {
     setCustomerName(c.name);
     setPhone(formatPhone(c.phone));
     setCustomerUserId(c.id);
+    setCustomerBalance(Number(c.bonusBalance) || 0);
+    setRedeemAmount(0);
     setCustomerResults([]);
     setCustomerFocused(false);
   };
@@ -585,6 +600,8 @@ export default function Checkout() {
     setCustomerName("");
     setPhone("");
     setCustomerUserId(null);
+    setCustomerBalance(0);
+    setRedeemAmount(0);
     setCustomerResults([]);
   };
 
@@ -613,6 +630,20 @@ export default function Checkout() {
     return Math.max(0, Math.min(raw, subtotal));
   }, [discountType, discountValueNum, subtotal]);
   const total = Math.max(0, subtotal - discountAmount);
+
+  // Loyalty redeem: bonus points spendable on this sale, capped by the
+  // customer's balance and the program's per-check cap (% of total). `payable`
+  // is what real tenders must cover after points are applied.
+  const maxRedeem = useMemo(() => {
+    if (!loyaltyRedeemPct || customerBalance <= 0 || total <= 0) return 0;
+    return Math.min(
+      customerBalance,
+      Math.floor((total * loyaltyRedeemPct) / 100),
+      total,
+    );
+  }, [loyaltyRedeemPct, customerBalance, total]);
+  const redeem = Math.min(Math.max(0, redeemAmount), maxRedeem);
+  const payable = Math.max(0, total - redeem);
   // "dona" badge: sum piece counts, but a weighted line counts as one item
   // (its fractional kg isn't a piece count).
   const itemCount = useMemo(
@@ -696,17 +727,19 @@ export default function Checkout() {
   // Everything that isn't cash or debt: card + the configurable methods
   // (UzCard, Click, …). None of them produce change.
   const nonCashEntered = totalEntered - cashEntered - debtEntered;
-  const payRemaining = Math.max(0, total - totalEntered);
+  // Payment entries cover the payable (total less redeemed points), not the
+  // gross total — the points already settle their share.
+  const payRemaining = Math.max(0, payable - totalEntered);
   const hasDebt = payEntries.some((e) => e.method === "debt");
   // Change is only ever given from the cash the customer handed over.
-  const cashNeeded = Math.max(0, total - nonCashEntered - debtEntered);
+  const cashNeeded = Math.max(0, payable - nonCashEntered - debtEntered);
   const change = Math.max(0, cashEntered - cashNeeded);
 
   const paymentValid =
     payEntries.length > 0 &&
     payEntries.every((e) => (Number(e.amount) || 0) > 0) &&
-    totalEntered >= total - 0.5 &&
-    nonCashEntered + debtEntered <= total + 0.5 &&
+    totalEntered >= payable - 0.5 &&
+    nonCashEntered + debtEntered <= payable + 0.5 &&
     (!hasDebt ||
       (customerName.trim() !== "" && phone.trim() !== "" && change < 1));
 
@@ -1047,8 +1080,8 @@ export default function Checkout() {
       );
       return;
     }
-    if (prefillCash && payEntries.length === 0 && total > 0) {
-      setPayEntries([{ method: "cash", amount: String(Math.round(total)) }]);
+    if (prefillCash && payEntries.length === 0 && payable > 0) {
+      setPayEntries([{ method: "cash", amount: String(Math.round(payable)) }]);
     }
     setShowPayment(true);
   };
@@ -1070,7 +1103,7 @@ export default function Checkout() {
     }
     setPayEntries((prev) => {
       const entered = prev.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-      const left = Math.max(0, Math.round(total - entered));
+      const left = Math.max(0, Math.round(payable - entered));
       const existing = prev.find((e) => e.method === method);
       if (existing) {
         if (left <= 0) return prev;
@@ -1112,6 +1145,8 @@ export default function Checkout() {
     setPhone("");
     setDueDate("");
     setCustomerUserId(null);
+    setCustomerBalance(0);
+    setRedeemAmount(0);
     setCustomerResults([]);
     setCustomerFocused(false);
     setShowMore(false);
@@ -1461,6 +1496,7 @@ export default function Checkout() {
         shiftId: activeShift.id,
         discountType: discountAmount > 0 ? discountType : undefined,
         discountValue: discountAmount > 0 ? discountValueNum : undefined,
+        redeemPoints: redeem > 0 ? redeem : undefined,
         // Retire the draft this cart was auto-saved as (if any) in the same tx.
         heldOrderId: draftIdRef.current ?? undefined,
       });
@@ -2850,6 +2886,72 @@ export default function Checkout() {
                     </>
                   )}
                 </div>
+
+                {/* Loyalty redeem — only when a client is picked and the program
+                    allows spending points on this sale. */}
+                {customerUserId && loyaltyRedeemPct > 0 && customerBalance > 0 && (
+                  <div className="rounded-lg border border-success-200 bg-success-50/60 p-3 dark:border-success-500/30 dark:bg-success-500/[0.08]">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        {t("checkout.usepoints")}
+                      </span>
+                      <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                        {t("checkout.pointsAvailable")}:{" "}
+                        <b className="text-success-600 dark:text-success-500">
+                          {formatNumberInput(String(customerBalance))}
+                        </b>
+                      </span>
+                    </div>
+                    {maxRedeem > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={redeemAmount > 0 ? formatNumberInput(String(redeemAmount)) : ""}
+                            placeholder="0"
+                            onChange={(e) =>
+                              setRedeemAmount(
+                                Math.min(Number(digitsOnly(e.target.value)) || 0, maxRedeem),
+                              )
+                            }
+                            className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-3 pr-12 text-sm tabular-nums text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
+                          />
+                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                            {currency}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setRedeemAmount(maxRedeem)}
+                          className="h-10 shrink-0 rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                        >
+                          {t("checkout.max")}
+                        </button>
+                        {redeem > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setRedeemAmount(0)}
+                            className="h-10 shrink-0 rounded-lg px-2 text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                          >
+                            {t("checkout.clear") || "✕"}
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400">
+                        {t("checkout.pointsCapHint")}
+                      </p>
+                    )}
+                    {redeem > 0 && (
+                      <p className="mt-2 text-xs tabular-nums text-success-700 dark:text-success-500">
+                        −{formatMoney(redeem)} · {t("checkout.payRemaining") || "To pay"}:{" "}
+                        <b>{formatMoney(payable)}</b>
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="mb-1 inline-block text-xs font-semibold text-gray-700 dark:text-gray-400">
                     {t("checkout.note")}
@@ -2873,7 +2975,7 @@ export default function Checkout() {
               className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 text-base font-semibold text-white shadow-theme-md transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span>
-                {`${t("checkout.pay") || "Pay"}${total > 0 ? ` · ${formatMoney(total)}` : ""}`}
+                {`${t("checkout.pay") || "Pay"}${payable > 0 ? ` · ${formatMoney(payable)}` : ""}`}
               </span>
             </button>
 
@@ -2980,6 +3082,18 @@ export default function Checkout() {
                   <span>{t("checkout.total") || "Total"}</span>
                   <span>{formatMoney(total)}</span>
                 </div>
+                {redeem > 0 && (
+                  <>
+                    <div className="flex justify-between text-success-600 dark:text-success-500">
+                      <span>{t("checkout.usepoints")}</span>
+                      <span>−{formatMoney(redeem)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold">
+                      <span>{t("checkout.payRemaining") || "To pay"}</span>
+                      <span>{formatMoney(payable)}</span>
+                    </div>
+                  </>
+                )}
                 {payEntries.map((e) => (
                   <div key={e.method} className="flex justify-between italic text-gray-500 dark:text-gray-400">
                     <span>{payMethodLabel(e.method)}</span>
@@ -3021,8 +3135,13 @@ export default function Checkout() {
                   {t("checkout.totalPayable") || "Total"}:
                 </p>
                 <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
-                  {formatMoney(total)}
+                  {formatMoney(payable)}
                 </p>
+                {redeem > 0 && (
+                  <p className="mt-0.5 text-xs text-gray-400 line-through">
+                    {formatMoney(total)}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="text-sm font-medium text-success-600 dark:text-success-500">

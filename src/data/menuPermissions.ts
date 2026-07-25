@@ -33,6 +33,13 @@ export const defaultMenuPermissions: MenuPermission[] = [
   // User Debt (nasiya) — core POS; the free floor caps at 20 debts (backend).
   { menuItem: 'userDebt', allowedTiers: FREE },
 
+  // Loyalty program (keshbek/bonus) — Mijozlar. FREE for now so every shop can
+  // set it up; move to BASIC/PRO to make it a paid differentiator.
+  { menuItem: 'loyalty', allowedTiers: FREE },
+
+  // Customers list (loyalty balances) — Mijozlar.
+  { menuItem: 'customers', allowedTiers: FREE },
+
   // Finance (Moliya) — Standart (basic) and up.
   { menuItem: 'finance.categories', allowedTiers: BASIC },
   { menuItem: 'finance.transactions', allowedTiers: BASIC },
@@ -94,6 +101,8 @@ const routeMenuMap: Record<string, string> = {
   '/product': 'ecommerce.productsList',
   '/add-product': 'ecommerce.addProduct',
   '/user-debt': 'userDebt',
+  '/loyalty': 'loyalty',
+  '/customers': 'customers',
   '/subscription-management': 'subscriptionManagement',
   '/settings/receipts': 'settings.receipts',
   '/settings': 'settings',

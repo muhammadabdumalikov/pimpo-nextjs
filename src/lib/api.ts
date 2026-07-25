@@ -1000,6 +1000,9 @@ export interface Customer {
   email: string | null;
   address: string | null;
   isActive: boolean;
+  /** Loyalty: spendable cashback balance (so'm) and lifetime spend. */
+  bonusBalance?: string;
+  totalSpent?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -1605,6 +1608,8 @@ export interface CreateOrderDto {
   source?: string;
   discountType?: "amount" | "percent";
   discountValue?: number;
+  /** Loyalty bonus balance (so'm) to spend on this sale (clamped server-side). */
+  redeemPoints?: number;
   /** Register (kassa) this admin sale is rung up on. */
   registerId?: string;
   /** Cashier shift this sale belongs to (offline may pass it explicitly). */
@@ -1861,6 +1866,139 @@ export async function updateReceiptSettings(
   });
   if (!response.ok)
     await parseError(response, 'Failed to save receipt settings');
+  return response.json();
+}
+
+// ─── Loyalty program (cashback → bonus balance) ─────────────────────────────
+
+/** One accumulating lifetime-spend tier. */
+export interface LoyaltyTier {
+  name: string;
+  minTotal: number;
+  cashbackPercent: number;
+}
+
+export interface LoyaltySettings {
+  businessId: string;
+  enabled: boolean;
+  /** Base cashback rate (%) — decimal string, e.g. "3.00". */
+  cashbackPercent: string;
+  /** Minimum sale total (so'm) to earn — decimal string. */
+  minPurchase: string;
+  /** Max share of a check payable from bonus balance (%) — decimal string. */
+  redeemMaxPercent: string;
+  /** Bonus balance lifetime in months; null = never expires. */
+  expiryMonths: number | null;
+  tiers: LoyaltyTier[];
+  updatedAt?: string;
+}
+
+export interface UpdateLoyaltySettingsDto {
+  enabled?: boolean;
+  cashbackPercent?: number;
+  minPurchase?: number;
+  redeemMaxPercent?: number;
+  expiryMonths?: number | null;
+  tiers?: LoyaltyTier[];
+}
+
+export async function getLoyaltySettings(): Promise<LoyaltySettings> {
+  const response = await fetch(`${API_BASE_URL}/loyalty/settings`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch loyalty settings');
+  return response.json();
+}
+
+export async function updateLoyaltySettings(
+  data: UpdateLoyaltySettingsDto,
+): Promise<LoyaltySettings> {
+  const response = await fetch(`${API_BASE_URL}/loyalty/settings`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to save loyalty settings');
+  return response.json();
+}
+
+/** A customer as seen on the loyalty list — balance + tier + last visit. */
+export interface LoyaltyCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  bonusBalance: string;
+  totalSpent: string;
+  tier: string | null;
+  lastOrderAt: string | null;
+}
+
+export interface LoyaltyCustomersResponse {
+  customers: LoyaltyCustomer[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export type LoyaltyTxType = 'earn' | 'redeem' | 'adjust' | 'expire';
+
+export interface LoyaltyTransaction {
+  id: string;
+  businessId: string;
+  userId: string;
+  orderId: string | null;
+  type: LoyaltyTxType;
+  /** Signed so'm: positive credits, negative debits. Decimal string. */
+  amount: string;
+  balanceAfter: string;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface LoyaltyHistoryResponse {
+  transactions: LoyaltyTransaction[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getLoyaltyCustomers(
+  page?: number,
+  limit?: number,
+  search?: string,
+): Promise<LoyaltyCustomersResponse> {
+  const params = new URLSearchParams();
+  if (page) params.append('page', String(page));
+  if (limit) params.append('limit', String(limit));
+  if (search) params.append('search', search);
+  const qs = params.toString();
+  const response = await fetch(
+    `${API_BASE_URL}/loyalty/customers${qs ? `?${qs}` : ''}`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch loyalty customers');
+  return response.json();
+}
+
+export async function getLoyaltyCustomerHistory(
+  userId: string,
+  page?: number,
+  limit?: number,
+): Promise<LoyaltyHistoryResponse> {
+  const params = new URLSearchParams();
+  if (page) params.append('page', String(page));
+  if (limit) params.append('limit', String(limit));
+  const qs = params.toString();
+  const response = await fetch(
+    `${API_BASE_URL}/loyalty/customers/${userId}/history${qs ? `?${qs}` : ''}`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch loyalty history');
   return response.json();
 }
 
@@ -4160,6 +4298,37 @@ export async function sendDocumentToTelegram(
     body: formData,
   });
   if (!response.ok) await parseError(response, 'Failed to send to Telegram');
+  return response.json();
+}
+
+// Which per-event bot notifications the business has enabled. Mirrors the
+// backend telegram_notification_settings row.
+export interface TelegramNotificationSettings {
+  checkout: boolean;
+  cashShifts: boolean;
+  cashOperations: boolean;
+  dailySales: boolean;
+}
+
+export async function getTelegramNotificationSettings(): Promise<TelegramNotificationSettings> {
+  const response = await fetch(
+    `${API_BASE_URL}/telegram/notification-settings`,
+    {method: 'GET', headers: authHeaders()},
+  );
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch Telegram notification settings');
+  return response.json();
+}
+
+export async function updateTelegramNotificationSettings(
+  data: Partial<TelegramNotificationSettings>,
+): Promise<TelegramNotificationSettings> {
+  const response = await fetch(
+    `${API_BASE_URL}/telegram/notification-settings`,
+    {method: 'PUT', headers: authHeaders(), body: JSON.stringify(data)},
+  );
+  if (!response.ok)
+    await parseError(response, 'Failed to save Telegram notification settings');
   return response.json();
 }
 

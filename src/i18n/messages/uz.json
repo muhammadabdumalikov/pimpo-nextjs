@@ -926,7 +926,10 @@
     "reportsTarget": "Reja / fakt",
     "onlineOrders": "Onlayn buyurtmalar",
     "onlineStore": "Onlayn do'kon",
-    "integrations": "Ilovalar"
+    "integrations": "Ilovalar",
+    "clients": "Mijozlar",
+    "loyalty": "Sodiqlik dasturi",
+    "customers": "Mijozlar"
   },
   "stockTakes": {
     "title": "Inventarizatsiya",
@@ -1314,7 +1317,12 @@
     "discountCustom": "Boshqa",
     "newSale": "Yangi savat",
     "stockTakeFrozenTitle": "Inventarizatsiya ketmoqda",
-    "stockTakeFrozenBody": "Inventarizatsiya tugaguncha sotuv to'xtatilgan."
+    "stockTakeFrozenBody": "Inventarizatsiya tugaguncha sotuv to'xtatilgan.",
+    "usepoints": "Ballardan foydalanish",
+    "pointsAvailable": "Mavjud",
+    "max": "Max",
+    "clear": "✕",
+    "pointsCapHint": "Bu chek uchun ball ishlatib bo'lmaydi"
   },
   "roles": {
     "title": "Rollar",
@@ -2258,6 +2266,19 @@
     "manage": "Boshqarish",
     "statusConnected": "Ulangan",
     "statusNotConnected": "Ulanmagan",
+    "notifications": {
+      "title": "Bildirishnomalar",
+      "subtitle": "Bot ulangan chatlarga qaysi xabarlarni yuborishini tanlang",
+      "saved": "Saqlandi",
+      "checkoutTitle": "Sotuvlar",
+      "checkoutDesc": "Har bir yakunlangan sotuv uchun xabar yuborish",
+      "cashShiftsTitle": "Kassa smenalari",
+      "cashShiftsDesc": "Smena ochilishi va yopilishi haqida xabar berish",
+      "cashOperationsTitle": "Kassa operatsiyalari",
+      "cashOperationsDesc": "Naqd kirim / chiqim harakatlari haqida xabar berish",
+      "dailySalesTitle": "Kunlik hisobot",
+      "dailySalesDesc": "Kun yakunidagi sotuvlar hisobotini 21:00 da yuborish"
+    },
     "billz": {
       "title": "BiLLZ'dan ko'chirish",
       "subtitle": "Mahsulotlar, mijozlar va rasmlarni BiLLZ 2.0 hisobingizdan KPOS'ga import qiling",
@@ -2360,5 +2381,60 @@
     "noChats": "Ulangan Telegram chatlar yo'q",
     "noChatsHint": "Avval Sozlamalar → Ilovalar bo'limida Telegram botni ulang.",
     "goToSettings": "Sozlamalarga o'tish"
+  },
+  "loyalty": {
+    "title": "Sodiqlik dasturi",
+    "subtitle": "Har xariddan mijozga keshbek bering — ballar keyingi xaridda ishlatiladi. Doimiy mijozlarni ushlab qolish uchun.",
+    "saved": "Sodiqlik dasturi saqlandi",
+    "points": "ball",
+    "previewLabel": "Jonli hisob",
+    "previewPurchase": "Xarid summasi",
+    "previewEarns": "Mijoz oladi",
+    "previewRate": "Keshbek",
+    "previewBelowMin": "Minimal summadan past — keshbek yo'q",
+    "rulesTitle": "Qoidalar",
+    "cashbackPercent": "Keshbek foizi",
+    "cashbackHint": "Har xarid summasidan mijoz balansiga qo'shiladigan ulush.",
+    "minPurchase": "Minimal xarid",
+    "minPurchaseHint": "Shu summadan past xaridlarda keshbek berilmaydi. 0 — doim beriladi.",
+    "redeemMax": "Ball bilan to'lash chegarasi",
+    "redeemMaxHint": "Bitta chekning necha foizini ball bilan yopish mumkin.",
+    "expiry": "Ball muddati",
+    "expiryHint": "Ball necha oydan so'ng kuyadi. Bo'sh — hech qachon.",
+    "months": "oy",
+    "never": "Muddatsiz",
+    "tiersTitle": "Darajalar",
+    "tiersHint": "Ixtiyoriy: umumiy xarid summasi oshgani sayin keshbek foizi ko'tariladi.",
+    "addTier": "Daraja qo'shish",
+    "removeTier": "Darajani o'chirish",
+    "noTiers": "Daraja yo'q — barcha mijozlar uchun yagona keshbek foizi.",
+    "tierName": "Nomi",
+    "tierMinTotal": "Umumiy xariddan",
+    "tierRate": "Keshbek",
+    "tierNamePlaceholder": "masalan, Kumush",
+    "unsaved": "Saqlanmagan o'zgarishlar",
+    "discard": "Bekor qilish",
+    "save": "Saqlash",
+    "saving": "Saqlanmoqda..."
+  },
+  "clients": {
+    "title": "Mijozlar",
+    "subtitle": "Mijozlar va ularning keshbek balansi. Tafsilot uchun qatorni bosing.",
+    "search": "Ism yoki telefon bo'yicha qidirish",
+    "empty": "Mijozlar topilmadi",
+    "customer": "Mijoz",
+    "balance": "Balans",
+    "tier": "Daraja",
+    "totalSpent": "Umumiy xarid",
+    "lastVisit": "Oxirgi tashrif",
+    "points": "ball",
+    "history": "Keshbek tarixi",
+    "noHistory": "Hali harakatlar yo'q",
+    "tx": {
+      "earn": "Keshbek olindi",
+      "redeem": "Ball ishlatildi",
+      "adjust": "Tuzatish",
+      "expire": "Muddati o'tdi"
+    }
   }
 }
