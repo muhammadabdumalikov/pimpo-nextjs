@@ -2310,7 +2310,10 @@
         "fPhone": "Phone"
       },
       "failedResumeHint": "Fetched data is saved — “Resume” continues from where it stopped, not from the beginning.",
-      "fetchOnlyNote": "These are fetched records — loading into the database hasn't started yet, so the log may be empty."
+      "fetchOnlyNote": "These are fetched records — loading into the database hasn't started yet, so the log may be empty.",
+      "withCategories": "Import together with categories",
+      "withCategoriesOnDesc": "BiLLZ categories are created and products linked to them",
+      "withCategoriesOffDesc": "Only the products are imported — categories are untouched"
     }
   },
   "telegramSend": {

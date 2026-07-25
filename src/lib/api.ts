@@ -4216,6 +4216,8 @@ export interface BillzImportJob {
   status: BillzImportJobStatus;
   phase: BillzImportPhase;
   entities: BillzImportEntity[];
+  /** withCategories=false → products imported without creating/linking categories. */
+  options: { withCategories: boolean };
   currentEntity: BillzImportEntity | null;
   counters: BillzImportCounters;
   error: string | null;
@@ -4247,11 +4249,12 @@ export interface BillzImportItem {
 
 export async function startBillzImport(
   entities: BillzImportEntity[],
+  withCategories = true,
 ): Promise<{ job: BillzImportJob }> {
   const response = await fetch(`${API_BASE_URL}/billz/import/start`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ entities }),
+    body: JSON.stringify({ entities, withCategories }),
   });
   if (!response.ok) await parseError(response, 'Failed to start BiLLZ import');
   return response.json();

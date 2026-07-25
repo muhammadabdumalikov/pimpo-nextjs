@@ -2310,7 +2310,10 @@
         "fPhone": "Telefon"
       },
       "failedResumeHint": "Yuklab olingan ma'lumotlar saqlab qo'yilgan — «Davom ettirish» to'xtagan joydan davom etadi, boshidan boshlamaydi.",
-      "fetchOnlyNote": "Quyidagilar yuklab olingan yozuvlar — bazaga yozish hali boshlanmagani uchun jurnal bo'sh bo'lishi mumkin."
+      "fetchOnlyNote": "Quyidagilar yuklab olingan yozuvlar — bazaga yozish hali boshlanmagani uchun jurnal bo'sh bo'lishi mumkin.",
+      "withCategories": "Kategoriyalari bilan import qilish",
+      "withCategoriesOnDesc": "BiLLZ kategoriyalari yaratiladi va mahsulotlar ularga bog'lanadi",
+      "withCategoriesOffDesc": "Faqat mahsulotlar import qilinadi — kategoriyalarga tegilmaydi"
     }
   },
   "telegramSend": {

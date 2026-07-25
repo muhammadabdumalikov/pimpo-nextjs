@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import {
-  LuKeyRound,
   LuCheck,
   LuCircleCheck,
   LuCircleAlert,
@@ -14,8 +13,6 @@ import {
   LuRefreshCw,
   LuScrollText,
   LuHourglass,
-  LuCloudDownload,
-  LuDatabase,
   LuEye,
 } from "react-icons/lu";
 import { useTranslations } from "@/hooks/useTranslations";
@@ -41,9 +38,10 @@ import {
   type BillzImportStatus,
 } from "@/lib/api";
 
-// MG7 wizard (MIGRATSIYA.md), fully wired. Two-phase backend queue: a job first
-// runs the FETCH phase (rate-limited pull from BiLLZ into staging) then the LOAD
-// phase (staging → real KPOS tables). Polled live while queued/running/paused.
+// MG7 wizard (MIGRATSIYA.md). Three views — connect, select, import — with ONE
+// progress representation during import (status line + hero % + slim entity
+// rows). The job runs on the backend's two-phase queue (fetch → load), polled
+// while queued/running/paused.
 
 type Step = "connect" | "select" | "import";
 
@@ -53,8 +51,6 @@ const ACTIVE_STATUSES: BillzImportJob["status"][] = [
   "paused",
 ];
 
-const PHASES: BillzImportPhase[] = ["fetch", "load"];
-
 const ENTITIES: {
   id: BillzImportEntity;
   icon: React.ReactNode;
@@ -63,19 +59,19 @@ const ENTITIES: {
 }[] = [
   {
     id: "products",
-    icon: <LuPackage className="h-5 w-5" />,
+    icon: <LuPackage className="h-4 w-4" />,
     labelKey: "integrations.billz.entityProducts",
     descKey: "integrations.billz.entityProductsDesc",
   },
   {
     id: "customers",
-    icon: <LuUsers className="h-5 w-5" />,
+    icon: <LuUsers className="h-4 w-4" />,
     labelKey: "integrations.billz.entityCustomers",
     descKey: "integrations.billz.entityCustomersDesc",
   },
   {
     id: "images",
-    icon: <LuImage className="h-5 w-5" />,
+    icon: <LuImage className="h-4 w-4" />,
     labelKey: "integrations.billz.entityImages",
     descKey: "integrations.billz.entityImagesDesc",
   },
@@ -121,6 +117,16 @@ function sumPhase(
   );
 }
 
+/** Live pulse dot (brand) shown next to the running status line. */
+function PulseDot({ className = "" }: { className?: string }) {
+  return (
+    <span className={`relative flex h-2 w-2 ${className}`}>
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
+      <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-500" />
+    </span>
+  );
+}
+
 export default function BillzMigration() {
   const { t } = useTranslations();
   const { showToast } = useToast();
@@ -128,20 +134,23 @@ export default function BillzMigration() {
   const [step, setStep] = useState<Step>("connect");
   const [bootLoading, setBootLoading] = useState(true);
 
-  // Step 1 — connect
+  // Connect
   const [token, setToken] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
 
-  // Step 2 — select
+  // Select
   const [selected, setSelected] = useState<Record<BillzImportEntity, boolean>>({
     products: true,
     customers: true,
     images: false,
   });
+  // Products sub-option: also create BiLLZ categories and link products to them
+  // (off = products land alone, categories untouched).
+  const [withCategories, setWithCategories] = useState(true);
   const [starting, setStarting] = useState(false);
 
-  // Step 3 — import (server-driven)
+  // Import (server-driven)
   const [importStatus, setImportStatus] = useState<BillzImportStatus | null>(
     null,
   );
@@ -216,7 +225,7 @@ export default function BillzMigration() {
     if (entities.length === 0) return;
     setStarting(true);
     try {
-      await startBillzImport(entities);
+      await startBillzImport(entities, withCategories);
       setImportStatus(await getBillzImportStatus());
       setStep("import");
     } catch (e) {
@@ -257,7 +266,7 @@ export default function BillzMigration() {
       ? Math.min(100, Math.round((processed / sums.total) * 100))
       : null;
 
-  // Client-side ETA from an exponentially-smoothed processing rate. Reset on a
+  // Client-side ETA from an exponentially-smoothed processing rate; reset on a
   // phase change so the load phase doesn't inherit the fetch rate.
   const rateRef = useRef<{
     t: number;
@@ -286,72 +295,11 @@ export default function BillzMigration() {
       ? (sums.total - processed) / rate
       : null;
 
-  const steps: { id: Step; labelKey: string }[] = [
-    { id: "connect", labelKey: "integrations.billz.stepConnect" },
-    { id: "select", labelKey: "integrations.billz.stepSelect" },
-    { id: "import", labelKey: "integrations.billz.stepImport" },
-  ];
-  const stepIndex = steps.findIndex((s) => s.id === step);
-
-  const phaseMeta: Record<
-    BillzImportPhase,
-    { icon: React.ReactNode; labelKey: string }
-  > = {
-    fetch: {
-      icon: <LuCloudDownload className="h-4 w-4" />,
-      labelKey: "integrations.billz.phaseFetch",
-    },
-    load: {
-      icon: <LuDatabase className="h-4 w-4" />,
-      labelKey: "integrations.billz.phaseLoad",
-    },
-  };
-
-  // The two-phase strip shown during running/paused/load-queued.
-  const renderPhaseStrip = () => (
-    <div className="mb-6 flex items-center gap-2">
-      {PHASES.map((p, i) => {
-        const isCurrent = phase === p;
-        const isDone = phase === "load" && p === "fetch";
-        return (
-          <React.Fragment key={p}>
-            <div
-              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-theme-sm font-medium transition-colors ${
-                isCurrent
-                  ? "bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400"
-                  : isDone
-                    ? "text-success-600 dark:text-success-500"
-                    : "text-gray-400 dark:text-gray-500"
-              }`}
-            >
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-theme-xs ${
-                  isDone
-                    ? "bg-success-500 text-white"
-                    : isCurrent
-                      ? "bg-brand-500 text-white"
-                      : "bg-gray-200 text-gray-500 dark:bg-white/10 dark:text-gray-400"
-                }`}
-              >
-                {isDone ? <LuCheck className="h-3 w-3" /> : i + 1}
-              </span>
-              {phaseMeta[p].icon}
-              {t(phaseMeta[p].labelKey)}
-            </div>
-            {i === 0 && (
-              <span
-                className={`h-px w-6 ${
-                  isDone || phase === "load"
-                    ? "bg-success-400"
-                    : "bg-gray-200 dark:bg-gray-800"
-                }`}
-              />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
+  const terminal =
+    job &&
+    (job.status === "completed" ||
+      job.status === "failed" ||
+      job.status === "cancelled");
 
   return (
     <div className="min-h-fill overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-5 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
@@ -364,65 +312,15 @@ export default function BillzMigration() {
         </p>
       </div>
 
-      {/* Stepper */}
-      <ol className="mb-8 flex items-center">
-        {steps.map((s, i) => {
-          const done = i < stepIndex;
-          const active = i === stepIndex;
-          return (
-            <li key={s.id} className="flex flex-1 items-center last:flex-none">
-              <span className="flex items-center gap-2">
-                <span
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-theme-sm font-semibold ${
-                    done
-                      ? "bg-brand-500 text-white"
-                      : active
-                        ? "bg-brand-50 text-brand-600 ring-2 ring-brand-500 dark:bg-brand-500/15 dark:text-brand-400"
-                        : "bg-gray-100 text-gray-400 dark:bg-white/5 dark:text-gray-500"
-                  }`}
-                >
-                  {done ? <LuCheck className="h-4 w-4" /> : i + 1}
-                </span>
-                <span
-                  className={`text-theme-sm font-medium ${
-                    active
-                      ? "text-gray-800 dark:text-white/90"
-                      : "text-gray-500 dark:text-gray-400"
-                  }`}
-                >
-                  {t(s.labelKey)}
-                </span>
-              </span>
-              {i < steps.length - 1 && (
-                <span
-                  className={`mx-3 h-px flex-1 ${
-                    done ? "bg-brand-500" : "bg-gray-200 dark:bg-gray-800"
-                  }`}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ol>
-
       {bootLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500 dark:border-gray-700 dark:border-t-brand-400" />
         </div>
       ) : (
         <>
-          {/* Step 1 — connect */}
+          {/* ── Connect ─────────────────────────────────────────────────── */}
           {step === "connect" && (
-            <div className="max-w-xl">
-              <div className="mb-5 flex items-start gap-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-theme-purple-500/10 text-theme-purple-500">
-                  <LuKeyRound className="h-5 w-5" />
-                </span>
-                <p className="text-theme-sm text-gray-600 dark:text-gray-300">
-                  {t("integrations.billz.tokenHint")}
-                </p>
-              </div>
-
+            <div className="max-w-md">
               <Label htmlFor="billz-token">
                 {t("integrations.billz.tokenLabel")}
               </Label>
@@ -440,7 +338,7 @@ export default function BillzMigration() {
                     handleVerify();
                 }}
                 error={!!tokenError}
-                hint={tokenError ?? undefined}
+                hint={tokenError ?? t("integrations.billz.tokenHint")}
                 disabled={verifying}
               />
               <div className="mt-5">
@@ -460,53 +358,73 @@ export default function BillzMigration() {
             </div>
           )}
 
-          {/* Step 2 — select */}
+          {/* ── Select ──────────────────────────────────────────────────── */}
           {step === "select" && (
-            <div className="max-w-2xl">
-              <div className="mb-5 flex items-center gap-2 text-theme-sm font-medium text-success-600 dark:text-success-500">
-                <LuCircleCheck className="h-5 w-5" />
+            <div className="max-w-xl">
+              <p className="mb-5 flex items-center gap-1.5 text-theme-sm font-medium text-success-600 dark:text-success-500">
+                <LuCircleCheck className="h-4 w-4" />
                 {t("integrations.billz.connected")}
-              </div>
+              </p>
 
               <h4 className="mb-3 font-semibold text-gray-800 dark:text-white/90">
                 {t("integrations.billz.selectTitle")}
               </h4>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {ENTITIES.map((e) => (
-                  <label
+                  <div
                     key={e.id}
-                    className={`flex cursor-pointer items-start gap-4 rounded-xl border p-4 transition ${
+                    className={`rounded-xl border p-3.5 transition-colors ${
                       selected[e.id]
-                        ? "border-brand-300 bg-brand-50/50 dark:border-brand-500/40 dark:bg-brand-500/5"
+                        ? "border-brand-300 dark:border-brand-500/40"
                         : "border-gray-200 dark:border-gray-800"
                     }`}
                   >
-                    <Checkbox
-                      checked={selected[e.id]}
-                      onChange={(checked) =>
-                        setSelected((prev) => ({ ...prev, [e.id]: checked }))
-                      }
-                    />
-                    <span className="-mt-0.5">
-                      <span className="flex items-center gap-2 font-medium text-gray-800 dark:text-white/90">
-                        {e.icon}
-                        {t(e.labelKey)}
+                    <label className="flex cursor-pointer items-start gap-3.5">
+                      <Checkbox
+                        checked={selected[e.id]}
+                        onChange={(checked) =>
+                          setSelected((prev) => ({ ...prev, [e.id]: checked }))
+                        }
+                      />
+                      <span className="-mt-0.5 min-w-0">
+                        <span className="flex items-center gap-2 text-theme-sm font-medium text-gray-800 dark:text-white/90">
+                          {e.icon}
+                          {t(e.labelKey)}
+                        </span>
+                        <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
+                          {t(e.descKey)}
+                        </span>
                       </span>
-                      <span className="mt-1 block text-theme-sm text-gray-500 dark:text-gray-400">
-                        {t(e.descKey)}
-                      </span>
-                    </span>
-                  </label>
+                    </label>
+                    {/* Products sub-option: with or without categories */}
+                    {e.id === "products" && selected.products && (
+                      <label className="mt-3 flex cursor-pointer items-center gap-3 border-t border-gray-100 pl-8 pt-3 dark:border-gray-800">
+                        <Checkbox
+                          checked={withCategories}
+                          onChange={setWithCategories}
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-theme-sm text-gray-700 dark:text-gray-300">
+                            {t("integrations.billz.withCategories")}
+                          </span>
+                          <span className="block text-theme-xs text-gray-400 dark:text-gray-500">
+                            {withCategories
+                              ? t("integrations.billz.withCategoriesOnDesc")
+                              : t("integrations.billz.withCategoriesOffDesc")}
+                          </span>
+                        </span>
+                      </label>
+                    )}
+                  </div>
                 ))}
               </div>
 
-              {/* Shared-queue notice: many stores, one BiLLZ pipe */}
-              <p className="mt-4 flex items-start gap-2 text-theme-xs text-gray-400 dark:text-gray-500">
+              <p className="mt-4 flex items-start gap-1.5 text-theme-xs text-gray-400 dark:text-gray-500">
                 <LuHourglass className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 {t("integrations.billz.queueExplain")}
               </p>
 
-              <div className="mt-5 flex items-center gap-3">
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-3">
                 <Button
                   size="sm"
                   onClick={handleStart}
@@ -525,18 +443,18 @@ export default function BillzMigration() {
                 >
                   {t("integrations.billz.probe.button")}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
+                <button
+                  type="button"
                   onClick={() => setStep("connect")}
+                  className="text-theme-sm font-medium text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
                 >
                   {t("integrations.billz.changeToken")}
-                </Button>
+                </button>
                 {job && !jobActive && (
                   <button
                     type="button"
                     onClick={() => setDrawerOpen(true)}
-                    className="inline-flex items-center gap-1.5 text-theme-sm font-medium text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
+                    className="inline-flex items-center gap-1.5 text-theme-sm font-medium text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
                   >
                     <LuScrollText className="h-4 w-4" />
                     {t("integrations.billz.viewLog")}
@@ -546,14 +464,14 @@ export default function BillzMigration() {
             </div>
           )}
 
-          {/* Step 3 — import */}
+          {/* ── Import ──────────────────────────────────────────────────── */}
           {step === "import" && job && (
-            <div className="max-w-2xl">
-              {/* Queued — the waiting room (phase-aware copy) */}
+            <div className="max-w-xl">
+              {/* Queued — waiting for the shared pipe */}
               {job.status === "queued" && (
-                <div className="flex flex-col items-center rounded-xl border border-gray-200 px-6 py-10 text-center dark:border-gray-800">
-                  <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">
-                    <LuHourglass className="h-6 w-6" />
+                <div className="flex flex-col items-center py-8 text-center">
+                  <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">
+                    <LuHourglass className="h-5 w-5" />
                     <span className="absolute inset-0 animate-ping rounded-full bg-brand-500/20 [animation-duration:2.5s]" />
                   </span>
                   <h4 className="mt-4 font-semibold text-gray-800 dark:text-white/90">
@@ -562,17 +480,15 @@ export default function BillzMigration() {
                       : t("integrations.billz.queuedTitle")}
                   </h4>
                   {importStatus?.queuePosition != null && (
-                    <p className="mt-3 text-4xl font-semibold tabular-nums text-gray-800 dark:text-white/90">
+                    <p className="mt-2 text-3xl font-semibold tabular-nums text-gray-800 dark:text-white/90">
                       {importStatus.queuePosition}
-                      <span className="ml-2 text-theme-sm font-medium text-gray-400 dark:text-gray-500">
+                      <span className="text-theme-sm font-medium text-gray-400 dark:text-gray-500">
+                        {" "}
                         / {importStatus.queueLength}
                       </span>
                     </p>
                   )}
-                  <p className="mt-1 text-theme-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                    {t("integrations.billz.queuePositionLabel")}
-                  </p>
-                  <p className="mt-4 max-w-md text-theme-sm text-gray-500 dark:text-gray-400">
+                  <p className="mt-3 max-w-sm text-theme-sm text-gray-500 dark:text-gray-400">
                     {phase === "load"
                       ? t("integrations.billz.loadQueuedHint")
                       : t("integrations.billz.queueExplain")}
@@ -580,7 +496,7 @@ export default function BillzMigration() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="mt-6"
+                    className="mt-5"
                     onClick={() => setCancelOpen(true)}
                     disabled={actionBusy}
                   >
@@ -589,43 +505,39 @@ export default function BillzMigration() {
                 </div>
               )}
 
-              {/* Running / paused — live progress for the current phase */}
+              {/* Running / paused — the one progress view */}
               {(job.status === "running" || job.status === "paused") && (
                 <>
-                  {renderPhaseStrip()}
+                  {/* Status line: what's happening + which of the 2 phases */}
+                  <p className="flex items-center gap-2 text-theme-sm font-medium text-gray-500 dark:text-gray-400">
+                    {job.status === "running" ? (
+                      <PulseDot />
+                    ) : (
+                      <LuPause className="h-4 w-4 text-warning-500" />
+                    )}
+                    {job.status === "paused"
+                      ? t("integrations.billz.pausedTitle")
+                      : phase === "fetch"
+                        ? t("integrations.billz.fetchRunning")
+                        : t("integrations.billz.loadRunning")}
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-theme-xs tabular-nums text-gray-500 dark:bg-white/5 dark:text-gray-400">
+                      {phase === "fetch" ? "1/2" : "2/2"}
+                    </span>
+                  </p>
 
-                  <div className="flex items-end justify-between gap-4">
-                    <div>
-                      <p className="flex items-center gap-2 text-theme-sm font-medium text-gray-500 dark:text-gray-400">
-                        {job.status === "running" ? (
-                          <>
-                            <span className="relative flex h-2 w-2">
-                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
-                              <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-500" />
-                            </span>
-                            {phase === "fetch"
-                              ? t("integrations.billz.fetchRunning")
-                              : t("integrations.billz.loadRunning")}
-                          </>
-                        ) : (
-                          <>
-                            <LuPause className="h-4 w-4 text-warning-500" />
-                            {t("integrations.billz.pausedTitle")}
-                          </>
-                        )}
-                      </p>
-                      <p className="mt-2 text-4xl font-semibold tabular-nums tracking-tight text-gray-800 dark:text-white/90">
-                        {overallPct !== null ? `${overallPct}%` : nf(processed)}
-                        {overallPct === null && (
-                          <span className="ml-2 text-theme-sm font-medium text-gray-400">
-                            {t("integrations.billz.recordsLabel")}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="text-right text-theme-sm text-gray-500 dark:text-gray-400">
+                  {/* Hero: % (or running count) + the numbers that matter */}
+                  <div className="mt-2 flex items-end justify-between gap-4">
+                    <p className="text-4xl font-semibold tabular-nums tracking-tight text-gray-800 dark:text-white/90">
+                      {overallPct !== null ? `${overallPct}%` : nf(processed)}
+                      {overallPct === null && (
+                        <span className="ml-2 text-theme-sm font-medium text-gray-400">
+                          {t("integrations.billz.recordsLabel")}
+                        </span>
+                      )}
+                    </p>
+                    <div className="pb-1 text-right text-theme-xs text-gray-400 dark:text-gray-500">
                       {sums.total !== null && (
-                        <p className="tabular-nums">
+                        <p className="tabular-nums text-theme-sm text-gray-500 dark:text-gray-400">
                           {nf(processed)} / {nf(sums.total)}
                         </p>
                       )}
@@ -635,14 +547,12 @@ export default function BillzMigration() {
                         </p>
                       )}
                       {etaSeconds !== null && (
-                        <p className="text-theme-xs text-gray-400 dark:text-gray-500">
-                          ~{formatEta(etaSeconds)}
-                        </p>
+                        <p className="tabular-nums">~{formatEta(etaSeconds)}</p>
                       )}
                     </div>
                   </div>
 
-                  <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/5">
+                  <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/5">
                     {overallPct !== null ? (
                       <div
                         className="h-full rounded-full bg-brand-500 transition-[width] duration-500 ease-out"
@@ -653,88 +563,83 @@ export default function BillzMigration() {
                     )}
                   </div>
 
-                  {/* Entity lanes for the current phase */}
-                  <div className="mt-6 space-y-2.5">
-                    {jobEntities.map((id) => {
-                      const meta = ENTITIES.find((e) => e.id === id);
-                      const c = counters[id]?.[phase];
-                      if (!meta || !c) return null;
-                      const laneProcessed = c.done + c.failed;
-                      const isCurrent =
-                        job.currentEntity === id && job.status === "running";
-                      const finished =
-                        c.total !== null && laneProcessed >= c.total;
-                      const waiting = laneProcessed === 0 && !isCurrent;
-                      const lanePct =
-                        c.total && c.total > 0
-                          ? Math.min(100, (laneProcessed / c.total) * 100)
-                          : null;
-                      return (
-                        <div
-                          key={id}
-                          className={`rounded-xl border p-4 transition-colors ${
-                            isCurrent
-                              ? "border-brand-300 bg-brand-50/40 dark:border-brand-500/40 dark:bg-brand-500/5"
-                              : "border-gray-200 dark:border-gray-800"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <span
-                              className={`flex items-center gap-2 text-theme-sm font-medium ${
-                                waiting
-                                  ? "text-gray-400 dark:text-gray-500"
-                                  : "text-gray-800 dark:text-white/90"
-                              }`}
-                            >
-                              {meta.icon}
-                              {t(meta.labelKey)}
-                              {isCurrent && (
-                                <span className="relative flex h-1.5 w-1.5">
-                                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
-                                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-500" />
-                                </span>
-                              )}
-                            </span>
-                            <span className="text-theme-sm tabular-nums text-gray-500 dark:text-gray-400">
-                              {finished ? (
-                                <span className="inline-flex items-center gap-1 font-medium text-success-600 dark:text-success-500">
-                                  <LuCheck className="h-4 w-4" />
-                                  {nf(c.done)}
-                                </span>
-                              ) : waiting ? (
-                                t("integrations.billz.laneWaiting")
-                              ) : c.total !== null ? (
-                                `${nf(laneProcessed)} / ${nf(c.total)}`
-                              ) : (
-                                nf(laneProcessed)
-                              )}
-                            </span>
-                          </div>
-                          {!waiting && (
-                            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/5">
-                              {lanePct !== null ? (
-                                <div
-                                  className={`h-full rounded-full transition-[width] duration-500 ease-out ${
-                                    finished ? "bg-success-500" : "bg-brand-500"
-                                  }`}
-                                  style={{ width: `${lanePct}%` }}
-                                />
-                              ) : (
-                                <div className="h-full w-1/3 animate-pulse rounded-full bg-brand-400/70" />
-                              )}
+                  {/* Entity rows — slim, no boxes; the current one carries the accent */}
+                  {jobEntities.length > 1 && (
+                    <div className="mt-6 space-y-4">
+                      {jobEntities.map((id) => {
+                        const meta = ENTITIES.find((e) => e.id === id);
+                        const c = counters[id]?.[phase];
+                        if (!meta || !c) return null;
+                        const laneProcessed = c.done + c.failed;
+                        const isCurrent =
+                          job.currentEntity === id && job.status === "running";
+                        const finished =
+                          c.total !== null && laneProcessed >= c.total;
+                        const waiting = laneProcessed === 0 && !isCurrent;
+                        const lanePct =
+                          c.total && c.total > 0
+                            ? Math.min(100, (laneProcessed / c.total) * 100)
+                            : null;
+                        return (
+                          <div key={id}>
+                            <div className="flex items-center justify-between gap-3">
+                              <span
+                                className={`flex items-center gap-2 text-theme-sm font-medium ${
+                                  isCurrent
+                                    ? "text-brand-600 dark:text-brand-400"
+                                    : waiting
+                                      ? "text-gray-400 dark:text-gray-500"
+                                      : "text-gray-700 dark:text-gray-300"
+                                }`}
+                              >
+                                {meta.icon}
+                                {t(meta.labelKey)}
+                                {isCurrent && <PulseDot className="scale-75" />}
+                              </span>
+                              <span className="text-theme-xs tabular-nums text-gray-500 dark:text-gray-400">
+                                {finished ? (
+                                  <span className="inline-flex items-center gap-1 font-medium text-success-600 dark:text-success-500">
+                                    <LuCheck className="h-3.5 w-3.5" />
+                                    {nf(c.done)}
+                                  </span>
+                                ) : waiting ? (
+                                  t("integrations.billz.laneWaiting")
+                                ) : c.total !== null ? (
+                                  `${nf(laneProcessed)} / ${nf(c.total)}`
+                                ) : (
+                                  nf(laneProcessed)
+                                )}
+                              </span>
                             </div>
-                          )}
-                          {c.failed > 0 && (
-                            <p className="mt-2 text-theme-xs tabular-nums text-error-500">
-                              {nf(c.failed)} {t("integrations.billz.failedLabel")}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                            {!waiting && (
+                              <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/5">
+                                {lanePct !== null ? (
+                                  <div
+                                    className={`h-full rounded-full transition-[width] duration-500 ease-out ${
+                                      finished
+                                        ? "bg-success-500"
+                                        : "bg-brand-500"
+                                    }`}
+                                    style={{ width: `${lanePct}%` }}
+                                  />
+                                ) : (
+                                  <div className="h-full w-1/3 animate-pulse rounded-full bg-brand-400/70" />
+                                )}
+                              </div>
+                            )}
+                            {c.failed > 0 && (
+                              <p className="mt-1 text-theme-xs tabular-nums text-error-500">
+                                {nf(c.failed)}{" "}
+                                {t("integrations.billz.failedLabel")}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
-                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3">
                     {job.status === "running" ? (
                       <Button
                         size="sm"
@@ -755,42 +660,40 @@ export default function BillzMigration() {
                         {t("integrations.billz.resume")}
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setCancelOpen(true)}
-                      disabled={actionBusy}
-                    >
-                      {t("common.cancel")}
-                    </Button>
                     <button
                       type="button"
                       onClick={() => setDrawerOpen(true)}
-                      className="inline-flex items-center gap-1.5 text-theme-sm font-medium text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
+                      className="inline-flex items-center gap-1.5 text-theme-sm font-medium text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
                     >
                       <LuScrollText className="h-4 w-4" />
                       {t("integrations.billz.viewLog")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCancelOpen(true)}
+                      disabled={actionBusy}
+                      className="text-theme-sm font-medium text-gray-500 transition-colors hover:text-error-500 disabled:opacity-50 dark:text-gray-400 dark:hover:text-error-400"
+                    >
+                      {t("common.cancel")}
                     </button>
                   </div>
                 </>
               )}
 
-              {/* Terminal states — the load counters are what actually landed */}
-              {(job.status === "completed" ||
-                job.status === "failed" ||
-                job.status === "cancelled") && (
-                <div className="rounded-xl border border-gray-200 p-5 dark:border-gray-800">
+              {/* Terminal — one quiet card */}
+              {terminal && (
+                <div>
                   <div className="flex items-center gap-3">
                     {job.status === "completed" ? (
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500">
-                        <LuCircleCheck className="h-6 w-6" />
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500">
+                        <LuCircleCheck className="h-5 w-5" />
                       </span>
                     ) : (
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-error-50 text-error-500 dark:bg-error-500/15">
-                        <LuCircleAlert className="h-6 w-6" />
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-error-50 text-error-500 dark:bg-error-500/15">
+                        <LuCircleAlert className="h-5 w-5" />
                       </span>
                     )}
-                    <div>
+                    <div className="min-w-0">
                       <h4 className="font-semibold text-gray-800 dark:text-white/90">
                         {job.status === "completed"
                           ? t("integrations.billz.doneTitle")
@@ -799,22 +702,15 @@ export default function BillzMigration() {
                             : t("integrations.billz.cancelledTitle")}
                       </h4>
                       {job.status === "failed" && job.error && (
-                        <p className="mt-0.5 text-theme-sm text-error-500">
+                        <p className="truncate text-theme-xs text-error-500">
                           {job.error}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  {/* Per-entity result summary. Completed jobs show LOAD counts
-                      (what actually landed in KPOS); a job that died in the
-                      FETCH phase shows what was pulled into staging instead. */}
-                  {phase === "fetch" && job.status !== "completed" && (
-                    <p className="mt-4 text-theme-xs text-gray-400 dark:text-gray-500">
-                      {t("integrations.billz.fetchOnlyNote")}
-                    </p>
-                  )}
-                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {/* Per-entity result — one line each, phase-appropriate counts */}
+                  <div className="mt-5 space-y-2">
                     {jobEntities.map((id) => {
                       const meta = ENTITIES.find((e) => e.id === id);
                       const c = counters[id]?.[phase];
@@ -822,45 +718,40 @@ export default function BillzMigration() {
                       return (
                         <div
                           key={id}
-                          className="rounded-lg bg-gray-50 px-3 py-2.5 dark:bg-white/[0.03]"
+                          className="flex items-center justify-between gap-3"
                         >
-                          <p className="flex items-center gap-1.5 text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                          <span className="flex items-center gap-2 text-theme-sm text-gray-600 dark:text-gray-300">
                             {meta.icon}
                             {t(meta.labelKey)}
-                          </p>
-                          <p className="mt-1 text-lg font-semibold tabular-nums text-gray-800 dark:text-white/90">
+                          </span>
+                          <span className="text-theme-sm tabular-nums text-gray-800 dark:text-white/90">
                             {nf(c.done)}
-                          </p>
-                          {c.failed > 0 && (
-                            <p className="text-theme-xs tabular-nums text-error-500">
-                              {nf(c.failed)} {t("integrations.billz.failedLabel")}
-                            </p>
-                          )}
+                            {c.failed > 0 && (
+                              <span className="ml-2 text-theme-xs text-error-500">
+                                {nf(c.failed)}{" "}
+                                {t("integrations.billz.failedLabel")}
+                              </span>
+                            )}
+                          </span>
                         </div>
                       );
                     })}
                   </div>
 
-                  {loadSums.failed > 0 && (
-                    <p className="mt-3 text-theme-sm text-gray-500 dark:text-gray-400">
-                      {t("integrations.billz.failedHint")}
-                    </p>
-                  )}
-                  {job.status === "failed" && (
-                    <p className="mt-3 text-theme-sm text-gray-500 dark:text-gray-400">
-                      {t("integrations.billz.failedResumeHint")}
-                    </p>
-                  )}
-                  {job.status === "completed" && (
-                    <p className="mt-3 text-theme-sm text-gray-500 dark:text-gray-400">
-                      {t("integrations.billz.validateHint")}
-                    </p>
-                  )}
+                  {/* One contextual hint, not a stack of paragraphs */}
+                  <p className="mt-4 text-theme-xs text-gray-400 dark:text-gray-500">
+                    {job.status === "failed"
+                      ? phase === "fetch"
+                        ? t("integrations.billz.fetchOnlyNote")
+                        : t("integrations.billz.failedResumeHint")
+                      : job.status === "completed"
+                        ? loadSums.failed > 0
+                          ? t("integrations.billz.failedHint")
+                          : t("integrations.billz.validateHint")
+                        : t("integrations.billz.cancelConfirm")}
+                  </p>
 
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
-                    {/* A failed job resumes from its checkpoint — nothing already
-                        staged/loaded is re-done. Restart (new job) stays as the
-                        secondary option. */}
+                  <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-3">
                     {job.status === "failed" && (
                       <Button
                         size="sm"
@@ -871,14 +762,6 @@ export default function BillzMigration() {
                         {t("integrations.billz.resume")}
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setDrawerOpen(true)}
-                      startIcon={<LuScrollText className="h-4 w-4" />}
-                    >
-                      {t("integrations.billz.viewLog")}
-                    </Button>
                     <Button
                       size="sm"
                       variant={
@@ -895,6 +778,14 @@ export default function BillzMigration() {
                         ? t("integrations.billz.newImport")
                         : t("integrations.billz.restart")}
                     </Button>
+                    <button
+                      type="button"
+                      onClick={() => setDrawerOpen(true)}
+                      className="inline-flex items-center gap-1.5 text-theme-sm font-medium text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
+                    >
+                      <LuScrollText className="h-4 w-4" />
+                      {t("integrations.billz.viewLog")}
+                    </button>
                   </div>
                 </div>
               )}
