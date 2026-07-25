@@ -45,9 +45,21 @@ export default function CatalogStats({
     });
   };
 
+  // The API sums can arrive as strings (numeric driver) or, if a field is
+  // missing, undefined — either would poison the money math into "NaN". Coerce
+  // every value to a finite number before it's used or rendered.
+  const num = (v: unknown): number => {
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const supplyValue = num(stats?.supplyValue);
+  const retailValue = num(stats?.retailValue);
+  const units = num(stats?.units);
+
   // Money values in the band are compact ("2.1 mlrd so'm"); the exact grouped
   // sum lives in the title tooltip.
   const compactSum = (v: number): string => {
+    if (!Number.isFinite(v)) return nf.format(0);
     const one = (n: number) =>
       nf.format(Math.round(n * 10) / 10);
     if (v >= 1e9) return `${one(v / 1e9)} ${t("products.statsBillion")}`;
@@ -57,17 +69,15 @@ export default function CatalogStats({
   };
   const fullSum = (v: number) => `${nf.format(Math.round(v))} so'm`;
 
-  const profit = stats ? stats.retailValue - stats.supplyValue : 0;
+  const profit = retailValue - supplyValue;
   const profitPct =
-    stats && stats.supplyValue > 0
-      ? Math.round((profit / stats.supplyValue) * 100)
-      : null;
+    supplyValue > 0 ? Math.round((profit / supplyValue) * 100) : null;
   // Rail: the supply share of the retail value in gray, the margin in green.
   // A negative margin (selling below cost) collapses the green segment and
   // recolors the delta line as a warning.
   const supplyShare =
-    stats && stats.retailValue > 0
-      ? Math.min(100, (stats.supplyValue / stats.retailValue) * 100)
+    retailValue > 0
+      ? Math.min(100, (supplyValue / retailValue) * 100)
       : 100;
 
   // Health bar segments; non-empty buckets keep a minimum sliver so a handful
@@ -86,7 +96,9 @@ export default function CatalogStats({
     }));
   })();
 
-  const chips: {
+  // Legend rows double as the stock filter — ledger style (label left, count
+  // right), so three buckets never wrap the way pill-chips did.
+  const buckets: {
     key: StockStatusFilter;
     label: string;
     count: number | undefined;
@@ -99,7 +111,7 @@ export default function CatalogStats({
       count: stats?.inStock,
       dot: "bg-success-500",
       active:
-        "border-success-300 bg-success-50 text-success-700 dark:border-success-800 dark:bg-success-500/10 dark:text-success-400",
+        "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400",
     },
     {
       key: "low",
@@ -107,7 +119,7 @@ export default function CatalogStats({
       count: stats?.lowStock,
       dot: "bg-warning-500",
       active:
-        "border-warning-300 bg-warning-50 text-warning-700 dark:border-warning-800 dark:bg-warning-500/10 dark:text-warning-400",
+        "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-400",
     },
     {
       key: "out",
@@ -115,7 +127,7 @@ export default function CatalogStats({
       count: stats?.outOfStock,
       dot: "bg-error-500",
       active:
-        "border-error-300 bg-error-50 text-error-700 dark:border-error-800 dark:bg-error-500/10 dark:text-error-400",
+        "bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-400",
     },
   ];
 
@@ -161,8 +173,11 @@ export default function CatalogStats({
                     {t("products.statsNames")}
                   </span>
                 </p>
-                <p className="mt-1 text-sm tabular-nums text-gray-500 dark:text-gray-400">
-                  {nfUnits.format(stats.units)} {t("products.statsUnitsSuffix")}
+                <p
+                  className="mt-1 text-sm tabular-nums text-gray-500 dark:text-gray-400"
+                  title={`${nfUnits.format(units)} ${t("products.statsUnitsSuffix")}`}
+                >
+                  {nf.format(Math.round(units))} {t("products.statsUnitsSuffix")}
                 </p>
               </>
             ) : (
@@ -178,16 +193,18 @@ export default function CatalogStats({
             {label(t("products.statsValue"))}
             {stats ? (
               <>
+                {/* Money grows left → right; the type size follows it, so the
+                    retail figure (the bigger story) leads. */}
                 <div className="mt-2 flex items-end justify-between gap-4">
                   <div>
                     <p className="text-xs text-gray-400 dark:text-gray-500">
                       {t("products.statsSupply")}
                     </p>
                     <p
-                      className="text-lg font-semibold tabular-nums text-gray-700 dark:text-gray-200"
-                      title={fullSum(stats.supplyValue)}
+                      className="text-base font-medium tabular-nums text-gray-600 dark:text-gray-300"
+                      title={fullSum(supplyValue)}
                     >
-                      {compactSum(stats.supplyValue)}{" "}
+                      {compactSum(supplyValue)}{" "}
                       <span className="text-xs font-normal text-gray-400">
                         so'm
                       </span>
@@ -198,30 +215,32 @@ export default function CatalogStats({
                       {t("products.statsRetail")}
                     </p>
                     <p
-                      className="text-lg font-semibold tabular-nums text-gray-800 dark:text-white/90"
-                      title={fullSum(stats.retailValue)}
+                      className="text-xl font-semibold tabular-nums text-gray-800 dark:text-white/90"
+                      title={fullSum(retailValue)}
                     >
-                      {compactSum(stats.retailValue)}{" "}
+                      {compactSum(retailValue)}{" "}
                       <span className="text-xs font-normal text-gray-400">
                         so'm
                       </span>
                     </p>
                   </div>
                 </div>
-                <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-white/[0.08]">
+                <div className="mt-2 flex h-1.5 gap-px overflow-hidden rounded-full bg-gray-200 dark:bg-white/[0.08]">
                   <div
-                    className="bg-gray-400 dark:bg-gray-500"
+                    className="rounded-full bg-gray-300 dark:bg-gray-600"
                     style={{ width: `${supplyShare}%` }}
                   />
                   {profit > 0 && (
                     <div
-                      className="bg-success-500"
+                      className="rounded-full bg-success-500"
                       style={{ width: `${100 - supplyShare}%` }}
                     />
                   )}
                 </div>
+                {/* The delta sits under the green (margin) end of the rail, so
+                    label, color and geometry point at the same thing. */}
                 <p
-                  className={`mt-1.5 text-xs font-medium tabular-nums ${
+                  className={`mt-1.5 text-right text-xs font-medium tabular-nums ${
                     profit >= 0
                       ? "text-success-600 dark:text-success-500"
                       : "text-warning-600 dark:text-warning-500"
@@ -262,27 +281,33 @@ export default function CatalogStats({
                     />
                   ))}
                 </div>
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  {chips.map((chip) => {
-                    const isActive = activeStock === chip.key;
+                <div className="mt-2 -mx-1.5 space-y-0.5">
+                  {buckets.map((b) => {
+                    const isActive = activeStock === b.key;
                     return (
                       <button
-                        key={chip.key}
+                        key={b.key}
                         type="button"
                         aria-pressed={isActive}
-                        onClick={() => onToggleStock(chip.key)}
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                        onClick={() => onToggleStock(b.key)}
+                        className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-theme-sm transition-colors ${
                           isActive
-                            ? chip.active
-                            : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-white/[0.03] dark:text-gray-400 dark:hover:border-gray-600"
+                            ? b.active
+                            : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/[0.04]"
                         }`}
                       >
                         <span
-                          className={`h-1.5 w-1.5 rounded-full ${chip.dot}`}
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${b.dot}`}
                         />
-                        {chip.label}
-                        <span className="tabular-nums">
-                          {chip.count != null ? nf.format(chip.count) : "—"}
+                        {b.label}
+                        <span
+                          className={`ml-auto tabular-nums font-medium ${
+                            isActive
+                              ? ""
+                              : "text-gray-800 dark:text-white/90"
+                          }`}
+                        >
+                          {b.count != null ? nf.format(b.count) : "—"}
                         </span>
                       </button>
                     );
@@ -290,9 +315,11 @@ export default function CatalogStats({
                 </div>
               </>
             ) : (
-              <div className="mt-2 space-y-2.5">
+              <div className="mt-2 space-y-2">
                 <div className="h-1.5 w-full animate-pulse rounded-full bg-gray-200 dark:bg-white/[0.06]" />
-                <div className="h-6 w-full animate-pulse rounded-md bg-gray-200 dark:bg-white/[0.06]" />
+                <div className="h-5 w-full animate-pulse rounded-md bg-gray-200 dark:bg-white/[0.06]" />
+                <div className="h-5 w-4/5 animate-pulse rounded-md bg-gray-200 dark:bg-white/[0.06]" />
+                <div className="h-5 w-3/5 animate-pulse rounded-md bg-gray-200 dark:bg-white/[0.06]" />
               </div>
             )}
           </div>
