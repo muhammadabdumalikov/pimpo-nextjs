@@ -33,7 +33,9 @@ export default function TelegramNotifications() {
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  // Per-key in-flight set, so saving one toggle doesn't disable the others and
+  // the whole group doesn't grey out on every click.
+  const [savingKeys, setSavingKeys] = useState<Set<EventKey>>(() => new Set());
 
   useEffect(() => {
     let active = true;
@@ -59,21 +61,25 @@ export default function TelegramNotifications() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Optimistic flip; persist just the one changed flag; revert on failure.
+  // Optimistic flip; persist just this flag; silent on success (auto-save), and
+  // revert only this flag on failure. Functional updates so a second toggle
+  // in flight can't clobber the first.
   const toggle = async (key: EventKey, value: boolean) => {
-    if (!settings || saving) return;
-    const previous = settings;
-    setSettings({ ...settings, [key]: value });
-    setSaving(true);
+    if (!settings || savingKeys.has(key)) return;
+    setSettings((s) => (s ? { ...s, [key]: value } : s));
+    setSavingKeys((prev) => new Set(prev).add(key));
     try {
       const updated = await updateTelegramNotificationSettings({ [key]: value });
-      setSettings(updated);
-      showToast("success", t("integrations.notifications.saved"), "Success");
+      setSettings((s) => (s ? { ...s, ...updated } : updated));
     } catch (e) {
-      setSettings(previous);
+      setSettings((s) => (s ? { ...s, [key]: !value } : s));
       showToast("error", (e as Error).message, "Error");
     } finally {
-      setSaving(false);
+      setSavingKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     }
   };
 
@@ -110,7 +116,7 @@ export default function TelegramNotifications() {
               <div className="shrink-0">
                 <Toggle
                   checked={settings[key]}
-                  disabled={saving}
+                  disabled={savingKeys.has(key)}
                   onChange={(v) => toggle(key, v)}
                 />
               </div>
