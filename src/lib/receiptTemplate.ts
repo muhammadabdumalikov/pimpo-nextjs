@@ -36,6 +36,8 @@ export const FOOTER_LINK_DEFS: {
   { key: "telegram", label: "Telegram", hasValue: true, placeholder: "@channel" },
   { key: "website", label: "Сайт", hasValue: true, placeholder: "example.com" },
   { key: "barcode", label: "Штрих-код", hasValue: false },
+  // QR of the online-store URL — derived automatically, so no free-text value.
+  { key: "storeQr", label: "QR-код магазина", hasValue: false },
 ];
 
 const INFO_LABELS = new Map(INFO_FIELD_DEFS.map((d) => [d.key, d.label]));

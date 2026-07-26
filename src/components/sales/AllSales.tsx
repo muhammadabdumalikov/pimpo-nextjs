@@ -14,6 +14,7 @@ import {
   searchCustomers,
   resolveReceiptTemplate,
   getStoredAccount,
+  getStoreUrl,
   type Order,
   type SalesSummary,
   type Staff,
@@ -276,6 +277,7 @@ export default function AllSales() {
       discount: Number(order.discountAmount),
       total: Number(order.totalAmount),
       currency: receiptStrings.out.currency,
+      storeUrl: getStoreUrl() ?? undefined,
     };
     try {
       const template = await resolveReceiptTemplate();

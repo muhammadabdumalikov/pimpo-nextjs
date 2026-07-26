@@ -1,3 +1,4 @@
+import qrcode from "qrcode-generator";
 import type { ReceiptTemplate } from "@/lib/api";
 import { normalizeFields, INFO_FIELD_KEYS, FOOTER_LINK_KEYS } from "@/lib/receiptTemplate";
 import type {
@@ -37,6 +38,8 @@ export interface ReceiptData {
   discount: number;
   total: number;
   currency?: string;
+  /** Online-store URL to encode in the receipt QR (when the QR footer is on). */
+  storeUrl?: string;
 }
 
 const nf = new Intl.NumberFormat("ru-RU");
@@ -82,6 +85,36 @@ function barcodeHtml(code: string): string {
   return `<div class="rc-barcode">${bars}</div><div class="rc-barcode-num">${esc(code)}</div>`;
 }
 
+// A real, scannable QR of the store URL, emitted as a self-contained inline SVG
+// (one crisp <path> of dark modules) so it prints on thermal paper and needs no
+// external asset. Error-correction level M is the usual print sweet spot.
+function storeQrHtml(url: string, caption: string): string {
+  const qr = qrcode(0, "M");
+  qr.addData(url);
+  qr.make();
+  const count = qr.getModuleCount();
+  let path = "";
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (qr.isDark(r, c)) path += `M${c} ${r}h1v1h-1z`;
+    }
+  }
+  const svg =
+    `<svg class="rc-qr-svg" viewBox="0 0 ${count} ${count}" ` +
+    `xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" ` +
+    `role="img" aria-label="QR">` +
+    `<rect width="${count}" height="${count}" fill="#fff"/>` +
+    `<path d="${path}" fill="#000"/></svg>`;
+  const cap = caption
+    ? `<div class="rc-qr-caption">${esc(caption)}</div>`
+    : "";
+  // Print the URL under the QR too, so it stays usable if the code won't scan.
+  // Drop the scheme for a compact, readable line (demo-market.kpos.uz).
+  const shown = url.replace(/^https?:\/\//i, "");
+  const link = `<div class="rc-qr-url">${esc(shown)}</div>`;
+  return `<div class="rc-qr">${svg}${cap}${link}</div>`;
+}
+
 /** CSS shared by the live preview and the print output. */
 export function receiptCss(widthMm: number): string {
   return `
@@ -115,6 +148,10 @@ export function receiptCss(widthMm: number): string {
   .rc-barcode { display: flex; justify-content: center; align-items: flex-end; height: 44px; gap: 0; margin-top: 8px; }
   .rc-bar { display: inline-block; height: 44px; }
   .rc-barcode-num { text-align: center; letter-spacing: 2px; font-size: 11px; }
+  .rc-qr { text-align: center; margin-top: 8px; }
+  .rc-qr-svg { width: 30mm; height: 30mm; max-width: 60%; display: inline-block; }
+  .rc-qr-caption { font-size: 11px; margin-top: 2px; }
+  .rc-qr-url { font-size: 11px; font-weight: 600; word-break: break-all; }
   .rc-footer-links { margin-top: 6px; }
   .rc-footer-links div { text-align: center; }
   .rc-powered { text-align: center; margin-top: 8px; font-size: 10px; color: #444; }
@@ -283,22 +320,34 @@ export function buildReceiptHtml(
     parts.push(`<div class="rc-note">${sanitizeNoteHtml(template.footerText)}</div>`);
   }
 
-  // Footer links + barcode (in configured order)
-  const linkLines: string[] = [];
-  let barcode = "";
+  // Footer links + barcode + store QR, in the configured (drag) order. Adjacent
+  // text links are grouped into one centered block; a barcode/QR breaks the run.
+  let pendingLinks: string[] = [];
+  const flushLinks = () => {
+    if (pendingLinks.length) {
+      parts.push(`<div class="rc-footer-links">${pendingLinks.join("")}</div>`);
+      pendingLinks = [];
+    }
+  };
   for (const f of footer) {
     if (!f.enabled) continue;
     if (f.key === "barcode") {
-      barcode = barcodeHtml(d.saleNumber);
+      flushLinks();
+      parts.push(barcodeHtml(d.saleNumber));
+    } else if (f.key === "storeQr") {
+      // Skip silently when the store has no reachable URL — a QR to nothing is
+      // worse than none. sampleReceiptData supplies one so the editor preview
+      // always shows it.
+      if (d.storeUrl) {
+        flushLinks();
+        parts.push(storeQrHtml(d.storeUrl, L.storeQrCaption));
+      }
     } else if (f.value) {
       const label = strings.footerLinks[f.key] ?? f.key;
-      linkLines.push(`<div>${esc(label)}: ${esc(f.value)}</div>`);
+      pendingLinks.push(`<div>${esc(label)}: ${esc(f.value)}</div>`);
     }
   }
-  if (linkLines.length) {
-    parts.push(`<div class="rc-footer-links">${linkLines.join("")}</div>`);
-  }
-  if (barcode) parts.push(barcode);
+  flushLinks();
 
   // Powered by
   if (template.showPoweredBy) {
@@ -336,6 +385,7 @@ export function sampleReceiptData(storeName?: string): ReceiptData {
     discount: 20000,
     total: 430000,
     currency: "сум",
+    storeUrl: "https://demo-market.kpos.uz",
   };
 }
 

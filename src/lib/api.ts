@@ -232,9 +232,57 @@ export function getStoredMenuKeys(): string[] {
   return getStoredAccount()?.menuKeys ?? [];
 }
 
+// The root domain the online storefront is served under. Each store lives on a
+// subdomain of it. Kept in sync with the ecommerce app's NEXT_PUBLIC_ROOT_DOMAIN
+// and the Settings → Online store screen.
+const STORE_ROOT_DOMAIN =
+  process.env.NEXT_PUBLIC_STORE_ROOT_DOMAIN || 'kpos.uz';
+
+/** Full public URL of a store slug, or null when no slug is set. */
+export function buildStoreUrl(slug?: string | null): string | null {
+  const s = slug?.trim().toLowerCase();
+  return s ? `https://${s}.${STORE_ROOT_DOMAIN}` : null;
+}
+
+// The business's online-store config, cached locally so receipt printing can
+// build the store URL synchronously (refreshed on app open by AuthContext).
+const BUSINESS_STORAGE_KEY = 'business';
+
+export interface StoredBusiness {
+  storeSlug?: string | null;
+  storeEnabled?: boolean;
+}
+
+export function setStoredBusiness(business: StoredBusiness): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(BUSINESS_STORAGE_KEY, JSON.stringify(business));
+}
+
+export function getStoredBusiness(): StoredBusiness | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(BUSINESS_STORAGE_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as StoredBusiness;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The online-store URL to encode on receipts, or null when the store has no
+ * slug or is switched off (a QR to a disabled storefront would just 404).
+ */
+export function getStoreUrl(): string | null {
+  const b = getStoredBusiness();
+  if (!b?.storeEnabled) return null;
+  return buildStoreUrl(b.storeSlug);
+}
+
 export function clearAccount(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(ACCOUNT_STORAGE_KEY);
+  localStorage.removeItem(BUSINESS_STORAGE_KEY);
   // Per-business client caches must not leak across a login switch.
   invalidateUnitsCache();
   invalidatePaymentMethodsCache();

@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useCallback, useEffect, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getAuthToken, removeAuthToken, clearAccount, getStoredAccount, setAccount as persistAccount, getCurrentUser, type AccountInfo } from "@/lib/api";
+import { getAuthToken, removeAuthToken, clearAccount, getStoredAccount, setAccount as persistAccount, setStoredBusiness, getCurrentUser, type AccountInfo } from "@/lib/api";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -41,8 +41,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshAccount = useCallback(async () => {
     if (!getAuthToken()) return;
     try {
-      const { account: fresh } = await getCurrentUser();
+      const { account: fresh, business } = await getCurrentUser();
       persistAccount(fresh);
+      // Cache the store config so receipt printing can build the store URL
+      // (for the receipt QR code) without an extra request.
+      setStoredBusiness({
+        storeSlug: business.storeSlug ?? null,
+        storeEnabled: business.storeEnabled ?? false,
+      });
       setAccount(fresh);
     } catch {
       // offline / transient error — keep the cached account

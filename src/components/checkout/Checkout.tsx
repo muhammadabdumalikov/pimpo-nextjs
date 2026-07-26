@@ -26,6 +26,7 @@ import {
   openShift,
   resolveReceiptTemplate,
   getStoredAccount,
+  getStoreUrl,
   getUnits,
   getPaymentMethods,
   type PaymentMethod as ApiPaymentMethod,
@@ -689,6 +690,7 @@ export default function Checkout() {
       discount: discountAmount,
       total,
       currency: receiptStrings.out.currency,
+      storeUrl: getStoreUrl() ?? undefined,
     };
     return buildReceiptHtml(receiptTemplate, data, receiptStrings);
   }, [
@@ -1418,6 +1420,7 @@ export default function Checkout() {
       discount: discountAmount,
       total,
       currency: receiptStrings.out.currency,
+      storeUrl: getStoreUrl() ?? undefined,
     };
     try {
       const template = await resolveReceiptTemplate(activeShift?.registerId);

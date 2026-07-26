@@ -25,6 +25,8 @@ export interface ReceiptOutLabels {
   debt: string;
   poweredBy: string;
   thankYou: string;
+  /** Caption printed under the online-store QR code. */
+  storeQrCaption: string;
   defaultStoreName: string;
   /** Currency word printed after amounts (e.g. so'm / сум). */
   currency: string;
@@ -173,6 +175,7 @@ const en: ReceiptTplStrings = {
     telegram: "Telegram",
     website: "Website",
     barcode: "Barcode",
+    storeQr: "Online store QR",
   },
   out: {
     saleNumber: "Receipt #",
@@ -195,6 +198,7 @@ const en: ReceiptTplStrings = {
     debt: "Customer debt",
     poweredBy: "Printed with KPOS",
     thankYou: "Thank you for your purchase!",
+    storeQrCaption: "Scan to shop online",
     defaultStoreName: "Store",
     currency: "sum",
     dateLocale: "en-GB",
@@ -282,6 +286,7 @@ const ru: ReceiptTplStrings = {
     telegram: "Telegram",
     website: "Сайт",
     barcode: "Штрих-код",
+    storeQr: "QR интернет-магазина",
   },
   out: {
     saleNumber: "Чек №",
@@ -304,6 +309,7 @@ const ru: ReceiptTplStrings = {
     debt: "Долг клиента",
     poweredBy: "Чек напечатан с помощью KPOS",
     thankYou: "Спасибо за вашу покупку!",
+    storeQrCaption: "Сканируйте — покупки онлайн",
     defaultStoreName: "Магазин",
     currency: "сум",
     dateLocale: "ru-RU",
@@ -391,6 +397,7 @@ const uz: ReceiptTplStrings = {
     telegram: "Telegram",
     website: "Sayt",
     barcode: "Shtrix-kod",
+    storeQr: "Onlayn do'kon QR",
   },
   out: {
     saleNumber: "Chek №",
@@ -413,6 +420,7 @@ const uz: ReceiptTplStrings = {
     debt: "Mijoz qarzi",
     poweredBy: "Chek KPOS yordamida chop etildi",
     thankYou: "Xaridingiz uchun rahmat!",
+    storeQrCaption: "Onlayn xarid uchun skanerlang",
     defaultStoreName: "Do'kon",
     currency: "so'm",
     dateLocale: "uz-UZ",
@@ -500,6 +508,7 @@ const uzc: ReceiptTplStrings = {
     telegram: "Telegram",
     website: "Сайт",
     barcode: "Штрих-код",
+    storeQr: "Онлайн дўкон QR",
   },
   out: {
     saleNumber: "Чек №",
@@ -522,6 +531,7 @@ const uzc: ReceiptTplStrings = {
     debt: "Мижоз қарзи",
     poweredBy: "Чек KPOS ёрдамида чоп этилди",
     thankYou: "Харидингиз учун раҳмат!",
+    storeQrCaption: "Онлайн харид учун сканерланг",
     defaultStoreName: "Дўкон",
     currency: "сўм",
     dateLocale: "uz-Cyrl-UZ",
