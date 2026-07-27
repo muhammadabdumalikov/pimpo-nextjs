@@ -14,7 +14,6 @@ import { useTranslations } from "@/hooks/useTranslations";
 import { createProduct, updateProduct, generateProductCode, generateBarcode, getProduct, getCategories, getProductCount, lookupBarcode, createCategory, getBrands, createBrand, getSuppliers, getBranches, getUnits, type Product, type Branch, type Unit } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useSubscription } from "@/context/SubscriptionContext";
-import { useSidebar } from "@/context/SidebarContext";
 import { formatNumberInput, digitsOnly, stripLeadingZeros } from "@/lib/number";
 import {
   PricePair,
@@ -71,9 +70,6 @@ export default function AddProductForm({
   const router = useRouter();
   const { showToast } = useToast();
   const { getLimit, isLimitReached, currentTier } = useSubscription();
-  // Header can be hidden from the sidebar; the sticky section-nav offset follows
-  // it so the nav doesn't hang 96px down (leaving a gap) when the header is closed.
-  const { headerOpen } = useSidebar();
   const isEditMode = !!productId;
   const embedded = !!onCreated;
   // Product images are a Business (pro) plan feature.
@@ -606,9 +602,9 @@ export default function AddProductForm({
     if (isLoadingProduct || embedded) return;
     const ids = sectionNav.map((s) => s.id);
 
-    // Sticky offset the section nav sits at: below the header when it's shown,
-    // near the top of the content when it's hidden (keeps scroll-spy aligned).
-    const HEADER_OFFSET = headerOpen ? 130 : 40;
+    // Sticky offset the section nav sits at, near the top of the content
+    // (keeps scroll-spy aligned with the nav's lg:top-6).
+    const HEADER_OFFSET = 40;
     const HYSTERESIS = 64; // px a rival must lead by before the highlight moves
 
     // Visible height of a section below the sticky header (0 when off-screen).
@@ -675,7 +671,7 @@ export default function AddProductForm({
       window.removeEventListener("resize", onScrollThrottled);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoadingProduct, headerOpen]);
+  }, [isLoadingProduct]);
 
   // Helper function to parse price (remove $ and commas)
   const parsePrice = (price: string): string => {
@@ -813,7 +809,7 @@ export default function AddProductForm({
         {/* Sticky section navigation (BiLLZ-style). Hidden in embedded mode —
             its scroll-spy follows window scroll, not the drawer's container. */}
         {!embedded && (
-          <nav className={`lg:sticky lg:self-start ${headerOpen ? "lg:top-24" : "lg:top-6"}`}>
+          <nav className="lg:sticky lg:top-6 lg:self-start">
             <div className="flex gap-1 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-white/[0.03] lg:flex-col lg:overflow-visible">
               {sectionNav.map((s) => (
                 <button

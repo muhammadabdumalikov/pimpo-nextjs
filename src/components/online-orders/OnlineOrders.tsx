@@ -9,7 +9,6 @@ import {
 } from "@/lib/api";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
-import { useSidebar } from "@/context/SidebarContext";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import Badge from "@/components/ui/badge/Badge";
 
@@ -44,34 +43,6 @@ function statusColor(
 export default function OnlineOrders() {
   const { t } = useTranslations();
   const { showToast } = useToast();
-  const { headerOpen } = useSidebar();
-
-  // The detail drawer starts below the app header so its (higher z-index) bar
-  // never covers the drawer's top — re-measured when the header is toggled.
-  // (Same pattern as the AllSales slide-over.)
-  const [headerBottom, setHeaderBottom] = useState(0);
-  useEffect(() => {
-    const measure = () => {
-      if (!headerOpen) {
-        setHeaderBottom(0);
-        return;
-      }
-      const header = document.querySelector("header");
-      const bottom = header ? header.getBoundingClientRect().bottom : 0;
-      setHeaderBottom(Math.max(0, Math.round(bottom)));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
-    const ro = new ResizeObserver(measure);
-    ro.observe(document.body);
-    return () => {
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure, true);
-      ro.disconnect();
-    };
-  }, [headerOpen]);
-
   const [ordersList, setOrdersList] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -359,8 +330,7 @@ export default function OnlineOrders() {
         aria-hidden="true"
       />
       <aside
-        style={{ top: headerBottom, height: `calc(100dvh - ${headerBottom}px)` }}
-        className={`fixed right-0 z-50 flex w-full max-w-lg flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
+        className={`fixed right-0 top-0 z-50 flex h-dvh w-full max-w-lg flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
           detailOpen ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"

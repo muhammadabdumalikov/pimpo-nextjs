@@ -44,6 +44,8 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'finance.categories', allowedTiers: BASIC },
   { menuItem: 'finance.transactions', allowedTiers: BASIC },
   { menuItem: 'finance.state', allowedTiers: BASIC },
+  // Payroll (Ish haqi) — part of Moliya, same tier.
+  { menuItem: 'finance.payroll', allowedTiers: BASIC },
 
   // Inventory & analytics — Standart and up.
   { menuItem: 'inventory', allowedTiers: BASIC },
@@ -118,6 +120,7 @@ const routeMenuMap: Record<string, string> = {
   '/finance/categories': 'finance.categories',
   '/finance/transactions': 'finance.transactions',
   '/finance/state': 'finance.state',
+  '/finance/payroll': 'finance.payroll',
   '/inventory': 'inventory',
   '/suppliers': 'suppliers',
   '/receipts': 'receipts',

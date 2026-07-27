@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
-import { useSidebar } from "@/context/SidebarContext";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import {
   getOrders,
@@ -48,33 +47,7 @@ function todayStr() {
 export default function AllSales() {
   const { t, locale } = useTranslations();
   const { showToast } = useToast();
-  const { headerOpen } = useSidebar();
   const receiptStrings = useMemo(() => receiptTplStrings(locale as Locale), [locale]);
-
-  // The detail drawer starts below the app header so its (higher z-index) bar
-  // never covers the drawer's top — re-measured when the header is toggled.
-  const [headerBottom, setHeaderBottom] = useState(0);
-  useEffect(() => {
-    const measure = () => {
-      if (!headerOpen) {
-        setHeaderBottom(0);
-        return;
-      }
-      const header = document.querySelector("header");
-      const bottom = header ? header.getBoundingClientRect().bottom : 0;
-      setHeaderBottom(Math.max(0, Math.round(bottom)));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
-    const ro = new ResizeObserver(measure);
-    ro.observe(document.body);
-    return () => {
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure, true);
-      ro.disconnect();
-    };
-  }, [headerOpen]);
 
   // Filters: an inclusive day range (BiLLZ-style; default = today). Both empty
   // means all time.
@@ -403,10 +376,9 @@ export default function AllSales() {
   const inputClass =
     "h-12 rounded-xl border border-gray-300 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
 
-  // On wide screens the page fills the viewport: header + search + the right
-  // report column stay put while only the sales list scrolls. The height is
-  // measured from the grid's top edge to the bottom of the viewport so it works
-  // with the collapsible app header.
+  // On wide screens the page fills the viewport: search + the right report
+  // column stay put while only the sales list scrolls. The height is measured
+  // from the grid's top edge to the bottom of the viewport.
   const gridRef = useRef<HTMLDivElement>(null);
   const [gridHeight, setGridHeight] = useState<number | null>(null);
   useEffect(() => {
@@ -416,28 +388,17 @@ export default function AllSales() {
       const top = el.getBoundingClientRect().top + window.scrollY;
       setGridHeight(Math.max(420, window.innerHeight - top - 24));
     };
-    // The header show/hide is an animated grid-row inside a `min-h-screen`
-    // layout, so the body never resizes and ResizeObserver misses the toggle.
-    // Re-measure every frame for the ~300ms animation (the effect re-runs on
-    // `headerOpen`) so the list reclaims the space a collapsed header leaves.
-    let rafId = 0;
-    const startedAt = Date.now();
-    const tick = () => {
-      update();
-      if (Date.now() - startedAt < 400) rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
+    update();
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     const ro = new ResizeObserver(update);
     ro.observe(document.body);
     return () => {
-      cancelAnimationFrame(rafId);
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
       ro.disconnect();
     };
-  }, [headerOpen]);
+  }, []);
 
   return (
     <div
@@ -677,8 +638,7 @@ export default function AllSales() {
         aria-hidden="true"
       />
       <aside
-        style={{ top: headerBottom, height: `calc(100dvh - ${headerBottom}px)` }}
-        className={`fixed right-0 z-50 flex w-full max-w-lg flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
+        className={`fixed right-0 top-0 z-50 flex h-dvh w-full max-w-lg flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
           detailOpen ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
+import { formatCompact } from "@/lib/reportFormat";
 import type { ProductStats, StockStatusFilter } from "@/lib/api";
 
 // Collapsed-state preference survives reloads (mirrors BiLLZ's
@@ -58,15 +59,12 @@ export default function CatalogStats({
 
   // Money values in the band are compact ("2.1 mlrd so'm"); the exact grouped
   // sum lives in the title tooltip.
-  const compactSum = (v: number): string => {
-    if (!Number.isFinite(v)) return nf.format(0);
-    const one = (n: number) =>
-      nf.format(Math.round(n * 10) / 10);
-    if (v >= 1e9) return `${one(v / 1e9)} ${t("products.statsBillion")}`;
-    if (v >= 1e6) return `${one(v / 1e6)} ${t("products.statsMillion")}`;
-    if (v >= 1e3) return `${one(v / 1e3)} ${t("products.statsThousand")}`;
-    return nf.format(Math.round(v));
-  };
+  const compactSum = (v: number): string =>
+    formatCompact(v, {
+      thousand: t("products.statsThousand"),
+      million: t("products.statsMillion"),
+      billion: t("products.statsBillion"),
+    });
   const fullSum = (v: number) => `${nf.format(Math.round(v))} so'm`;
 
   const profit = retailValue - supplyValue;

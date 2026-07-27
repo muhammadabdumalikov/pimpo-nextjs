@@ -16,12 +16,18 @@ import {
   LuChartColumnBig,
   LuBox,
   LuUsersRound,
+  LuChevronsLeft,
+  LuChevronsRight,
+  LuLogOut,
 } from "react-icons/lu";
 import { CgProfile } from "react-icons/cg";
+import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
+import AvatarText from "@/components/ui/avatar/AvatarText";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useAuth } from "@/context/AuthContext";
 import { getMenuPermissions, isMenuAllowed, getMenuIdFromPath } from "@/data/menuPermissions";
+import { selectableLocales, localeLabels, type Locale } from "@/i18n/config";
 import { getOrderCount } from "@/lib/api";
 
 type NavItem = {
@@ -33,15 +39,44 @@ type NavItem = {
 };
 
 const AppSidebar: React.FC = () => {
-  const { t } = useTranslations();
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar, headerOpen, toggleHeader } = useSidebar();
+  const { t, locale, setLocale } = useTranslations();
+  const {
+    isExpanded,
+    isMobileOpen,
+    isHovered,
+    setIsHovered,
+    toggleSidebar,
+    toggleMobileSidebar,
+  } = useSidebar();
 
   // On mobile the sidebar is an overlay — close it once a destination is picked.
   const handleNavClick = () => {
     if (isMobileOpen) toggleMobileSidebar();
   };
   const { currentTier } = useSubscription();
-  const { hasMenuAccess } = useAuth();
+  const { hasMenuAccess, account, logout } = useAuth();
+
+  // Account panel (footer drop-up): name, language and sign-out live here now
+  // that there is no app header.
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = React.useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAccountOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [accountOpen]);
   const pathname = usePathname();
   const menuPermissions = getMenuPermissions();
 
@@ -144,6 +179,7 @@ const AppSidebar: React.FC = () => {
         { name: t('sidebar.financeTransactions'), path: "/finance/transactions", pro: false },
         { name: t('sidebar.financeCategories'), path: "/finance/categories", pro: false },
         { name: t('sidebar.financeState'), path: "/finance/state", pro: false },
+        { name: t('sidebar.financePayroll'), path: "/finance/payroll", pro: false },
       ],
     },
     {
@@ -400,7 +436,7 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
+      className={`fixed flex flex-col top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200
         ${
           isExpanded || isMobileOpen
             ? "w-[290px]"
@@ -429,48 +465,29 @@ const AppSidebar: React.FC = () => {
             </span>
           )}
         </Link>
-        {/* Header show/hide — a "top panel" toggle: the top bar of the panel
-            fills when the header is shown and empties when it's hidden. */}
+        {/* The header is gone: its two survivors live here. Theme toggle where
+            the header show/hide used to be, and the sidebar collapse (the old
+            header hamburger's job) beside it — desktop only, since mobile
+            closes via the backdrop. */}
         {(isExpanded || isHovered || isMobileOpen) && (
-          <button
-            type="button"
-            onClick={toggleHeader}
-            aria-label={headerOpen ? "Hide header" : "Show header"}
-            className="flex items-center justify-center text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-              <rect
-                x="3"
-                y="4"
-                width="18"
-                height="16"
-                rx="2.5"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              {/* Top bar: solid when shown, hollow line when hidden */}
-              <path
-                d="M3 9h18"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-              <rect
-                x="4.5"
-                y="5.5"
-                width="15"
-                height="2"
-                rx="1"
-                fill="currentColor"
-                className={`origin-center transition-all duration-300 ease-in-out ${
-                  headerOpen ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
-                }`}
-              />
-            </svg>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <ThemeToggleButton />
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+              className="hidden h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white lg:flex"
+            >
+              {isExpanded ? (
+                <LuChevronsLeft size={20} />
+              ) : (
+                <LuChevronsRight size={20} />
+              )}
+            </button>
+          </div>
         )}
       </div>
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+      <div className="flex flex-1 flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>
@@ -491,6 +508,79 @@ const AppSidebar: React.FC = () => {
             </div>
           </div>
         </nav>
+      </div>
+
+      {/* ── Account footer ─────────────────────────────────────────────────
+          The old header's user menu and locale switcher, consolidated into one
+          bottom-pinned card (the Linear/Notion pattern): tap the account row to
+          get language chips and sign-out in a drop-UP panel. */}
+      <div
+        ref={accountRef}
+        className="relative -mx-5 mt-auto border-t border-gray-200 px-4 py-3 dark:border-gray-800"
+      >
+        <button
+          type="button"
+          onClick={() => setAccountOpen((v) => !v)}
+          aria-expanded={accountOpen}
+          aria-haspopup="menu"
+          className={`flex w-full items-center gap-3 rounded-xl p-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-white/5 ${
+            !isExpanded && !isHovered ? "lg:justify-center" : ""
+          }`}
+        >
+          <AvatarText
+            name={account?.name || "?"}
+            className="!h-9 !w-9 shrink-0 text-theme-xs"
+          />
+          {(isExpanded || isHovered || isMobileOpen) && (
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block truncate text-sm font-medium text-gray-800 dark:text-white/90">
+                {account?.name || "—"}
+              </span>
+              <span className="block truncate text-theme-xs text-gray-400">
+                {account?.type === "staff"
+                  ? account?.roleName ?? ""
+                  : account?.login ?? ""}
+              </span>
+            </span>
+          )}
+        </button>
+
+        {accountOpen && (
+          <div
+            role="menu"
+            className="absolute bottom-full left-4 z-50 mb-2 w-60 rounded-2xl border border-gray-200 bg-white p-2 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark"
+          >
+            {/* Language — the last surviving header control. */}
+            <div className="flex gap-1 border-b border-gray-100 p-1 pb-2.5 dark:border-gray-800">
+              {selectableLocales.map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={() => setLocale(loc as Locale)}
+                  className={`flex-1 rounded-lg px-2 py-1.5 text-theme-xs font-medium transition-colors ${
+                    loc === locale
+                      ? "bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400"
+                      : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
+                  }`}
+                >
+                  {localeLabels[loc]}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setAccountOpen(false);
+                logout();
+              }}
+              className="mt-1.5 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
+            >
+              <LuLogOut size={17} className="text-gray-400" />
+              {t("auth.signOut")}
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

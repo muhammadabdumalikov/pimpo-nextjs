@@ -13,6 +13,53 @@ export const formatMoney = (amount: number, som = "so'm") =>
 export const formatNumber = (n: number) =>
   new Intl.NumberFormat('uz-UZ').format(n);
 
+/** Locale-supplied short scale units for `formatCompact`. */
+export interface CompactUnits {
+  thousand: string; // "ming" / "тыс." / "k"
+  million: string; // "mln"
+  billion: string; // "mlrd" / "bn"
+}
+
+/**
+ * Short form for figures that must fit a tight slot — a chart axis label or a
+ * stat band — where a fully grouped UZS sum ("1 240 000 000") would wrap or
+ * crowd out its neighbours. One decimal, so 1.2 mlrd stays readable while
+ * 1 240 000 000 does not. Always pair with the exact value nearby (tooltip or
+ * title), since this rounds.
+ */
+export const formatCompact = (v: number, units: CompactUnits): string => {
+  if (!Number.isFinite(v)) return formatNumber(0);
+  const sign = v < 0 ? '-' : '';
+  const abs = Math.abs(v);
+  const one = (n: number) => formatNumber(Math.round(n * 10) / 10);
+  if (abs >= 1e9) return `${sign}${one(abs / 1e9)} ${units.billion}`;
+  if (abs >= 1e6) return `${sign}${one(abs / 1e6)} ${units.million}`;
+  if (abs >= 1e3) return `${sign}${one(abs / 1e3)} ${units.thousand}`;
+  return `${sign}${formatNumber(Math.round(abs))}`;
+};
+
+// BCP-47 tags for the app locales, for Intl month names.
+const INTL_LOCALE: Record<string, string> = {
+  uz: 'uz-Latn-UZ',
+  uzc: 'uz-Cyrl-UZ',
+  ru: 'ru-RU',
+  en: 'en-US',
+};
+
+/** Localized month names, Jan→Dec. `format` picks short ("Yan") or long. */
+export const monthNames = (
+  locale: string,
+  format: 'short' | 'long' = 'short',
+): string[] => {
+  const fmt = new Intl.DateTimeFormat(INTL_LOCALE[locale] ?? 'uz-Latn-UZ', {
+    month: format,
+  });
+  return Array.from({ length: 12 }, (_, i) => {
+    const name = fmt.format(new Date(Date.UTC(2024, i, 1)));
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  });
+};
+
 export const formatDate = (iso: string | Date | null) => {
   if (!iso) return '—';
   const d = typeof iso === 'string' ? new Date(iso) : iso;

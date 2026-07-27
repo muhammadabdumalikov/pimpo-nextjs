@@ -1520,13 +1520,30 @@ export async function deleteRole(id: string): Promise<void> {
   if (!response.ok) await parseError(response, 'Failed to delete role');
 }
 
+/** How an employee is paid. 'none' = not on payroll. */
+export type SalaryType = 'none' | 'fixed' | 'percent' | 'mixed';
+
 export interface Staff {
   id: string;
   businessId: string;
-  roleId: string;
+  /** Null for employees without a system account. */
+  roleId: string | null;
   roleName: string | null;
   name: string;
-  login: string;
+  /** Null for employees without a system account. */
+  login: string | null;
+  /** Whether the employee can sign in — only these consume a plan seat. */
+  hasAccount: boolean;
+  position: string | null;
+  phone: string | null;
+  branchId: string | null;
+  branchName: string | null;
+  hiredAt: string | null;
+  salaryType: SalaryType;
+  baseSalary: string;
+  salesPercent: string;
+  percentBase: 'revenue' | 'profit';
+  salaryBalance: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -1534,16 +1551,41 @@ export interface Staff {
 
 export interface CreateStaffDto {
   name: string;
-  login: string;
-  password: string;
-  roleId: string;
+  hasAccount?: boolean;
+  login?: string;
+  password?: string;
+  roleId?: string;
+  position?: string;
+  phone?: string;
+  branchId?: string;
+  hiredAt?: string;
+  salaryType?: SalaryType;
+  baseSalary?: number;
+  salesPercent?: number;
+  percentBase?: 'revenue' | 'profit';
 }
 
 export interface UpdateStaffDto {
   name?: string;
+  hasAccount?: boolean;
+  login?: string;
   roleId?: string;
   password?: string;
+  position?: string;
+  phone?: string;
+  branchId?: string;
+  hiredAt?: string;
+  salaryType?: SalaryType;
+  baseSalary?: number;
+  salesPercent?: number;
+  percentBase?: 'revenue' | 'profit';
   isActive?: boolean;
+}
+
+/** Plan seat usage: owner + staff holding an account. */
+export interface StaffSeatUsage {
+  used: number;
+  limit: number | null;
 }
 
 export async function getStaff(): Promise<Staff[]> {
@@ -1581,6 +1623,185 @@ export async function deleteStaff(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!response.ok) await parseError(response, 'Failed to delete staff');
+}
+
+export async function getStaffSeatUsage(): Promise<StaffSeatUsage> {
+  const response = await fetch(`${API_BASE_URL}/staff/seat-usage`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch seat usage');
+  return response.json();
+}
+
+// ---------------------------------------------------------------------------
+// Payroll API (Ish haqi) — lives under Moliya
+// ---------------------------------------------------------------------------
+
+export type PayrollEntryType =
+  | 'accrual'
+  | 'bonus'
+  | 'payment'
+  | 'advance'
+  | 'deduction';
+
+/** One employee's row in the payroll table. */
+export interface PayrollSummaryRow {
+  id: string;
+  name: string;
+  position: string | null;
+  phone: string | null;
+  branchId: string | null;
+  branchName: string | null;
+  hasAccount: boolean;
+  isActive: boolean;
+  salaryType: SalaryType;
+  baseSalary: number;
+  salesPercent: number;
+  percentBase: 'revenue' | 'profit';
+  /** Running balance: positive = the business owes the employee. */
+  balance: number;
+  periodRevenue: number;
+  periodProfit: number;
+  periodAccrued: number;
+  periodPaid: number;
+}
+
+export interface PayrollSummary {
+  period: string;
+  rows: PayrollSummaryRow[];
+  totals: {
+    balance: number;
+    accrued: number;
+    paid: number;
+    onPayroll: number;
+  };
+}
+
+/** A computed (not yet posted) accrual line. */
+export interface PayrollPreviewRow {
+  staffId: string;
+  staffName: string;
+  position: string | null;
+  salaryType: SalaryType;
+  baseAmount: number;
+  salesBase: number;
+  percentApplied: number;
+  salesAmount: number;
+  total: number;
+  percentBase: 'revenue' | 'profit';
+  alreadyAccrued: boolean;
+}
+
+export interface PayrollPreview {
+  period: string;
+  rows: PayrollPreviewRow[];
+  total: number;
+}
+
+export interface PayrollEntry {
+  id: string;
+  businessId: string;
+  staffId: string;
+  staffName: string;
+  type: PayrollEntryType;
+  amount: string;
+  balanceAfter: string;
+  periodMonth: string | null;
+  baseAmount: string | null;
+  salesAmount: string | null;
+  salesBase: string | null;
+  percentApplied: string | null;
+  accountId: string | null;
+  financialTransactionId: string | null;
+  note: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  createdAt: string;
+}
+
+export async function getPayrollSummary(period?: string): Promise<PayrollSummary> {
+  const qs = period ? `?period=${encodeURIComponent(period)}` : '';
+  const response = await fetch(`${API_BASE_URL}/payroll/summary${qs}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch payroll summary');
+  return response.json();
+}
+
+export async function getPayrollPreview(period: string): Promise<PayrollPreview> {
+  const response = await fetch(
+    `${API_BASE_URL}/payroll/periods/${encodeURIComponent(period)}/preview`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok) await parseError(response, 'Failed to preview payroll');
+  return response.json();
+}
+
+export async function accruePayroll(
+  period: string,
+  staffIds?: string[],
+): Promise<{ period: string; created: number; total: number }> {
+  const response = await fetch(
+    `${API_BASE_URL}/payroll/periods/${encodeURIComponent(period)}/accrue`,
+    {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(staffIds?.length ? { staffIds } : {}),
+    },
+  );
+  if (!response.ok) await parseError(response, 'Failed to accrue payroll');
+  return response.json();
+}
+
+export async function getPayrollEntries(
+  staffId: string,
+  limit = 100,
+): Promise<PayrollEntry[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/payroll/staff/${staffId}/entries?limit=${limit}`,
+    { method: 'GET', headers: authHeaders() },
+  );
+  if (!response.ok) await parseError(response, 'Failed to fetch payroll entries');
+  return response.json();
+}
+
+export async function createPayrollPayment(
+  staffId: string,
+  data: {
+    amount: number;
+    accountId: string;
+    type?: 'payment' | 'advance';
+    note?: string;
+  },
+): Promise<PayrollEntry> {
+  const response = await fetch(
+    `${API_BASE_URL}/payroll/staff/${staffId}/payments`,
+    { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) },
+  );
+  if (!response.ok) await parseError(response, 'Failed to record payment');
+  return response.json();
+}
+
+export async function createPayrollAdjustment(
+  staffId: string,
+  data: { amount: number; type: 'bonus' | 'deduction'; note?: string },
+): Promise<PayrollEntry> {
+  const response = await fetch(
+    `${API_BASE_URL}/payroll/staff/${staffId}/adjustments`,
+    { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) },
+  );
+  if (!response.ok) await parseError(response, 'Failed to record adjustment');
+  return response.json();
+}
+
+export async function deletePayrollEntry(entryId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/payroll/entries/${entryId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to delete payroll entry');
 }
 
 // ---------------------------------------------------------------------------

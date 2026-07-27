@@ -5,7 +5,6 @@ import Image from "next/image";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { useToast } from "@/context/ToastContext";
-import { useSidebar } from "@/context/SidebarContext";
 import { formatPhone } from "@/lib/phone";
 import { formatNumberInput, digitsOnly, stripLeadingZeros } from "@/lib/number";
 import DatePicker from "@/components/form/date-picker";
@@ -213,7 +212,6 @@ export default function Checkout() {
     [locale],
   );
   const { showToast } = useToast();
-  const { headerOpen } = useSidebar();
 
   const [cart, setCart] = useState<CartLine[]>([]);
 
@@ -513,34 +511,6 @@ export default function Checkout() {
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
   }, [showHeld, showShortcuts, showPayment]);
-
-  // Drawers start below the app header so its (higher z-index) bar never covers
-  // the drawer's top controls. The header is collapsible, so we re-measure its
-  // bottom edge on layout changes; when it's hidden the drawer fills the screen.
-  const [headerBottom, setHeaderBottom] = useState(0);
-  useEffect(() => {
-    // The header is always mounted (collapsed via animation), so its own rect
-    // still reports full height when hidden — gate on `headerOpen`.
-    const measure = () => {
-      if (!headerOpen) {
-        setHeaderBottom(0);
-        return;
-      }
-      const header = document.querySelector("header");
-      const bottom = header ? header.getBoundingClientRect().bottom : 0;
-      setHeaderBottom(Math.max(0, Math.round(bottom)));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
-    const ro = new ResizeObserver(measure);
-    ro.observe(document.body);
-    return () => {
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure, true);
-      ro.disconnect();
-    };
-  }, [headerOpen]);
 
   // Client-side filter over the parked sales: order id, customer or note.
   const filteredHeld = useMemo(() => {
@@ -1997,8 +1967,7 @@ export default function Checkout() {
         aria-hidden="true"
       />
       <aside
-        style={{ top: headerBottom, height: `calc(100dvh - ${headerBottom}px)` }}
-        className={`fixed right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
+        className={`fixed right-0 top-0 z-50 flex h-dvh w-full max-w-md flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
           showHeld ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"
@@ -3003,20 +2972,17 @@ export default function Checkout() {
         </aside>
       </div>
 
-      {/* ── Payment drawer — slides in from the RIGHT, below the app header. The
-          payment is composed from method entries; tapping a tile auto-fills
-          what's left to pay. ── */}
+      {/* ── Payment drawer — slides in from the RIGHT. The payment is composed
+          from method entries; tapping a tile auto-fills what's left to pay. ── */}
       <div
-        style={{ top: headerBottom }}
-        className={`fixed inset-x-0 bottom-0 z-40 bg-gray-900/50 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-40 bg-gray-900/50 transition-opacity duration-300 ${
           showPayment ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={closePayment}
         aria-hidden="true"
       />
       <aside
-        style={{ top: headerBottom, height: `calc(100dvh - ${headerBottom}px)` }}
-        className={`fixed right-0 z-50 flex w-full max-w-6xl bg-gray-50 shadow-theme-lg transition-transform duration-300 dark:bg-gray-950 ${
+        className={`fixed right-0 top-0 z-50 flex h-dvh w-full max-w-6xl bg-gray-50 shadow-theme-lg transition-transform duration-300 dark:bg-gray-950 ${
           showPayment ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"

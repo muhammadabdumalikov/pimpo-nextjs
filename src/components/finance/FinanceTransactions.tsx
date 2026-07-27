@@ -7,19 +7,23 @@ import Input from "@/components/form/input/InputField";
 import SelectField from "@/components/form/SelectField";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 import { PlusIcon } from "@/icons/index";
 import { digitsOnly, formatNumberInput } from "@/lib/number";
 import {
   getFinanceTransactions,
   getAccounts,
   getFinanceCategories,
+  getStaff,
   createIncome,
   createExpense,
   createTransfer,
+  createPayrollPayment,
   type FinanceTransaction,
   type Account,
   type FinanceCategory,
   type Currency,
+  type Staff,
 } from "@/lib/api";
 
 const CARD =
@@ -27,12 +31,25 @@ const CARD =
 
 const fmt = (n: number) => new Intl.NumberFormat("uz-UZ").format(n);
 
-type FormType = "income" | "expense" | "transfer";
+// The seeded salary expense category — same name-contract the backend uses
+// (FinanceService.getOrCreatePayrollCategory). A salary expense tied to an
+// employee is routed through the payroll endpoint so the ledger stays true.
+const PAYROLL_CATEGORY_NAME = "Ish haqi";
+
+// The add form is category-first: the chosen category already carries its kind
+// (income/expense), so the user never answers the same question twice. Only a
+// transfer — a different operation entirely (two accounts, no category) — gets
+// its own mode.
+type FormMode = "transaction" | "transfer";
 type Tab = "all" | "income" | "expense" | "transfer";
 
 export default function FinanceTransactions() {
   const { t } = useTranslations();
   const { showToast } = useToast();
+  const { account } = useAuth();
+  // Payroll writes are owner-only on the backend; staff with finance access
+  // still record plain salary expenses without the employee link.
+  const isOwner = account?.type === "business";
 
   const [data, setData] = useState<FinanceTransaction[]>([]);
   const [summary, setSummary] = useState<
@@ -46,7 +63,7 @@ export default function FinanceTransactions() {
 
   // Add form
   const [modalOpen, setModalOpen] = useState(false);
-  const [formType, setFormType] = useState<FormType>("expense");
+  const [formMode, setFormMode] = useState<FormMode>("transaction");
   const [accountId, setAccountId] = useState("");
   const [toAccountId, setToAccountId] = useState("");
   const [amount, setAmount] = useState("");
@@ -54,6 +71,11 @@ export default function FinanceTransactions() {
   const [categoryId, setCategoryId] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Employee link for salary expenses (owner only). Loaded lazily the first
+  // time the salary category is picked, so ordinary expenses pay no cost.
+  const [staffList, setStaffList] = useState<Staff[] | null>(null);
+  const [staffId, setStaffId] = useState("");
 
   const load = async (kind?: Tab) => {
     try {
@@ -108,21 +130,58 @@ export default function FinanceTransactions() {
     () => accounts.map((a) => ({ value: a.id, label: a.name })),
     [accounts],
   );
-  const categoryOptions = useMemo(
+  // One combined list, expenses first (the common case). The dot tells the
+  // kind at a glance: red = chiqim, green = kirim.
+  const categoryOptions = useMemo(() => {
+    const toOption = (c: FinanceCategory) => ({
+      value: c.id,
+      label: c.name,
+      dotColor:
+        c.kind === "expense"
+          ? "var(--color-error-500)"
+          : "var(--color-success-500)",
+    });
+    return [
+      ...categories.filter((c) => c.kind === "expense").map(toOption),
+      ...categories.filter((c) => c.kind === "income").map(toOption),
+    ];
+  }, [categories]);
+
+  const selectedCategory = useMemo(
+    () => categories.find((c) => c.id === categoryId) ?? null,
+    [categories, categoryId],
+  );
+  const isSalaryCategory =
+    isOwner &&
+    formMode === "transaction" &&
+    selectedCategory?.kind === "expense" &&
+    selectedCategory.name === PAYROLL_CATEGORY_NAME;
+
+  // Fetch employees only when the salary category is first picked.
+  useEffect(() => {
+    if (!isSalaryCategory || staffList !== null) return;
+    getStaff()
+      .then((list) => setStaffList(list.filter((s) => s.isActive)))
+      .catch(() => setStaffList([]));
+  }, [isSalaryCategory, staffList]);
+
+  const staffOptions = useMemo(
     () =>
-      categories
-        .filter((c) => (formType === "income" ? c.kind === "income" : c.kind === "expense"))
-        .map((c) => ({ value: c.id, label: c.name })),
-    [categories, formType],
+      (staffList ?? []).map((s) => ({
+        value: s.id,
+        label: s.position ? `${s.name} — ${s.position}` : s.name,
+      })),
+    [staffList],
   );
 
   const openAdd = () => {
-    setFormType("expense");
+    setFormMode("transaction");
     setAccountId("");
     setToAccountId("");
     setAmount("");
     setCurrency("UZS");
     setCategoryId("");
+    setStaffId("");
     setNote("");
     setModalOpen(true);
   };
@@ -135,7 +194,7 @@ export default function FinanceTransactions() {
     }
     setSaving(true);
     try {
-      if (formType === "transfer") {
+      if (formMode === "transfer") {
         if (!accountId || !toAccountId || accountId === toAccountId) {
           showToast("error", t("finance.account"), "Error");
           setSaving(false);
@@ -149,20 +208,39 @@ export default function FinanceTransactions() {
           note: note.trim() || undefined,
         });
       } else {
+        // The category decides whether this is income or expense.
+        const category = categories.find((c) => c.id === categoryId);
+        if (!category) {
+          showToast("error", t("finance.categoryRequired"), "Error");
+          setSaving(false);
+          return;
+        }
         if (!accountId) {
           showToast("error", t("finance.account"), "Error");
           setSaving(false);
           return;
         }
-        const payload = {
-          accountId,
-          amount: amt,
-          currency,
-          categoryId: categoryId || undefined,
-          note: note.trim() || undefined,
-        };
-        if (formType === "income") await createIncome(payload);
-        else await createExpense(payload);
+        if (isSalaryCategory && staffId) {
+          // Salary tied to an employee: route through payroll so the same
+          // expense is posted AND the employee's balance/history update
+          // atomically. The payroll ledger is UZS.
+          await createPayrollPayment(staffId, {
+            amount: amt,
+            accountId,
+            type: "payment",
+            note: note.trim() || undefined,
+          });
+        } else {
+          const payload = {
+            accountId,
+            amount: amt,
+            currency,
+            categoryId: category.id,
+            note: note.trim() || undefined,
+          };
+          if (category.kind === "income") await createIncome(payload);
+          else await createExpense(payload);
+        }
       }
       showToast("success", t("finance.add"), "Success");
       setModalOpen(false);
@@ -325,22 +403,72 @@ export default function FinanceTransactions() {
         }
       >
         <div className="space-y-4">
-          <div>
-            <Label>{t("finance.type")}</Label>
-            <SelectField
-              value={formType}
-              onChange={(v) => setFormType(v as FormType)}
-              options={[
-                { value: "expense", label: t("finance.expense") },
-                { value: "income", label: t("finance.income") },
-                { value: "transfer", label: t("finance.transfer") },
-              ]}
-            />
+          {/* Operation mode — a transfer is the only thing a category can't say. */}
+          <div className="flex gap-2">
+            {(
+              [
+                { key: "transaction", label: t("finance.operationTransaction") },
+                { key: "transfer", label: t("finance.transfer") },
+              ] as { key: FormMode; label: string }[]
+            ).map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setFormMode(m.key)}
+                className={
+                  formMode === m.key
+                    ? "rounded-lg bg-brand-500 px-3 py-1.5 text-theme-sm font-medium text-white"
+                    : "rounded-lg bg-gray-100 px-3 py-1.5 text-theme-sm font-medium text-gray-600 hover:bg-gray-200 dark:bg-white/[0.03] dark:text-gray-400 dark:hover:bg-white/[0.06]"
+                }
+              >
+                {m.label}
+              </button>
+            ))}
           </div>
+
+          {/* Category leads: it already knows whether this is kirim or chiqim. */}
+          {formMode === "transaction" && (
+            <div>
+              <Label>{t("finance.category")}</Label>
+              <SelectField
+                value={categoryId}
+                onChange={(v) => {
+                  setCategoryId(v);
+                  setStaffId("");
+                }}
+                placeholder={t("finance.selectCategory")}
+                searchable
+                options={categoryOptions}
+              />
+            </div>
+          )}
+
+          {/* Salary → optionally tie the payment to an employee (owner only). */}
+          {isSalaryCategory && (
+            <div>
+              <Label>{t("payroll.employee")}</Label>
+              <SelectField
+                value={staffId}
+                onChange={(v) => {
+                  setStaffId(v);
+                  // The payroll ledger is UZS-only.
+                  if (v) setCurrency("UZS");
+                }}
+                placeholder={t("finance.selectStaffOptional")}
+                searchable
+                options={staffOptions}
+              />
+              {staffId && (
+                <p className="mt-1 text-theme-xs text-gray-400">
+                  {t("finance.staffPaymentHint")}
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <Label>
-              {formType === "transfer" ? t("finance.fromAccount") : t("finance.account")}
+              {formMode === "transfer" ? t("finance.fromAccount") : t("finance.account")}
             </Label>
             <SelectField
               value={accountId}
@@ -350,7 +478,7 @@ export default function FinanceTransactions() {
             />
           </div>
 
-          {formType === "transfer" && (
+          {formMode === "transfer" && (
             <div>
               <Label>{t("finance.toAccount")}</Label>
               <SelectField
@@ -376,6 +504,8 @@ export default function FinanceTransactions() {
               <SelectField
                 value={currency}
                 onChange={(v) => setCurrency(v as Currency)}
+                // Employee-linked salary payments settle the UZS ledger.
+                disabled={!!staffId}
                 options={[
                   { value: "UZS", label: "UZS" },
                   { value: "USD", label: "USD" },
@@ -383,18 +513,6 @@ export default function FinanceTransactions() {
               />
             </div>
           </div>
-
-          {formType !== "transfer" && (
-            <div>
-              <Label>{t("finance.category")}</Label>
-              <SelectField
-                value={categoryId}
-                onChange={setCategoryId}
-                placeholder={t("finance.selectCategory")}
-                options={categoryOptions}
-              />
-            </div>
-          )}
 
           <div>
             <Label>{t("finance.note")}</Label>

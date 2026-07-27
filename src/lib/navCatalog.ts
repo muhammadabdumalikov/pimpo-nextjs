@@ -25,6 +25,7 @@ import {
   LuCreditCard,
   LuGlobe,
   LuPlug,
+  LuBanknote,
 } from "react-icons/lu";
 import { REPORTS } from "./reportsCatalog";
 
@@ -66,6 +67,7 @@ const MENU_ENTRIES: NavEntry[] = [
   { id: "finance-transactions", path: "/finance/transactions", nameKey: "sidebar.financeTransactions", groupKey: "sidebar.finance", icon: LuWallet },
   { id: "finance-categories", path: "/finance/categories", nameKey: "sidebar.financeCategories", groupKey: "sidebar.finance", icon: LuFolderTree },
   { id: "finance-state", path: "/finance/state", nameKey: "sidebar.financeState", groupKey: "sidebar.finance", icon: LuScale },
+  { id: "finance-payroll", path: "/finance/payroll", nameKey: "sidebar.financePayroll", groupKey: "sidebar.finance", icon: LuBanknote },
 
   // Reports hub
   { id: "reports", path: "/reports", nameKey: "sidebar.reports", groupKey: "sidebar.menu", icon: LuChartColumnBig },

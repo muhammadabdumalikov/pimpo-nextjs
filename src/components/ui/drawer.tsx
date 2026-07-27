@@ -1,6 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { useSidebar } from "@/context/SidebarContext";
+import React, { useEffect } from "react";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 interface DrawerProps {
@@ -14,9 +13,8 @@ interface DrawerProps {
   widthClass?: string;
 }
 
-// BiLLZ-style slide-over drawer from the right. Starts below the app header
-// (which is sticky at z-99999) so the header's bar stays visible above it —
-// mirrors the sale-detail / checkout drawers. Closes on Escape / backdrop click.
+// BiLLZ-style slide-over drawer from the right, full viewport height — mirrors
+// the sale-detail / checkout drawers. Closes on Escape / backdrop click.
 export const Drawer: React.FC<DrawerProps> = ({
   isOpen,
   onClose,
@@ -25,34 +23,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   footer,
   widthClass = "max-w-md",
 }) => {
-  const { headerOpen } = useSidebar();
   useBodyScrollLock(isOpen);
-
-  // Measure the app header's bottom so the drawer opens beneath it (the header
-  // sits at a higher z-index; without this it would cover the drawer's top).
-  const [headerBottom, setHeaderBottom] = useState(0);
-  useEffect(() => {
-    if (!isOpen) return;
-    const measure = () => {
-      if (!headerOpen) {
-        setHeaderBottom(0);
-        return;
-      }
-      const header = document.querySelector("header");
-      const bottom = header ? header.getBoundingClientRect().bottom : 0;
-      setHeaderBottom(Math.max(0, Math.round(bottom)));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
-    const ro = new ResizeObserver(measure);
-    ro.observe(document.body);
-    return () => {
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure, true);
-      ro.disconnect();
-    };
-  }, [isOpen, headerOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -64,7 +35,7 @@ export const Drawer: React.FC<DrawerProps> = ({
 
   return (
     <>
-      {/* Backdrop (below the header's z-index so the header stays visible) */}
+      {/* Backdrop */}
       <div
         className={`fixed inset-0 z-40 bg-gray-900/50 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "pointer-events-none opacity-0"
@@ -76,8 +47,7 @@ export const Drawer: React.FC<DrawerProps> = ({
       <aside
         role="dialog"
         aria-modal="true"
-        style={{ top: headerBottom, height: `calc(100dvh - ${headerBottom}px)` }}
-        className={`fixed right-0 z-50 flex w-full ${widthClass} flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
+        className={`fixed right-0 top-0 z-50 flex h-dvh w-full ${widthClass} flex-col bg-white shadow-theme-lg transition-transform duration-300 dark:bg-gray-900 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >

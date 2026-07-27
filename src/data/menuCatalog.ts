@@ -45,6 +45,13 @@ export const menuCatalog: MenuCatalogItem[] = [
   { key: "finance.categories", labelKey: "sidebar.financeCategories", group: "finance" },
   { key: "finance.transactions", labelKey: "sidebar.financeTransactions", group: "finance" },
   { key: "finance.state", labelKey: "sidebar.financeState", group: "finance" },
+  // Payroll exposes every employee's wage — owner-only, never grantable to a role.
+  {
+    key: "finance.payroll",
+    labelKey: "sidebar.financePayroll",
+    group: "finance",
+    ownerOnly: true,
+  },
 
   // Customers
   { key: "userDebt", labelKey: "sidebar.userDebt", group: "customers" },
