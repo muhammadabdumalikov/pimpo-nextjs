@@ -35,7 +35,7 @@ export default function SubscriptionManagement() {
   const [monthly, setMonthly] = useState(true);
 
   // NOTE: prices hardcoded here — must stay in sync with the backend seed
-  // (pimpo-backend/src/subscription/seed-plans.ts → 119/299/499). Unlike
+  // (pimpo-backend/src/subscription/seed-plans.ts → 119/299/399). Unlike
   // UpgradePlan (which fetches via getSubscriptionPlans), this comparison table
   // does not read the API, so update these if plan prices change on the backend.
   const plans = useMemo<Plan[]>(
@@ -50,7 +50,7 @@ export default function SubscriptionManagement() {
       {
         tier: "proplus",
         name: t("upgradePlan.proplus"),
-        monthlyPrice: 499000,
+        monthlyPrice: 399000,
       },
     ],
     [t],
@@ -60,7 +60,7 @@ export default function SubscriptionManagement() {
     () => [
       {
         label: t("upgradePlan.compare.branches"),
-        basic: "1 + 3",
+        basic: "1 + 2",
         pro: "1 + 5",
         proplus: t("upgradePlan.compare.unlimited"),
       },
@@ -105,6 +105,18 @@ export default function SubscriptionManagement() {
         basic: true,
         pro: t("upgradePlan.compare.extended"),
         proplus: t("upgradePlan.compare.extended"),
+      },
+      {
+        label: t("upgradePlan.compare.loyalty"),
+        basic: false,
+        pro: true,
+        proplus: true,
+      },
+      {
+        label: t("upgradePlan.compare.onlineStore"),
+        basic: false,
+        pro: true,
+        proplus: true,
       },
       {
         label: t("upgradePlan.compare.bulkImport"),

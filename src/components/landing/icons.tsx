@@ -9,13 +9,15 @@ import {
   LuClock,
   LuWallet,
   LuClipboardCheck,
-  LuCloudOff,
   LuArrowRightLeft,
   LuUndo2,
   LuCheck,
   LuArrowRight,
   LuChevronDown,
   LuGlobe,
+  LuStore,
+  LuGift,
+  LuBell,
 } from "react-icons/lu";
 
 type IconProps = { className?: string };
@@ -38,8 +40,10 @@ export const TeamIcon = lucide(LuUsers, "h-6 w-6");
 export const ShiftIcon = lucide(LuClock, "h-6 w-6");
 export const WalletIcon = lucide(LuWallet, "h-6 w-6");
 export const ClipboardIcon = lucide(LuClipboardCheck, "h-6 w-6");
-export const CloudIcon = lucide(LuCloudOff, "h-6 w-6");
 export const ExchangeIcon = lucide(LuArrowRightLeft, "h-6 w-6");
+export const StoreIcon = lucide(LuStore, "h-6 w-6");
+export const GiftIcon = lucide(LuGift, "h-6 w-6");
+export const BellIcon = lucide(LuBell, "h-6 w-6");
 export const UndoIcon = lucide(LuUndo2, "h-6 w-6");
 export const CheckIcon = lucide(LuCheck, "h-5 w-5");
 export const ArrowIcon = lucide(LuArrowRight, "h-4 w-4");
@@ -56,7 +60,9 @@ export const featureIcons = {
   shift: ShiftIcon,
   wallet: WalletIcon,
   clipboard: ClipboardIcon,
-  cloud: CloudIcon,
   exchange: ExchangeIcon,
   undo: UndoIcon,
+  store: StoreIcon,
+  gift: GiftIcon,
+  bell: BellIcon,
 } as const;

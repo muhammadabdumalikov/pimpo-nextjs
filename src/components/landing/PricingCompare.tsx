@@ -19,6 +19,7 @@ const VALUE_TOKENS = new Set([
   "extended",
   "standard",
   "priority",
+  "dedicated",
   "credit20",
 ]);
 
@@ -29,7 +30,7 @@ const GROUPS: { key: string; rows: Row[] }[] = [
   {
     key: "core",
     rows: [
-      { key: "branches", basic: "1 + 3", pro: "1 + 5", proplus: "unlimited" },
+      { key: "branches", basic: "1 + 2", pro: "1 + 5", proplus: "unlimited" },
       { key: "branchDiscount", basic: "+150 000", pro: "+150 000", proplus: "+150 000" },
       { key: "products", basic: "unlimited", pro: "unlimited", proplus: "unlimited" },
       { key: "users", basic: "10", pro: "20", proplus: "50" },
@@ -65,13 +66,31 @@ const GROUPS: { key: string; rows: Row[] }[] = [
     rows: [{ key: "suppliers", basic: true, pro: true, proplus: true }],
   },
   {
+    key: "finance",
+    rows: [
+      { key: "finance", basic: true, pro: true, proplus: true },
+      { key: "payroll", basic: true, pro: true, proplus: true },
+      { key: "multiCurrency", basic: true, pro: true, proplus: true },
+    ],
+  },
+  {
+    key: "growth",
+    rows: [
+      { key: "loyalty", basic: false, pro: true, proplus: true },
+      { key: "onlineStore", basic: false, pro: true, proplus: true },
+      { key: "telegram", basic: true, pro: true, proplus: true },
+    ],
+  },
+  {
     key: "reports",
     rows: [
       { key: "dashboard", basic: true, pro: true, proplus: true },
       { key: "operationalReports", basic: true, pro: true, proplus: true },
       { key: "staffSales", basic: true, pro: true, proplus: true },
       { key: "extendedReports", basic: false, pro: true, proplus: true },
-      { key: "multibranchReports", basic: false, pro: false, proplus: true },
+      // Business IS the multi-branch plan — comparison ships with it, not two
+      // tiers above the branches the customer already paid for.
+      { key: "multibranchReports", basic: false, pro: true, proplus: true },
     ],
   },
   {
@@ -80,7 +99,7 @@ const GROUPS: { key: string; rows: Row[] }[] = [
   },
   {
     key: "support",
-    rows: [{ key: "support", basic: "standard", pro: "priority", proplus: "priority" }],
+    rows: [{ key: "support", basic: "standard", pro: "priority", proplus: "dedicated" }],
   },
 ];
 

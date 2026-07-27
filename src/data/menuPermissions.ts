@@ -7,13 +7,14 @@ import { MenuPermission, SubscriptionTier, tiersFrom } from '@/types/subscriptio
 //              team, and the operational reports.
 //   • pro    — Business: + extended analytics (P&L, ABC/assortment, dead-stock,
 //              reorder, debt-aging, traffic, transfers history, targets, digest)
-//              + bulk import + product images.
-//   • proplus— Business+: + multi-branch analytics (branch comparison, transfer
-//              suggestions) + unlimited scale.
+//              + multi-branch analytics (branch comparison, transfer
+//              suggestions) + loyalty + the online storefront + bulk import
+//              + product images.
+//   • proplus— Business+: unlimited scale (branches / 50 users). No exclusive
+//              feature of its own — see NARX-DRAFT.md.
 const FREE = tiersFrom('free');   // everyone, incl. expired floor
 const BASIC = tiersFrom('basic'); // basic, pro, proplus
 const PRO = tiersFrom('pro');     // pro, proplus
-const PROPLUS = tiersFrom('proplus'); // proplus only
 
 // Default menu permissions - can be managed from admin page
 export const defaultMenuPermissions: MenuPermission[] = [
@@ -33,12 +34,12 @@ export const defaultMenuPermissions: MenuPermission[] = [
   // User Debt (nasiya) — core POS; the free floor caps at 20 debts (backend).
   { menuItem: 'userDebt', allowedTiers: FREE },
 
-  // Loyalty program (keshbek/bonus) — Mijozlar. FREE for now so every shop can
-  // set it up; move to BASIC/PRO to make it a paid differentiator.
-  { menuItem: 'loyalty', allowedTiers: FREE },
+  // Loyalty program (keshbek/bonus) — Mijozlar. Business (pro) and up: this is
+  // one of the paid differentiators the tiers are priced on.
+  { menuItem: 'loyalty', allowedTiers: PRO },
 
-  // Customers list (loyalty balances) — Mijozlar.
-  { menuItem: 'customers', allowedTiers: FREE },
+  // Customers list (loyalty balances) — Mijozlar, same tier as the programme.
+  { menuItem: 'customers', allowedTiers: PRO },
 
   // Finance (Moliya) — Standart (basic) and up.
   { menuItem: 'finance.categories', allowedTiers: BASIC },
@@ -51,13 +52,15 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'inventory', allowedTiers: BASIC },
   { menuItem: 'productPerformance', allowedTiers: BASIC },
 
-  // Reports (Hisobotlar) — three levels:
+  // Reports (Hisobotlar) — two levels:
   //   reports            operational reports — Standart (basic) and up
   //   reports.extended   extended analytics  — Business (pro) and up
-  //   reports.multibranch multi-branch analytics — Business+ (proplus) only
+  //   reports.multibranch multi-branch analytics — Business (pro) and up too:
+  //     Business IS the multi-branch plan, so branch comparison belongs with
+  //     it. Business+ is a scale ceiling, not an extra report set.
   { menuItem: 'reports', allowedTiers: BASIC },
   { menuItem: 'reports.extended', allowedTiers: PRO },
-  { menuItem: 'reports.multibranch', allowedTiers: PROPLUS },
+  { menuItem: 'reports.multibranch', allowedTiers: PRO },
 
   // Procurement (suppliers + goods receipts) — Standart and up.
   { menuItem: 'suppliers', allowedTiers: BASIC },
@@ -75,6 +78,11 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'upgradePlan', allowedTiers: FREE },
   { menuItem: 'settings', allowedTiers: FREE },
   { menuItem: 'settings.receipts', allowedTiers: FREE },
+  // Settings screens for gated features follow their feature's tier, so a shop
+  // can never switch on something the backend will refuse to serve (e.g.
+  // enabling a storefront that would answer STORE_NOT_FOUND).
+  { menuItem: 'settings.onlineStore', allowedTiers: PRO },
+  { menuItem: 'settings.telegram', allowedTiers: BASIC },
 ];
 
 // Menu gating rules are a STATIC mirror of the backend tier gating
@@ -107,6 +115,8 @@ const routeMenuMap: Record<string, string> = {
   '/customers': 'customers',
   '/subscription-management': 'subscriptionManagement',
   '/settings/receipts': 'settings.receipts',
+  '/settings/online-store': 'settings.onlineStore',
+  '/settings/applications/telegram': 'settings.telegram',
   '/settings': 'settings',
   '/cart': 'checkout',
   // All-sales history shares the checkout menu right: whoever can sell can

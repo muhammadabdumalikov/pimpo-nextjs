@@ -95,6 +95,8 @@ export default function UpgradePlan() {
         return [
           t('upgradePlan.features.pro.everythingInBasic'),
           t('upgradePlan.features.pro.ecommerceDashboard'),
+          t('upgradePlan.features.pro.loyalty'),
+          t('upgradePlan.features.pro.onlineStore'),
           t('upgradePlan.features.pro.productsList'),
           t('upgradePlan.features.pro.addProduct'),
           t('upgradePlan.features.pro.productImages'),
@@ -144,7 +146,7 @@ export default function UpgradePlan() {
     {
       tier: 'proplus' as SubscriptionTier,
       name: t('upgradePlan.proplus'),
-      price: 499000,
+      price: 399000,
       description: t('upgradePlan.proplusDescription'),
       features: getFeaturesForTier('proplus', t),
       popular: false,

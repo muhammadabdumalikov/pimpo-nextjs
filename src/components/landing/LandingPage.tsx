@@ -15,10 +15,13 @@ import { SITE_CONTACT, hasAnyContact } from "@/lib/siteContact";
 // marquee. Radius (locked): buttons = pill, cards/panels = 2xl, inner = xl.
 // Accent (locked): brand indigo #465fff only.
 
+// Cell budget: the grid is 3 columns, so the cells must total a multiple of 3
+// or the last row ends up with holes. hero = 4 (2×2), wide = 2, rest = 1 each.
+// Currently 4 + 2 + 6 = 12 → exactly four full rows.
 const FEATURES: {
   icon: keyof typeof featureIcons;
   key: string;
-  variant: "hero" | "chart" | "tint" | "plain";
+  variant: "hero" | "wide" | "chart" | "tint" | "plain";
 }[] = [
   { icon: "pos", key: "pos", variant: "hero" },
   { icon: "credit", key: "credit", variant: "tint" },
@@ -26,6 +29,11 @@ const FEATURES: {
   { icon: "chart", key: "reports", variant: "chart" },
   { icon: "truck", key: "suppliers", variant: "plain" },
   { icon: "team", key: "team", variant: "plain" },
+  // Business-plan differentiators — they carry the 299k tier, so they are sold
+  // here rather than only in the pricing table. The storefront gets the wide
+  // cell: it is the one capability no competitor bundles at this price.
+  { icon: "store", key: "onlineStore", variant: "wide" },
+  { icon: "gift", key: "loyalty", variant: "plain" },
 ];
 
 // Neutral checkout mini-visual for the large POS feature cell (brand product
@@ -35,6 +43,10 @@ const SALE = [
   { name: "Nescafé Gold 250g", price: "34 000" },
 ];
 const SALE_TOTAL = "46 000";
+
+// Illustrative storefront address — every shop gets its own subdomain from its
+// storeSlug (see StoreService.resolveBusinessId).
+const STORE_URL = "salom.kpos.uz";
 
 const PLANS: {
   id: string;
@@ -53,9 +65,9 @@ const OPS: { key: string; icon: keyof typeof featureIcons }[] = [
   { key: "shift", icon: "shift" },
   { key: "finance", icon: "wallet" },
   { key: "stocktake", icon: "clipboard" },
-  { key: "offline", icon: "cloud" },
   { key: "currency", icon: "exchange" },
   { key: "returns", icon: "undo" },
+  { key: "telegram", icon: "bell" },
 ];
 
 const STATS = ["install", "credit", "trial"] as const;
@@ -228,6 +240,38 @@ export default function LandingPage() {
                             {SALE_TOTAL}
                           </span>
                         </div>
+                      </div>
+                    </div>
+                  </Reveal>
+                );
+              }
+
+              // Wide accent cell: spans two columns so the storefront reads as
+              // a capability, not another tile. Carries the subdomain chip
+              // instead of a mock screenshot — it is the concrete thing a shop
+              // gets, and it stays honest at any viewport.
+              if (f.variant === "wide") {
+                return (
+                  <Reveal key={f.key} delay={i * 50} className="lg:col-span-2">
+                    <div className="flex h-full flex-col gap-6 rounded-2xl border border-brand-100 bg-brand-50/50 p-7 sm:flex-row sm:items-center sm:justify-between dark:border-brand-500/20 dark:bg-brand-500/[0.05]">
+                      <div className="max-w-md">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <h3 className="mt-5 text-lg font-semibold text-gray-900 dark:text-white">
+                          {t(`landing.features.${f.key}.title`)}
+                        </h3>
+                        <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+                          {t(`landing.features.${f.key}.desc`)}
+                        </p>
+                      </div>
+                      <div className="shrink-0 rounded-xl border border-brand-100 bg-white px-5 py-4 dark:border-brand-500/20 dark:bg-white/[0.04]">
+                        <span className="block text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                          {t("landing.features.onlineStore.urlLabel")}
+                        </span>
+                        <span className="mt-1 block font-mono text-sm text-brand-600 dark:text-brand-300">
+                          {STORE_URL}
+                        </span>
                       </div>
                     </div>
                   </Reveal>
@@ -456,16 +500,13 @@ export default function LandingPage() {
                   </p>
                   {(() => {
                     const rawPrice = String(t(`landing.pricing.${plan.id}.price`));
-                    const introRaw = String(t(`landing.pricing.${plan.id}.introPrice`));
                     const monthly = Number(rawPrice.replace(/\D/g, ""));
-                    const intro = Number(introRaw.replace(/\D/g, ""));
                     const paid = monthly > 0;
-                    // First 2 months at the intro price (monthly billing only);
-                    // yearly keeps its own −20% treatment so they never stack.
-                    const introActive = paid && intro > 0 && intro < monthly && !yearly;
-                    const shown = introActive
-                      ? intro
-                      : paid && yearly
+                    // Monthly is the headline; yearly applies the −20% discount.
+                    // (The old 2-month intro price is gone — it advertised a
+                    // number the customer stopped paying at month 3.)
+                    const shown =
+                      paid && yearly
                         ? Math.round(monthly * (1 - YEARLY_DISCOUNT))
                         : monthly;
                     // First month free is a standing offer on the entry plan.
@@ -473,7 +514,7 @@ export default function LandingPage() {
                     return (
                       <>
                         {/* Same layout on every card: big price + a blue promo
-                            note beside it ("Ilk oy bepul" / "Ilk 2 oy"). */}
+                            note beside it ("Ilk oy bepul"). */}
                         <div className="mt-6 flex items-end gap-1.5">
                           <span className="text-4xl font-extrabold tabular-nums tracking-tight text-gray-900 dark:text-white">
                             {paid ? nf(shown) : rawPrice}
@@ -484,11 +525,6 @@ export default function LandingPage() {
                                 {t("landing.pricing.promo.firstMonthFree")}
                               </span>
                             )}
-                            {introActive && (
-                              <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
-                                {t("landing.pricing.promo.intro")}
-                              </span>
-                            )}
                             <span className="text-sm text-gray-500 dark:text-gray-400">
                               {t(`landing.pricing.${plan.id}.period`)}
                             </span>
@@ -497,12 +533,6 @@ export default function LandingPage() {
                         {freeMonth && (
                           <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
                             {t("landing.pricing.promo.fromMonth2")} {nf(monthly)}{" "}
-                            {t("landing.pricing.promo.perMonth")}
-                          </p>
-                        )}
-                        {introActive && (
-                          <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-                            {t("landing.pricing.promo.then")} {nf(monthly)}{" "}
                             {t("landing.pricing.promo.perMonth")}
                           </p>
                         )}
