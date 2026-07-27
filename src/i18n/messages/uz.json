@@ -2585,5 +2585,28 @@
       "adjust": "Tuzatish",
       "expire": "Muddati o'tdi"
     }
+  },
+  "storeBot": {
+    "title": "Telegram Mini App (do'kon boti)",
+    "description": "Do'koningizni Telegram ichida oching. Mijoz botni ochadi, mahsulotlarni ko'radi va buyurtma beradi; buyurtma holati o'zgarganda sizning botingizdan xabar oladi.",
+    "statusOn": "Ulangan",
+    "statusOff": "Ulanmagan",
+    "needsSlug": "Avval yuqorida do'kon manzilini (subdomen) saqlang — botga ochadigan manzil kerak.",
+    "step1": "Telegramda @BotFather'ni oching va /newbot buyrug'i bilan bot yarating.",
+    "step2": "BotFather bergan tokenni nusxalab, quyidagi maydonga qo'ying.",
+    "step3": "So'ng BotFather'da /setmenubutton (yoki Bot Settings → Menu Button) orqali quyida ko'rsatilgan manzilni kiriting.",
+    "tokenLabel": "Bot tokeni",
+    "tokenHint": "Token faqat serverda saqlanadi va hech qachon qaytarib ko'rsatilmaydi.",
+    "connect": "Ulash",
+    "connected": "Bot ulandi",
+    "disconnect": "Uzish",
+    "disconnected": "Bot uzildi",
+    "saving": "Saqlanmoqda...",
+    "yourBot": "Sizning botingiz",
+    "miniAppUrlLabel": "Mini App manzili (BotFather uchun)",
+    "miniAppUrlHint": "Shu manzilni BotFather'da Menu Button URL sifatida kiriting.",
+    "copy": "Nusxalash",
+    "copied": "Nusxalandi",
+    "copyFailed": "Nusxalab bo'lmadi"
   }
 }

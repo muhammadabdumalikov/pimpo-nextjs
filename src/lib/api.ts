@@ -125,6 +125,63 @@ export async function updateStoreSettings(data: {
   return response.json();
 }
 
+/** The shop's own storefront bot (Telegram Mini App). Never carries the token. */
+export interface StoreBotInfo {
+  connected: boolean;
+  botUsername: string | null;
+  botLink: string | null;
+  /** URL to paste into BotFather as the bot's Mini App / Menu Button URL. */
+  miniAppUrl: string | null;
+  updatedAt: string | null;
+}
+
+export async function getStoreBot(): Promise<StoreBotInfo> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const response = await fetch(`${API_BASE_URL}/telegram/store-bot`, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const error = await response
+      .json()
+      .catch(() => ({ message: 'Failed to load store bot' }));
+    throw makeApiError(error, 'Failed to load store bot');
+  }
+  return response.json();
+}
+
+/** Connect the shop's storefront bot, or disconnect it with a null token. */
+export async function updateStoreBot(data: {
+  botToken: string | null;
+}): Promise<StoreBotInfo> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  const response = await fetch(`${API_BASE_URL}/telegram/store-bot`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const error = await response
+      .json()
+      .catch(() => ({ message: 'Failed to save store bot' }));
+    throw makeApiError(error, 'Failed to save store bot');
+  }
+  return response.json();
+}
+
 // Re-fetch the acting account (owner or staff) with its CURRENT permissions.
 // Unlike the login response (a one-time snapshot), this reflects live role /
 // menuKey edits — the frontend uses it to drive menus and permission checks.

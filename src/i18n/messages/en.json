@@ -2585,5 +2585,28 @@
       "adjust": "Adjustment",
       "expire": "Expired"
     }
+  },
+  "storeBot": {
+    "title": "Telegram Mini App (store bot)",
+    "description": "Open your storefront inside Telegram. Customers browse and order in the bot, and get status messages from your own bot.",
+    "statusOn": "Connected",
+    "statusOff": "Not connected",
+    "needsSlug": "Save your store address (subdomain) above first — the bot needs something to open.",
+    "step1": "Open @BotFather in Telegram and create a bot with /newbot.",
+    "step2": "Copy the token it gives you and paste it in the field below.",
+    "step3": "Then in BotFather use /setmenubutton (or Bot Settings → Menu Button) and enter the URL shown below.",
+    "tokenLabel": "Bot token",
+    "tokenHint": "The token is stored on the server only and never shown back.",
+    "connect": "Connect",
+    "connected": "Bot connected",
+    "disconnect": "Disconnect",
+    "disconnected": "Bot disconnected",
+    "saving": "Saving...",
+    "yourBot": "Your bot",
+    "miniAppUrlLabel": "Mini App URL (for BotFather)",
+    "miniAppUrlHint": "Enter this URL in BotFather as the Menu Button URL.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Could not copy"
   }
 }

@@ -7,6 +7,7 @@ import Button from "@/components/ui/button/Button";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import Switch from "@/components/form/switch/Switch";
+import StoreBotSettings from "@/components/settings/StoreBotSettings";
 import { getCurrentUser, updateStoreSettings } from "@/lib/api";
 
 // The root domain the storefront is served under. Subdomains of it become each
@@ -163,6 +164,9 @@ export default function StoreSettings() {
           </div>
         </div>
       )}
+
+      {/* Telegram Mini App: the same storefront, opened inside Telegram. */}
+      <StoreBotSettings storeUrl={storeUrl} />
     </div>
   );
 }
