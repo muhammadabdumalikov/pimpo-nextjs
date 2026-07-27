@@ -55,7 +55,8 @@ export default function LandingHeader() {
   }, [mobileOpen]);
 
   // The landing only offers Uzbek and Russian — fall back to Uzbek if the
-  // active locale is anything else (e.g. the app default "en").
+  // active locale is anything else (a session still holding retired "en"/"uzc"
+  // before LocaleContext folds it).
   useEffect(() => {
     if (locale !== "uz" && locale !== "ru") {
       setLocale("uz");

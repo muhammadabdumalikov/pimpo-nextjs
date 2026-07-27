@@ -13,8 +13,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // `lang` is the SSR default (matches i18n/config defaultLocale); LocaleProvider
+  // restamps it client-side once the stored locale is known.
   return (
-    <html lang="en" className={gilroy.variable}>
+    <html lang="uz" className={gilroy.variable}>
       {/* The page canvas sits a step darker than the white/gray-900 surfaces
           on it, so cards, inputs and the layout visibly separate in both
           themes. */}

@@ -17,11 +17,20 @@ export const LocaleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Initialize locale from localStorage. Uzbek Cyrillic (uzc) was retired from
-    // the switcher — fold any legacy choice to Latin Uzbek and re-persist.
+    // Initialize locale from localStorage. English (en) and Uzbek Cyrillic
+    // (uzc) were retired from the switcher — fold any retired choice to Latin
+    // Uzbek and re-persist, so a returning session can never sit on a language
+    // the user has no way to change from the UI.
     const savedLocale = localStorage.getItem('locale') as Locale | null;
-    const normalized: Locale | null = savedLocale === 'uzc' ? 'uz' : savedLocale;
-    if (normalized && selectableLocales.includes(normalized)) {
+    const normalized: Locale | null = savedLocale
+      ? selectableLocales.includes(savedLocale)
+        ? savedLocale
+        : 'uz'
+      : null;
+    if (normalized) {
+      // localStorage is client-only, so hydrating here rather than in the lazy
+      // initializer is what keeps the SSR and first client render identical.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocaleState(normalized);
       if (normalized !== savedLocale) localStorage.setItem('locale', normalized);
     }

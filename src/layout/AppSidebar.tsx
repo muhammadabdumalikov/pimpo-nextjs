@@ -1,12 +1,9 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
-import {
-  ChevronDownIcon,
-  HorizontaLDots,
-} from "../icons/index";
+import { ChevronDownIcon } from "../icons/index";
 import {
   LuScanBarcode,
   LuTruck,
@@ -18,25 +15,43 @@ import {
   LuUsersRound,
   LuChevronsLeft,
   LuChevronsRight,
+  LuChevronsUpDown,
   LuLogOut,
+  LuPlus,
+  LuSunMedium,
+  LuMoon,
 } from "react-icons/lu";
 import { CgProfile } from "react-icons/cg";
-import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
-import AvatarText from "@/components/ui/avatar/AvatarText";
+import { useTheme } from "@/context/ThemeContext";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useAuth } from "@/context/AuthContext";
 import { getMenuPermissions, isMenuAllowed, getMenuIdFromPath } from "@/data/menuPermissions";
-import { selectableLocales, localeLabels, type Locale } from "@/i18n/config";
+import { selectableLocales, localeNativeNames, type Locale } from "@/i18n/config";
 import { getOrderCount } from "@/lib/api";
 
+type SubItem = {
+  name: string;
+  path: string;
+  new?: boolean;
+  comingSoon?: boolean;
+  count?: number;
+};
+
 type NavItem = {
+  /** Stable identity for open/close state — never an array index, those shift
+   *  when tier/role filtering resolves async. */
+  key: string;
   name: string;
   icon: React.ReactNode;
   path?: string;
-  disabled?: boolean;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean; comingSoon?: boolean; count?: number }[];
+  subItems?: SubItem[];
 };
+
+// Which group is open — persisted so a reload lands where the user left off.
+// Single-open accordion: opening a group closes the previous one, and the
+// group containing the current page opens itself on navigation.
+const OPEN_GROUP_KEY = "sidebar.openGroup.v1";
 
 const AppSidebar: React.FC = () => {
   const { t, locale, setLocale } = useTranslations();
@@ -55,11 +70,25 @@ const AppSidebar: React.FC = () => {
   };
   const { currentTier } = useSubscription();
   const { hasMenuAccess, account, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+
+  // "Demo Market" → "DM" for the account squircle.
+  const accountInitials =
+    (account?.name || "")
+      .trim()
+      .split(/\s+/)
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "?";
+
+  // Labels are hidden on the collapsed desktop rail (unless hover-peeking).
+  const showLabels = isExpanded || isHovered || isMobileOpen;
 
   // Account panel (footer drop-up): name, language and sign-out live here now
   // that there is no app header.
   const [accountOpen, setAccountOpen] = useState(false);
-  const accountRef = React.useRef<HTMLDivElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!accountOpen) return;
     const onPointerDown = (e: MouseEvent) => {
@@ -106,10 +135,13 @@ const AppSidebar: React.FC = () => {
   // A menu is shown only when allowed by BOTH the subscription tier and the
   // acting account's role. The business owner has menuKeys ["*"] so the role
   // check always passes for them.
-  const isVisible = (menuId: string | null): boolean => {
-    if (!menuId) return true;
-    return isMenuAllowed(menuId, currentTier, menuPermissions) && hasMenuAccess(menuId);
-  };
+  const isVisible = useCallback(
+    (menuId: string | null): boolean => {
+      if (!menuId) return true;
+      return isMenuAllowed(menuId, currentTier, menuPermissions) && hasMenuAccess(menuId);
+    },
+    [currentTier, menuPermissions, hasMenuAccess],
+  );
 
   // Filter menu items based on subscription tier + role permissions
   const filterMenuItems = (items: NavItem[]): NavItem[] => {
@@ -136,254 +168,99 @@ const AppSidebar: React.FC = () => {
 
   const navItems: NavItem[] = filterMenuItems([
     {
-      icon: <LuLayoutDashboard size={24} />,
+      key: "dashboard",
+      icon: <LuLayoutDashboard size={22} />,
       name: t('sidebar.dashboard'),
       path: "/dashboard",
     },
     {
-      icon: <LuBox size={24} />,
+      key: "catalog",
+      icon: <LuBox size={22} />,
       name: t('sidebar.ecommerceMenu'),
       subItems: [
-        { name: t('sidebar.categories'), path: "/categories", pro: false },
-        { name: t('sidebar.products'), path: "/products", pro: false },
-        { name: t('sidebar.addProduct'), path: "/add-product", pro: false },
-        { name: t('inventory.title'), path: "/inventory", pro: false },
-        { name: t('sidebar.stockTakes'), path: "/stock-takes", pro: false },
-        { name: t('sidebar.stockTransfers'), path: "/stock-transfers", pro: false },
+        { name: t('sidebar.categories'), path: "/categories" },
+        { name: t('sidebar.products'), path: "/products" },
+        { name: t('sidebar.addProduct'), path: "/add-product" },
+        { name: t('inventory.title'), path: "/inventory" },
+        { name: t('sidebar.stockTakes'), path: "/stock-takes" },
+        { name: t('sidebar.stockTransfers'), path: "/stock-transfers" },
       ],
     },
     {
-      icon: <LuScanBarcode size={24} />,
+      key: "sales",
+      icon: <LuScanBarcode size={22} />,
       name: t('sidebar.sales'),
       subItems: [
-        { name: t('sidebar.checkout'), path: "/cart", pro: false },
-        { name: t('sidebar.allSales'), path: "/sales", pro: false },
-        { name: t('sidebar.onlineOrders'), path: "/online-orders", pro: false, count: pendingStoreOrders },
-        { name: t('sidebar.kassaShifts'), path: "/kassa", pro: false },
-        { name: t('sidebar.kassaOperations'), path: "/kassa/operations", pro: false },
+        { name: t('sidebar.checkout'), path: "/cart" },
+        { name: t('sidebar.allSales'), path: "/sales" },
+        { name: t('sidebar.onlineOrders'), path: "/online-orders", count: pendingStoreOrders },
+        { name: t('sidebar.kassaShifts'), path: "/kassa" },
+        { name: t('sidebar.kassaOperations'), path: "/kassa/operations" },
       ],
     },
     {
-      icon: <LuUsersRound size={24} />,
+      key: "clients",
+      icon: <LuUsersRound size={22} />,
       name: t('sidebar.clients'),
       subItems: [
-        { name: t('sidebar.customers'), path: "/customers", pro: false },
-        { name: t('sidebar.userDebt'), path: "/user-debt", pro: false },
-        { name: t('sidebar.loyalty'), path: "/loyalty", pro: false },
+        { name: t('sidebar.customers'), path: "/customers" },
+        { name: t('sidebar.userDebt'), path: "/user-debt" },
+        { name: t('sidebar.loyalty'), path: "/loyalty" },
       ],
     },
     {
-      icon: <LuChartPie size={24} />,
+      key: "finance",
+      icon: <LuChartPie size={22} />,
       name: t('sidebar.finance'),
       subItems: [
-        { name: t('sidebar.financeTransactions'), path: "/finance/transactions", pro: false },
-        { name: t('sidebar.financeCategories'), path: "/finance/categories", pro: false },
-        { name: t('sidebar.financeState'), path: "/finance/state", pro: false },
-        { name: t('sidebar.financePayroll'), path: "/finance/payroll", pro: false },
+        { name: t('sidebar.financeTransactions'), path: "/finance/transactions" },
+        { name: t('sidebar.financeCategories'), path: "/finance/categories" },
+        { name: t('sidebar.financeState'), path: "/finance/state" },
+        { name: t('sidebar.financePayroll'), path: "/finance/payroll" },
       ],
     },
     {
-      icon: <LuChartColumnBig size={24} />,
+      key: "reports",
+      icon: <LuChartColumnBig size={22} />,
       name: t('sidebar.reports'),
       path: "/reports",
     },
     {
-      icon: <LuTruck size={24} />,
+      key: "procurement",
+      icon: <LuTruck size={22} />,
       name: t('sidebar.procurement'),
       subItems: [
-        { name: t('sidebar.suppliers'), path: "/suppliers", pro: false },
-        { name: t('sidebar.goodsReceipts'), path: "/receipts", pro: false },
+        { name: t('sidebar.suppliers'), path: "/suppliers" },
+        { name: t('sidebar.goodsReceipts'), path: "/receipts" },
       ],
     },
     {
-      icon: <CgProfile size={24} />,
+      key: "team",
+      icon: <CgProfile size={22} />,
       name: t('sidebar.team'),
       subItems: [
-        { name: t('sidebar.roles'), path: "/roles", pro: false },
-        { name: t('sidebar.staff'), path: "/staff", pro: false },
-        { name: t('sidebar.staffSales'), path: "/staff-sales", pro: false },
+        { name: t('sidebar.roles'), path: "/roles" },
+        { name: t('sidebar.staff'), path: "/staff" },
+        { name: t('sidebar.staffSales'), path: "/staff-sales" },
       ],
     },
     {
-      icon: <LuSettings size={24} />,
+      key: "settings",
+      icon: <LuSettings size={22} />,
       name: t('sidebar.settings'),
       subItems: [
-        { name: t('sidebar.branches'), path: "/settings/branches", pro: false },
-        { name: t('sidebar.receipts'), path: "/settings/receipts", pro: false },
-        { name: t('sidebar.paymentMethods'), path: "/settings/payment-methods", pro: false },
-        { name: t('sidebar.units'), path: "/settings/units", pro: false },
-        { name: t('sidebar.catalogSettings'), path: "/settings/catalog", pro: false },
-        { name: t('sidebar.onlineStore'), path: "/settings/online-store", pro: false },
-        { name: t('sidebar.profileSettings'), path: "/settings/profile", pro: false },
-        { name: t('sidebar.integrations'), path: "/settings/applications", pro: false },
-        { name: t('sidebar.subscriptionManagement'), path: "/subscription-management", pro: false },
+        { name: t('sidebar.branches'), path: "/settings/branches" },
+        { name: t('sidebar.receipts'), path: "/settings/receipts" },
+        { name: t('sidebar.paymentMethods'), path: "/settings/payment-methods" },
+        { name: t('sidebar.units'), path: "/settings/units" },
+        { name: t('sidebar.catalogSettings'), path: "/settings/catalog" },
+        { name: t('sidebar.onlineStore'), path: "/settings/online-store" },
+        { name: t('sidebar.profileSettings'), path: "/settings/profile" },
+        { name: t('sidebar.integrations'), path: "/settings/applications" },
+        { name: t('sidebar.subscriptionManagement'), path: "/subscription-management" },
       ],
     },
   ]);
-
-  const renderMenuItems = (
-    navItems: NavItem[],
-    menuType: "main" | "others"
-  ) => (
-    <ul className="flex flex-col gap-4">
-      {navItems.map((nav, index) => (
-        <li key={`${menuType}-${index}`}>
-          {nav.subItems ? (
-            <button
-              onClick={() => handleSubmenuToggle(index, menuType)}
-              className={`menu-item group  ${
-                openSubmenu?.type === menuType && openSubmenu?.index === index
-                  ? "menu-item-active"
-                  : "menu-item-inactive"
-              } cursor-pointer ${
-                !isExpanded && !isHovered
-                  ? "lg:justify-center"
-                  : "lg:justify-start"
-              }`}
-            >
-              <span
-                className={` ${
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? "menu-item-icon-active"
-                    : "menu-item-icon-inactive"
-                }`}
-              >
-                {nav.icon}
-              </span>
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <span className={`menu-item-text`}>{nav.name}</span>
-              )}
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <ChevronDownIcon
-                  className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                    openSubmenu?.type === menuType &&
-                    openSubmenu?.index === index
-                      ? "rotate-180 text-brand-500"
-                      : ""
-                  }`}
-                />
-              )}
-            </button>
-          ) : nav.disabled ? (
-            <span
-              className="menu-item group menu-item-inactive cursor-not-allowed opacity-60"
-              aria-disabled="true"
-            >
-              <span className="menu-item-icon-inactive">{nav.icon}</span>
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <span className={`menu-item-text`}>{nav.name}</span>
-              )}
-            </span>
-          ) : (
-            nav.path && (
-              <Link
-                href={nav.path}
-                onClick={handleNavClick}
-                className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                }`}
-              >
-                <span
-                  className={`${
-                    isActive(nav.path)
-                      ? "menu-item-icon-active"
-                      : "menu-item-icon-inactive"
-                  }`}
-                >
-                  {nav.icon}
-                </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className={`menu-item-text`}>{nav.name}</span>
-                )}
-              </Link>
-            )
-          )}
-          {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
-            // Animated with grid-rows (like the header toggle in the admin
-            // layout) instead of a measured pixel height — measuring broke
-            // whenever navItems refiltered async (tier/role load) and left a
-            // stale height cached for the wrong submenu.
-            <div
-              className={`grid transition-all duration-300 ease-in-out ${
-                openSubmenu?.type === menuType && openSubmenu?.index === index
-                  ? "grid-rows-[1fr] opacity-100"
-                  : "grid-rows-[0fr] opacity-0"
-              }`}
-            >
-              <div className="overflow-hidden">
-              <ul className="mt-2 space-y-1 ml-9">
-                {nav.subItems.map((subItem) => (
-                  <li key={subItem.name}>
-                    {subItem.comingSoon ? (
-                      <span
-                        className="menu-dropdown-item menu-dropdown-item-inactive cursor-not-allowed opacity-60"
-                        aria-disabled="true"
-                        title={t('sidebar.comingSoon')}
-                      >
-                        {subItem.name}
-                        <span className="flex items-center gap-1 ml-auto">
-                          <span className="menu-dropdown-badge menu-dropdown-badge-inactive">
-                            {t('sidebar.comingSoon')}
-                          </span>
-                        </span>
-                      </span>
-                    ) : (
-                    <Link
-                      href={subItem.path}
-                      onClick={handleNavClick}
-                      className={`menu-dropdown-item ${
-                        isActive(subItem.path)
-                          ? "menu-dropdown-item-active"
-                          : "menu-dropdown-item-inactive"
-                      }`}
-                    >
-                      {subItem.name}
-                      <span className="flex items-center gap-1 ml-auto">
-                        {typeof subItem.count === "number" && subItem.count > 0 && (
-                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-xs font-semibold text-white">
-                            {subItem.count > 99 ? "99+" : subItem.count}
-                          </span>
-                        )}
-                        {subItem.new && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            {t('sidebar.new')}
-                          </span>
-                        )}
-                        {subItem.pro && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            {t('sidebar.pro')}
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              </div>
-            </div>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-
-  const [openSubmenu, setOpenSubmenu] = useState<{
-    type: "main" | "others";
-    index: number;
-  } | null>(null);
 
   // Exact match or a sub-route of the item (e.g. "/reports" stays highlighted
   // on "/reports/sales", "/kassa" on "/kassa/[id]").
@@ -393,55 +270,227 @@ const AppSidebar: React.FC = () => {
     [pathname],
   );
 
-  // navItems is refiltered when the subscription tier / role permissions load
-  // (async, after mount) — the matched submenu index shifts with it, so the
-  // open-on-load effect must re-run on shape changes, not just on navigation.
-  const menuSignature = navItems
-    .map((nav) => nav.subItems?.map((s) => s.path).join(",") ?? nav.path ?? "")
-    .join("|");
+  // ── Open group: single-open accordion, persisted ──────────────────────────
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  // Persist only after the stored value has been read, so the initial null
+  // never overwrites a saved group.
+  const hydrated = useRef(false);
+
+  const activeGroupKey = useMemo(
+    () =>
+      navItems.find((nav) => nav.subItems?.some((s) => isActive(s.path)))?.key ??
+      null,
+    [navItems, isActive],
+  );
 
   useEffect(() => {
-    // Check if the current path matches any submenu item
-    let submenuMatched = false;
-    navItems.forEach((nav, index) => {
-      if (nav.subItems) {
-        nav.subItems.forEach((subItem) => {
-          if (isActive(subItem.path)) {
-            setOpenSubmenu({ type: "main", index });
-            submenuMatched = true;
-          }
-        });
+    if (!hydrated.current) {
+      hydrated.current = true;
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem(OPEN_GROUP_KEY);
+      } catch {
+        /* private mode — start closed */
       }
-    });
-
-    // If no submenu item matches, close the open submenu
-    if (!submenuMatched) {
-      setOpenSubmenu(null);
+      // localStorage is client-only, so hydrating here (not in the lazy
+      // initializer) is what keeps the SSR and first client render identical —
+      // same trade-off ThemeContext makes. The current page's group wins over
+      // the stored one.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOpenGroup(activeGroupKey ?? stored);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, isActive, menuSignature]);
+    // Navigating into a section opens it (and, accordion, closes the other).
+    if (activeGroupKey) setOpenGroup(activeGroupKey);
+  }, [activeGroupKey]);
 
-  const handleSubmenuToggle = (index: number, menuType: "main" | "others") => {
-    setOpenSubmenu((prevOpenSubmenu) => {
-      if (
-        prevOpenSubmenu &&
-        prevOpenSubmenu.type === menuType &&
-        prevOpenSubmenu.index === index
-      ) {
-        return null;
+  useEffect(() => {
+    if (!hydrated.current) return;
+    try {
+      if (openGroup) {
+        localStorage.setItem(OPEN_GROUP_KEY, openGroup);
+      } else {
+        localStorage.removeItem(OPEN_GROUP_KEY);
       }
-      return { type: menuType, index };
-    });
-  };
+    } catch {
+      /* private mode — open state just won't persist */
+    }
+  }, [openGroup]);
+
+  const toggleGroup = (key: string) =>
+    setOpenGroup((prev) => (prev === key ? null : key));
+
+  const canSell = isVisible("checkout");
+
+  const renderMenuItems = (items: NavItem[]) => (
+    <ul className="flex flex-col gap-1">
+      {items.map((nav) => {
+        const isOpen = openGroup === nav.key;
+        const containsActive =
+          nav.subItems?.some((s) => isActive(s.path)) ?? false;
+        // A closed group holding the current page still answers "where am I":
+        // it takes the active treatment until it's opened (then the child
+        // carries it and the parent goes quiet).
+        const parentActive = nav.subItems
+          ? containsActive && (!isOpen || !showLabels)
+          : nav.path
+            ? isActive(nav.path)
+            : false;
+        // Badge signal must survive a closed group / the icon rail — a hidden
+        // "3 new online orders" is a missed sale.
+        const groupCount =
+          nav.subItems?.reduce((sum, s) => sum + (s.count ?? 0), 0) ?? 0;
+
+        return (
+          <li key={nav.key}>
+            {nav.subItems ? (
+              <button
+                onClick={() => toggleGroup(nav.key)}
+                aria-expanded={isOpen}
+                className={`menu-item group ${
+                  parentActive ? "menu-item-active" : "menu-item-inactive"
+                } cursor-pointer ${
+                  !showLabels ? "lg:justify-center" : "lg:justify-start"
+                }`}
+              >
+                <span
+                  className={`relative ${
+                    parentActive || containsActive
+                      ? "menu-item-icon-active"
+                      : "menu-item-icon-inactive"
+                  }`}
+                >
+                  {nav.icon}
+                  {!showLabels && groupCount > 0 && (
+                    <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-brand-500" />
+                  )}
+                </span>
+                {showLabels && (
+                  <span className="truncate">{nav.name}</span>
+                )}
+                {showLabels && (
+                  <span className="ml-auto flex items-center gap-1.5">
+                    {!isOpen && groupCount > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-xs font-semibold text-white">
+                        {groupCount > 99 ? "99+" : groupCount}
+                      </span>
+                    )}
+                    <ChevronDownIcon
+                      className={`h-4 w-4 text-gray-400 transition-transform duration-200 dark:text-gray-500 ${
+                        isOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </span>
+                )}
+              </button>
+            ) : (
+              nav.path && (
+                <Link
+                  href={nav.path}
+                  onClick={handleNavClick}
+                  className={`menu-item group ${
+                    parentActive ? "menu-item-active" : "menu-item-inactive"
+                  } ${!showLabels ? "lg:justify-center" : "lg:justify-start"}`}
+                >
+                  <span
+                    className={
+                      parentActive
+                        ? "menu-item-icon-active"
+                        : "menu-item-icon-inactive"
+                    }
+                  >
+                    {nav.icon}
+                  </span>
+                  {showLabels && (
+                    <span className="truncate">{nav.name}</span>
+                  )}
+                </Link>
+              )
+            )}
+            {nav.subItems && showLabels && (
+              // Animated with grid-rows (like the header toggle in the admin
+              // layout) instead of a measured pixel height — measuring broke
+              // whenever navItems refiltered async (tier/role load) and left a
+              // stale height cached for the wrong submenu.
+              <div
+                className={`grid transition-all duration-300 ease-in-out ${
+                  isOpen
+                    ? "grid-rows-[1fr] opacity-100"
+                    : "grid-rows-[0fr] opacity-0"
+                }`}
+              >
+                <div className="overflow-hidden">
+                  {/* Tree hairline sits on the icon axis (px-3 + half of the
+                      22px glyph = 22px); pl-3 lands child text on the same
+                      x as the parent label. */}
+                  <ul className="mb-1 ml-[22px] mt-1 space-y-0.5 border-l border-gray-200 pl-3 dark:border-gray-800">
+                    {nav.subItems.map((subItem) => (
+                      <li key={subItem.name}>
+                        {subItem.comingSoon ? (
+                          <span
+                            className="menu-dropdown-item menu-dropdown-item-inactive cursor-not-allowed opacity-60"
+                            aria-disabled="true"
+                            title={t('sidebar.comingSoon')}
+                          >
+                            {subItem.name}
+                            <span className="ml-auto flex items-center gap-1">
+                              <span className="menu-dropdown-badge menu-dropdown-badge-inactive">
+                                {t('sidebar.comingSoon')}
+                              </span>
+                            </span>
+                          </span>
+                        ) : (
+                          <Link
+                            href={subItem.path}
+                            onClick={handleNavClick}
+                            className={`menu-dropdown-item ${
+                              isActive(subItem.path)
+                                ? "menu-dropdown-item-active"
+                                : "menu-dropdown-item-inactive"
+                            }`}
+                          >
+                            {subItem.name}
+                            <span className="ml-auto flex items-center gap-1">
+                              {typeof subItem.count === "number" &&
+                                subItem.count > 0 && (
+                                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-xs font-semibold text-white">
+                                    {subItem.count > 99 ? "99+" : subItem.count}
+                                  </span>
+                                )}
+                              {subItem.new && (
+                                <span
+                                  className={`${
+                                    isActive(subItem.path)
+                                      ? "menu-dropdown-badge-active"
+                                      : "menu-dropdown-badge-inactive"
+                                  } menu-dropdown-badge`}
+                                >
+                                  {t('sidebar.new')}
+                                </span>
+                              )}
+                            </span>
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
 
   return (
     <aside
-      className={`fixed flex flex-col top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200
+      className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-gray-200 bg-white px-4 text-gray-900 transition-all duration-300 ease-in-out dark:border-gray-800 dark:bg-gray-900
         ${
           isExpanded || isMobileOpen
-            ? "w-[290px]"
+            ? "w-[272px]"
             : isHovered
-            ? "w-[290px]"
+            ? "w-[272px]"
             : "w-[90px]"
         }
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
@@ -450,12 +499,12 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex items-center ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-between"
+        className={`flex items-center py-6 ${
+          !showLabels ? "lg:justify-center" : "justify-between"
         }`}
       >
         <Link href="/dashboard" className="flex items-center" aria-label="KPOS">
-          {isExpanded || isHovered || isMobileOpen ? (
+          {showLabels ? (
             <span className="rounded-lg bg-brand-500 px-3 py-1.5 text-xl font-bold tracking-tight text-white">
               KPOS
             </span>
@@ -465,120 +514,178 @@ const AppSidebar: React.FC = () => {
             </span>
           )}
         </Link>
-        {/* The header is gone: its two survivors live here. Theme toggle where
-            the header show/hide used to be, and the sidebar collapse (the old
-            header hamburger's job) beside it — desktop only, since mobile
-            closes via the backdrop. */}
-        {(isExpanded || isHovered || isMobileOpen) && (
-          <div className="flex items-center gap-1.5">
-            <ThemeToggleButton />
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
-              className="hidden h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white lg:flex"
-            >
-              {isExpanded ? (
-                <LuChevronsLeft size={20} />
-              ) : (
-                <LuChevronsRight size={20} />
-              )}
-            </button>
-          </div>
+        {/* Sidebar collapse (the old header hamburger's job) — desktop only,
+            since mobile closes via the backdrop. Theme lives in the account
+            panel below, with the other personal preferences. */}
+        {showLabels && (
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+            className="hidden h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white lg:flex"
+          >
+            {isExpanded ? (
+              <LuChevronsLeft size={18} />
+            ) : (
+              <LuChevronsRight size={18} />
+            )}
+          </button>
         )}
       </div>
-      <div className="flex flex-1 flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
-        <nav className="mb-6">
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  t('sidebar.menu')
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              {renderMenuItems(navItems, "main")}
-            </div>
-          </div>
-        </nav>
+
+      {/* The one thing this product exists for — selling — is one click from
+          everywhere, Linear's "New issue" pattern. Gated like the checkout
+          menu itself (tier + role). */}
+      {canSell && (
+        <div className={`pb-5 ${!showLabels ? "lg:flex lg:justify-center" : ""}`}>
+          <Link
+            href="/cart"
+            onClick={handleNavClick}
+            className={`flex items-center justify-center gap-2 rounded-lg bg-brand-500 font-semibold text-white shadow-theme-xs transition-colors hover:bg-brand-600 active:scale-[0.98] ${
+              showLabels ? "h-11 w-full text-sm" : "h-11 w-11"
+            }`}
+          >
+            <LuPlus size={20} />
+            {showLabels && <span>{t("sidebar.newSale")}</span>}
+          </Link>
+        </div>
+      )}
+
+      <div className="no-scrollbar flex flex-1 flex-col overflow-y-auto duration-300 ease-linear">
+        <nav className="mb-6">{renderMenuItems(navItems)}</nav>
       </div>
 
       {/* ── Account footer ─────────────────────────────────────────────────
           The old header's user menu and locale switcher, consolidated into one
-          bottom-pinned card (the Linear/Notion pattern): tap the account row to
-          get language chips and sign-out in a drop-UP panel. */}
+          bottom-pinned row (the Linear/Notion pattern). The account is the
+          BUSINESS (shop), so the mark is a brand-tinted squircle — the same
+          icon-tile vocabulary the rest of the app uses — not a person-circle
+          in a name-hashed color. */}
       <div
         ref={accountRef}
-        className="relative -mx-5 mt-auto border-t border-gray-200 px-4 py-3 dark:border-gray-800"
+        className="relative -mx-4 mt-auto border-t border-gray-200 px-3 py-3 dark:border-gray-800"
       >
         <button
           type="button"
           onClick={() => setAccountOpen((v) => !v)}
           aria-expanded={accountOpen}
-          aria-haspopup="menu"
-          className={`flex w-full items-center gap-3 rounded-xl p-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-white/5 ${
-            !isExpanded && !isHovered ? "lg:justify-center" : ""
-          }`}
+          aria-haspopup="true"
+          className={`flex w-full items-center gap-2.5 rounded-lg p-1.5 transition-colors ${
+            accountOpen
+              ? "bg-gray-100 dark:bg-white/5"
+              : "hover:bg-gray-100 dark:hover:bg-white/5"
+          } ${!showLabels ? "lg:justify-center" : ""}`}
         >
-          <AvatarText
-            name={account?.name || "?"}
-            className="!h-9 !w-9 shrink-0 text-theme-xs"
-          />
-          {(isExpanded || isHovered || isMobileOpen) && (
-            <span className="min-w-0 flex-1 text-left">
-              <span className="block truncate text-sm font-medium text-gray-800 dark:text-white/90">
-                {account?.name || "—"}
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-xs font-semibold text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+            {accountInitials}
+          </span>
+          {showLabels && (
+            <>
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block truncate text-sm font-medium text-gray-800 dark:text-white/90">
+                  {account?.name || "—"}
+                </span>
+                <span className="block truncate text-theme-xs text-gray-400 dark:text-gray-500">
+                  {account?.type === "staff"
+                    ? account?.roleName ?? ""
+                    : account?.login ?? ""}
+                </span>
               </span>
-              <span className="block truncate text-theme-xs text-gray-400">
-                {account?.type === "staff"
-                  ? account?.roleName ?? ""
-                  : account?.login ?? ""}
-              </span>
-            </span>
+              {/* The account-switcher affordance — without it this row reads
+                  as a static label, not a control. */}
+              <LuChevronsUpDown
+                size={15}
+                className="shrink-0 text-gray-400 dark:text-gray-500"
+              />
+            </>
           )}
         </button>
 
         {accountOpen && (
           <div
-            role="menu"
-            className="absolute bottom-full left-4 z-50 mb-2 w-60 rounded-2xl border border-gray-200 bg-white p-2 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark"
+            className={`absolute bottom-full z-50 mb-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark ${
+              showLabels ? "left-3 right-3" : "left-3 w-64"
+            }`}
           >
-            {/* Language — the last surviving header control. */}
-            <div className="flex gap-1 border-b border-gray-100 p-1 pb-2.5 dark:border-gray-800">
-              {selectableLocales.map((loc) => (
-                <button
-                  key={loc}
-                  type="button"
-                  onClick={() => setLocale(loc as Locale)}
-                  className={`flex-1 rounded-lg px-2 py-1.5 text-theme-xs font-medium transition-colors ${
-                    loc === locale
-                      ? "bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400"
-                      : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
-                  }`}
-                >
-                  {localeLabels[loc]}
-                </button>
-              ))}
+            {/* Who is signed in — so the actions below have a subject. */}
+            <div className="flex items-center gap-2.5 border-b border-gray-100 px-3 py-2.5 dark:border-gray-800">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-[11px] font-semibold text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+                {accountInitials}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-gray-800 dark:text-white/90">
+                  {account?.name || "—"}
+                </span>
+                <span className="block truncate text-theme-xs text-gray-400 dark:text-gray-500">
+                  {account?.type === "staff"
+                    ? account?.roleName ?? ""
+                    : account?.login ?? ""}
+                </span>
+              </span>
             </div>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setAccountOpen(false);
-                logout();
-              }}
-              className="mt-1.5 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
-            >
-              <LuLogOut size={17} className="text-gray-400" />
-              {t("auth.signOut")}
-            </button>
+
+            {/* Personal preferences — language and theme as matching segmented
+                controls. Languages are named in themselves (the person hunting
+                for one may not read the active one); switching keeps the panel
+                open — the whole UI flipping IS the feedback. */}
+            <div className="space-y-1 p-1.5">
+              <div className="flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-white/[0.06]">
+                {selectableLocales.map((loc) => (
+                  <button
+                    key={loc}
+                    type="button"
+                    aria-pressed={loc === locale}
+                    onClick={() => setLocale(loc as Locale)}
+                    className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                      loc === locale
+                        ? "bg-white text-gray-900 shadow-theme-xs dark:bg-white/10 dark:text-white"
+                        : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    {localeNativeNames[loc]}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-white/[0.06]">
+                {(
+                  [
+                    { value: "light", label: t("sidebar.themeLight"), icon: <LuSunMedium size={14} /> },
+                    { value: "dark", label: t("sidebar.themeDark"), icon: <LuMoon size={14} /> },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    aria-pressed={theme === opt.value}
+                    onClick={() => {
+                      if (theme !== opt.value) toggleTheme();
+                    }}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                      theme === opt.value
+                        ? "bg-white text-gray-900 shadow-theme-xs dark:bg-white/10 dark:text-white"
+                        : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    {opt.icon}
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 p-1.5 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountOpen(false);
+                  logout();
+                }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
+              >
+                <LuLogOut size={16} className="text-gray-400 dark:text-gray-500" />
+                {t("auth.signOut")}
+              </button>
+            </div>
           </div>
         )}
       </div>

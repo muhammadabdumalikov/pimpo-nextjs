@@ -8,6 +8,7 @@ import enMessages from '@/i18n/messages/en.json';
 import ruMessages from '@/i18n/messages/ru.json';
 import uzMessages from '@/i18n/messages/uz.json';
 import uzcMessages from '@/i18n/messages/uzc.json';
+import { defaultLocale } from '@/i18n/config';
 
 type Catalog = {apiErrors?: Record<string, string>};
 
@@ -18,7 +19,9 @@ const catalogs: Record<string, Catalog> = {
   uzc: uzcMessages as Catalog,
 };
 
-const DEFAULT_LOCALE = 'en';
+// Mirrors the UI default (i18n/config) so a session with no stored choice gets
+// its API errors in the same language as the rest of the app.
+const DEFAULT_LOCALE: string = defaultLocale;
 
 // The backend error envelope, as parsed from a failed response body.
 export interface ApiErrorBody {

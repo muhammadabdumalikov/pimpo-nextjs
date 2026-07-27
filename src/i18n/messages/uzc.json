@@ -514,7 +514,10 @@
     "integrations": "Иловалар",
     "clients": "Мижозлар",
     "loyalty": "Содиқлик дастури",
-    "customers": "Мижозлар"
+    "customers": "Мижозлар",
+    "newSale": "Янги сотув",
+    "themeLight": "Ёруғ",
+    "themeDark": "Тунги"
   },
   "stockTakes": {
     "title": "Инвентаризация",

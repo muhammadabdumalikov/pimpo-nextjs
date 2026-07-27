@@ -954,7 +954,10 @@
     "integrations": "Ilovalar",
     "clients": "Mijozlar",
     "loyalty": "Sodiqlik dasturi",
-    "customers": "Mijozlar"
+    "customers": "Mijozlar",
+    "newSale": "Yangi sotuv",
+    "themeLight": "Yorug'",
+    "themeDark": "Tungi"
   },
   "stockTakes": {
     "title": "Inventarizatsiya",

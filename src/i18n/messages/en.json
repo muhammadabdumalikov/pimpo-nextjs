@@ -954,7 +954,10 @@
     "integrations": "Apps",
     "clients": "Clients",
     "loyalty": "Loyalty program",
-    "customers": "Customers"
+    "customers": "Customers",
+    "newSale": "New sale",
+    "themeLight": "Light",
+    "themeDark": "Dark"
   },
   "stockTakes": {
     "title": "Stock-take",
