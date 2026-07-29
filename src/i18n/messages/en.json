@@ -1612,7 +1612,8 @@
     "loginTooShort": "Login must be at least 3 characters",
     "passwordTooShort": "Password must be at least 6 characters",
     "registerError": "Registration failed",
-    "perMonth": "sum/month"
+    "perMonth": "sum/month",
+    "signOutConfirm": "Are you sure you want to sign out?"
   },
   "suppliers": {
     "title": "Suppliers",

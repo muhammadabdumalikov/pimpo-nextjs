@@ -28,6 +28,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getMenuPermissions, isMenuAllowed, getMenuIdFromPath } from "@/data/menuPermissions";
 import { selectableLocales, localeNativeNames, type Locale } from "@/i18n/config";
 import { getOrderCount } from "@/lib/api";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 type SubItem = {
   name: string;
@@ -271,6 +272,7 @@ const AppSidebar: React.FC = () => {
 
   // ── Open group: single-open accordion, persisted ──────────────────────────
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [logoutAsk, setLogoutAsk] = useState(false);
   // Persist only after the stored value has been read, so the initial null
   // never overwrites a saved group.
   const hydrated = useRef(false);
@@ -657,7 +659,7 @@ const AppSidebar: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setAccountOpen(false);
-                  logout();
+                  setLogoutAsk(true);
                 }}
                 className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
               >
@@ -668,6 +670,20 @@ const AppSidebar: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={logoutAsk}
+        onClose={() => setLogoutAsk(false)}
+        onConfirm={() => {
+          setLogoutAsk(false);
+          logout();
+        }}
+        title={t("auth.signOut")}
+        message={t("auth.signOutConfirm")}
+        confirmLabel={t("auth.signOut")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+      />
     </aside>
   );
 };

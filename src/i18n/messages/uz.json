@@ -1612,7 +1612,8 @@
     "loginTooShort": "Login kamida 3 ta belgidan iborat bo'lishi kerak",
     "passwordTooShort": "Parol kamida 6 ta belgidan iborat bo'lishi kerak",
     "registerError": "Ro'yxatdan o'tishda xatolik yuz berdi",
-    "perMonth": "so'm/oy"
+    "perMonth": "so'm/oy",
+    "signOutConfirm": "Hisobingizdan chiqmoqchimisiz?"
   },
   "suppliers": {
     "title": "Yetkazib beruvchilar",
