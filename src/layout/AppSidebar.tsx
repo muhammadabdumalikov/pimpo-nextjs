@@ -483,6 +483,7 @@ const AppSidebar: React.FC = () => {
   );
 
   return (
+    <>
     <aside
       className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-gray-200 bg-white px-4 text-gray-900 transition-all duration-300 ease-in-out dark:border-gray-800 dark:bg-gray-900
         ${
@@ -670,21 +671,25 @@ const AppSidebar: React.FC = () => {
           </div>
         )}
       </div>
-
-      <ConfirmModal
-        isOpen={logoutAsk}
-        onClose={() => setLogoutAsk(false)}
-        onConfirm={() => {
-          setLogoutAsk(false);
-          logout();
-        }}
-        title={t("auth.signOut")}
-        message={t("auth.signOutConfirm")}
-        confirmLabel={t("auth.signOut")}
-        cancelLabel={t("common.cancel")}
-        variant="danger"
-      />
     </aside>
+
+    {/* Rendered OUTSIDE the <aside> — the sidebar's transform (transition-all)
+        would otherwise trap this fixed-position modal inside it instead of
+        centering it on the viewport. */}
+    <ConfirmModal
+      isOpen={logoutAsk}
+      onClose={() => setLogoutAsk(false)}
+      onConfirm={() => {
+        setLogoutAsk(false);
+        logout();
+      }}
+      title={t("auth.signOut")}
+      message={t("auth.signOutConfirm")}
+      confirmLabel={t("auth.signOut")}
+      cancelLabel={t("common.cancel")}
+      variant="danger"
+    />
+    </>
   );
 };
 
