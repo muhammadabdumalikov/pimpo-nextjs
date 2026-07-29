@@ -17,7 +17,6 @@ import {
   LuChevronsRight,
   LuChevronsUpDown,
   LuLogOut,
-  LuPlus,
   LuSunMedium,
   LuMoon,
 } from "react-icons/lu";
@@ -320,8 +319,6 @@ const AppSidebar: React.FC = () => {
   const toggleGroup = (key: string) =>
     setOpenGroup((prev) => (prev === key ? null : key));
 
-  const canSell = isVisible("checkout");
-
   const renderMenuItems = (items: NavItem[]) => (
     <ul className="flex flex-col gap-1">
       {items.map((nav) => {
@@ -532,24 +529,6 @@ const AppSidebar: React.FC = () => {
           </button>
         )}
       </div>
-
-      {/* The one thing this product exists for — selling — is one click from
-          everywhere, Linear's "New issue" pattern. Gated like the checkout
-          menu itself (tier + role). */}
-      {canSell && (
-        <div className={`pb-5 ${!showLabels ? "lg:flex lg:justify-center" : ""}`}>
-          <Link
-            href="/cart"
-            onClick={handleNavClick}
-            className={`flex items-center justify-center gap-2 rounded-lg bg-brand-500 font-semibold text-white shadow-theme-xs transition-colors hover:bg-brand-600 active:scale-[0.98] ${
-              showLabels ? "h-11 w-full text-sm" : "h-11 w-11"
-            }`}
-          >
-            <LuPlus size={20} />
-            {showLabels && <span>{t("sidebar.newSale")}</span>}
-          </Link>
-        </div>
-      )}
 
       <div className="no-scrollbar flex flex-1 flex-col overflow-y-auto duration-300 ease-linear">
         <nav className="mb-6">{renderMenuItems(navItems)}</nav>
