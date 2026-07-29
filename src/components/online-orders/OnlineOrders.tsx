@@ -490,7 +490,7 @@ export default function OnlineOrders() {
                         type="button"
                         onClick={() => setCancelAsk(true)}
                         disabled={updating}
-                        className="flex h-12 flex-1 items-center justify-center rounded-xl border border-error-300 bg-white text-sm font-semibold text-error-600 shadow-theme-xs transition hover:bg-error-50 disabled:opacity-50 dark:border-error-500/40 dark:bg-gray-800 dark:hover:bg-error-500/10"
+                        className="flex h-12 flex-1 items-center justify-center rounded-xl bg-error-500 text-sm font-semibold text-white shadow-theme-md transition hover:bg-error-600 disabled:opacity-50"
                       >
                         {t("onlineOrders.cancel")}
                       </button>

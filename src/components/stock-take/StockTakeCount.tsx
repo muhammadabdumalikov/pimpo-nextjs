@@ -958,10 +958,9 @@ export default function StockTakeCount({ id }: { id: string }) {
         {!isCompleted && (
           <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button
-              variant="outline"
+              variant="danger"
               onClick={() => setConfirmCancel(true)}
               disabled={completing || cancelling}
-              className="!text-error-600 hover:!bg-error-50 dark:!text-error-400 dark:hover:!bg-error-500/10"
             >
               {t("stockTakes.cancelCount")}
             </Button>
