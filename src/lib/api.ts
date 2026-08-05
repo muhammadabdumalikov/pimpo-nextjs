@@ -1722,6 +1722,12 @@ export interface PayrollSummaryRow {
   periodProfit: number;
   periodAccrued: number;
   periodPaid: number;
+  /** Deductions (jarima) posted in the period — needed for the exact month
+   *  remainder: wage − paid − deducted. */
+  periodDeducted: number;
+  /** The month's wage as it stands now: the ledger figure once accrued,
+   *  otherwise a live base + %-of-own-sales computation. */
+  periodWage: number;
   /** False when this month's accrual was never run for this employee. */
   accrualPosted: boolean;
 }
@@ -4913,5 +4919,119 @@ export async function probeBillzData(
     headers: authHeaders(),
   });
   if (!response.ok) await parseError(response, 'Failed to probe BiLLZ data');
+  return response.json();
+}
+
+// ─── AI assistant (BYOK) ────────────────────────────────────────────────────
+// Owner-only, pro tier. The owner brings their own provider API key; the
+// backend stores it encrypted and NEVER returns the raw key (only hasKey +
+// apiKeyLast4 for the masked placeholder).
+
+export type AiProviderId = 'anthropic' | 'openai' | 'gemini';
+
+export interface AiSettingsView {
+  provider: AiProviderId;
+  model: string;
+  enabled: boolean;
+  /** A key is stored (the raw key is never returned). */
+  hasKey: boolean;
+  /** Last 4 chars of the stored key, e.g. "9f2c" — for the masked display. */
+  apiKeyLast4: string | null;
+  /** Questions asked this calendar month. */
+  monthlyCount: number;
+  lastUsedAt: string | null; // ISO
+  /** Dropdown source of truth — per-provider model lists. */
+  availableModels: Record<AiProviderId, { id: string; label: string }[]>;
+}
+
+export async function getAiSettings(): Promise<AiSettingsView> {
+  const response = await fetch(`${API_BASE_URL}/ai/settings`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch AI settings');
+  return response.json();
+}
+
+// `apiKey` omitted = keep the stored key — how the owner changes model or
+// toggles `enabled` without re-typing the secret.
+export async function saveAiSettings(data: {
+  provider: AiProviderId;
+  model: string;
+  apiKey?: string;
+  enabled?: boolean;
+}): Promise<AiSettingsView> {
+  const response = await fetch(`${API_BASE_URL}/ai/settings`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to save AI settings');
+  return response.json();
+}
+
+// Live round-trip to the provider; `apiKey` omitted tests the stored key.
+export async function testAiConnection(data: {
+  provider: AiProviderId;
+  model: string;
+  apiKey?: string;
+}): Promise<{ ok: true }> {
+  const response = await fetch(`${API_BASE_URL}/ai/settings/test`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'AI connection test failed');
+  return response.json();
+}
+
+// Asks the provider which models the key can actually reach; `apiKey` omitted
+// uses the stored key. `live: false` = the provider call failed and the list
+// fell back to static suggestions — usable, but possibly stale.
+export async function listAiModels(data: {
+  provider: AiProviderId;
+  apiKey?: string;
+}): Promise<{ models: { id: string; label: string }[]; live: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/ai/settings/models`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to list AI models');
+  return response.json();
+}
+
+// Removes the stored key and settings (204).
+export async function deleteAiSettings(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/ai/settings`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to delete AI settings');
+}
+
+// What the assistant can do on this plan. Cheap — the chat screen uses it to
+// confirm the assistant is reachable before offering the composer.
+export interface AiCapabilities {
+  tier: string;
+  /** Which provider owns the key. Fixed per business — only the model varies. */
+  provider: AiProviderId;
+  /** The saved default model — the chat's model picker starts here. */
+  model: string;
+  /** hasKey && enabled. False → the chat renders the configure-first panel. */
+  configured: boolean;
+  /** Pickable models, live from the provider (cached 1h server-side; falls
+   *  back to static suggestions, so never empty). */
+  models: { id: string; label: string }[];
+  tools: { name: string; label: string }[];
+}
+
+export async function getAiCapabilities(): Promise<AiCapabilities> {
+  const response = await fetch(`${API_BASE_URL}/ai/capabilities`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok)
+    await parseError(response, 'Failed to fetch AI capabilities');
   return response.json();
 }

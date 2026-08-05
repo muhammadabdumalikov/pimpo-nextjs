@@ -12,6 +12,7 @@ import { PlusIcon, DownloadIcon, ChevronLeftIcon, PencilIcon, ChevronDownIcon, C
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { getFlatpickrLocale } from "@/lib/flatpickrLocale";
+import { monthNames } from "@/lib/reportFormat";
 import DatePicker from "../form/date-picker";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
@@ -133,29 +134,23 @@ export default function UserDebtList() {
     return `${new Intl.NumberFormat('uz-UZ').format(Math.round(numAmount))} so'm`;
   };
 
-  // Dates follow the active UI language, not a hardcoded English locale.
-  const dateLocale =
-    locale === 'ru' ? 'ru-RU' : locale === 'en' ? 'en-GB' : locale === 'uzc' ? 'uz-Cyrl-UZ' : 'uz-UZ';
-
-  // Format date helper
+  // Dates follow the active UI language. Month names come from our own tables
+  // (monthNames), not toLocaleDateString: browsers without Uzbek CLDR data
+  // render "M08" instead of "Avg" and the date turns to gibberish.
   const formatDate = (date: string | Date | null): string => {
     if (!date) return '—';
     const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' });
+    if (Number.isNaN(d.getTime())) return '—';
+    return `${d.getDate()} ${monthNames(locale, 'short')[d.getMonth()]} ${d.getFullYear()}`;
   };
 
   // Date + time (with hours/minutes) for precise debt/sale timestamps.
   const formatDateTime = (date: string | Date | null): string => {
     if (!date) return '—';
     const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleString(dateLocale, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
+    if (Number.isNaN(d.getTime())) return '—';
+    const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${formatDate(d)}, ${hm}`;
   };
 
   // Load customer groups (grouped + sorted + paginated server-side).

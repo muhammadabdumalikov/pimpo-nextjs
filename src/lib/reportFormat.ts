@@ -38,26 +38,40 @@ export const formatCompact = (v: number, units: CompactUnits): string => {
   return `${sign}${formatNumber(Math.round(abs))}`;
 };
 
-// BCP-47 tags for the app locales, for Intl month names.
-const INTL_LOCALE: Record<string, string> = {
-  uz: 'uz-Latn-UZ',
-  uzc: 'uz-Cyrl-UZ',
-  ru: 'ru-RU',
-  en: 'en-US',
+// Month names are OUR data, not Intl's: Safari (and some Chromium builds)
+// ship no Uzbek CLDR tables, so Intl.DateTimeFormat('uz-…') silently falls
+// back to the root locale and renders "M08" instead of "Avgust". Twelve words
+// per locale is cheaper than a formatter that lies on some devices.
+const MONTHS: Record<string, {long: string[]; short: string[]}> = {
+  uz: {
+    long: ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'],
+    short: ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'],
+  },
+  uzc: {
+    long: ['Январ', 'Феврал', 'Март', 'Апрел', 'Май', 'Июн', 'Июл', 'Август', 'Сентабр', 'Октабр', 'Ноябр', 'Декабр'],
+    short: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+  },
+  ru: {
+    long: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
+    short: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+  },
+  en: {
+    long: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    short: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  },
 };
 
 /** Localized month names, Jan→Dec. `format` picks short ("Yan") or long. */
 export const monthNames = (
   locale: string,
   format: 'short' | 'long' = 'short',
-): string[] => {
-  const fmt = new Intl.DateTimeFormat(INTL_LOCALE[locale] ?? 'uz-Latn-UZ', {
-    month: format,
-  });
-  return Array.from({ length: 12 }, (_, i) => {
-    const name = fmt.format(new Date(Date.UTC(2024, i, 1)));
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  });
+): string[] => (MONTHS[locale] ?? MONTHS.uz)[format];
+
+/** '2026-07' → 'Iyul 2026' in the given app locale. */
+export const periodLabel = (period: string, locale: string): string => {
+  const [y, m] = period.split('-').map(Number);
+  const name = monthNames(locale, 'long')[m - 1];
+  return name ? `${name} ${y}` : period;
 };
 
 export const formatDate = (iso: string | Date | null) => {

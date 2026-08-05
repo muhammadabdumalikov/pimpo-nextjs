@@ -1,23 +1,33 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { RiTelegram2Fill } from "react-icons/ri";
-import { LuSettings } from "react-icons/lu";
+import { LuSettings, LuSparkles, LuGlobe } from "react-icons/lu";
 import { useTranslations } from "@/hooks/useTranslations";
+import { useSubscription } from "@/context/SubscriptionContext";
+import { useAuth } from "@/context/AuthContext";
+import { isMenuVisible } from "@/data/menuPermissions";
 import Badge from "@/components/ui/badge/Badge";
-import { getTelegramLinks } from "@/lib/api";
+import { getAiSettings, getTelegramLinks, getCurrentUser } from "@/lib/api";
 
 // Registry of integration apps shown on the grid. Add new entries here and a
 // matching detail page under /settings/applications/<id>.
 interface AppEntry {
   id: string;
-  name: string;
+  /** Brand names (Telegram, BiLLZ) stay verbatim; anything the shop reads as
+   *  an ordinary noun is translated via `nameKey` instead. */
+  name?: string;
+  nameKey?: string;
   descriptionKey: string;
   href: string;
   icon: React.ReactNode;
   /** Show the connected/not-connected badge (apps with a live status). */
   hasStatus?: boolean;
+  /** Menu id gating this app's detail page. Cards whose page MenuAccessGuard
+   *  would bounce are hidden here, so the grid never offers a dead door.
+   *  Apps with no entry (BiLLZ, AI) reach a page open to every tier. */
+  menuId?: string;
 }
 
 const APPS: AppEntry[] = [
@@ -27,6 +37,7 @@ const APPS: AppEntry[] = [
     descriptionKey: "integrations.telegramSubtitle",
     href: "/settings/applications/telegram",
     hasStatus: true,
+    menuId: "settings.telegram",
     icon: (
       <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-light-50 text-blue-light-500 dark:bg-blue-light-500/10">
         <RiTelegram2Fill className="h-7 w-7" />
@@ -44,27 +55,79 @@ const APPS: AppEntry[] = [
       </span>
     ),
   },
+  {
+    id: "ai",
+    name: "AI yordamchi",
+    descriptionKey: "integrations.aiSubtitle",
+    href: "/settings/applications/ai",
+    hasStatus: true,
+    icon: (
+      <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-500 dark:bg-brand-500/10">
+        <LuSparkles className="h-7 w-7" />
+      </span>
+    ),
+  },
+  {
+    id: "online-store",
+    nameKey: "onlineStore.title",
+    // A one-line card subtitle, not the page's full paragraph.
+    descriptionKey: "onlineStore.subtitle",
+    href: "/settings/applications/online-store",
+    hasStatus: true,
+    menuId: "settings.onlineStore",
+    icon: (
+      <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400">
+        <LuGlobe className="h-7 w-7" />
+      </span>
+    ),
+  },
 ];
 
 export default function AppsGrid() {
   const { t } = useTranslations();
+  const { currentTier, isLoading: tierLoading } = useSubscription();
+  const { hasMenuAccess } = useAuth();
 
   // Per-app connection status; undefined = still loading (skeleton shown).
   const [connected, setConnected] = useState<Record<string, boolean>>({});
   const [statusLoaded, setStatusLoaded] = useState(false);
 
+  // Same rules the sidebar and the route guard apply. While the tier is still
+  // loading, show everything rather than flashing cards away and back.
+  const visibleApps = useMemo(
+    () =>
+      APPS.filter(
+        (app) =>
+          tierLoading ||
+          isMenuVisible(app.menuId ?? null, currentTier, hasMenuAccess),
+      ),
+    [currentTier, tierLoading, hasMenuAccess],
+  );
+
   useEffect(() => {
     let active = true;
     (async () => {
-      try {
-        const links = await getTelegramLinks();
-        if (!active) return;
-        setConnected({ telegram: links.length > 0 });
-      } catch {
-        // Status is decorative on this page — the detail page surfaces errors.
-      } finally {
-        if (active) setStatusLoaded(true);
-      }
+      // Fetched independently (allSettled) so one failing doesn't hide the
+      // other's badge — e.g. AI returns 403 on non-pro plans, which simply
+      // shows as "not connected". Status is decorative on this page — the
+      // detail pages surface real errors.
+      const [tg, ai, me] = await Promise.allSettled([
+        getTelegramLinks(),
+        getAiSettings(),
+        getCurrentUser(),
+      ]);
+      if (!active) return;
+      setConnected({
+        telegram: tg.status === "fulfilled" && tg.value.length > 0,
+        ai: ai.status === "fulfilled" && ai.value.enabled && ai.value.hasKey,
+        // "Connected" means the storefront is actually live: a slug alone is
+        // just a reserved address until the switch is on.
+        "online-store":
+          me.status === "fulfilled" &&
+          Boolean(me.value.business.storeEnabled) &&
+          Boolean(me.value.business.storeSlug),
+      });
+      setStatusLoaded(true);
     })();
     return () => {
       active = false;
@@ -83,7 +146,7 @@ export default function AppsGrid() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {APPS.map((app) => (
+        {visibleApps.map((app) => (
           <Link
             key={app.id}
             href={app.href}
@@ -92,7 +155,7 @@ export default function AppsGrid() {
             <div className="flex-1 p-4 sm:p-5">
               {app.icon}
               <h4 className="mt-4 font-semibold text-gray-800 dark:text-white/90">
-                {app.name}
+                {app.nameKey ? t(app.nameKey) : app.name}
               </h4>
               <p className="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">
                 {t(app.descriptionKey)}

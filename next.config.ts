@@ -12,6 +12,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      // Onlayn do'kon moved from a standalone settings page into the Apps grid
+      // (2026-08-05). Permanent, so old bookmarks and any printed/linked
+      // address keep working.
+      {
+        source: "/settings/online-store",
+        destination: "/settings/applications/online-store",
+        permanent: true,
+      },
+    ];
+  },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,

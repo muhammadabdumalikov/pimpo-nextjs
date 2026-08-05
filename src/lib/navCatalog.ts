@@ -83,7 +83,7 @@ const MENU_ENTRIES: NavEntry[] = [
 
   // Settings
   { id: "branches", path: "/settings/branches", nameKey: "sidebar.branches", groupKey: "sidebar.settings", icon: LuStore },
-  { id: "online-store", path: "/settings/online-store", nameKey: "sidebar.onlineStore", groupKey: "sidebar.settings", icon: LuGlobe },
+  { id: "online-store", path: "/settings/applications/online-store", nameKey: "sidebar.onlineStore", groupKey: "sidebar.settings", icon: LuGlobe },
   { id: "settings-receipts", path: "/settings/receipts", nameKey: "sidebar.receipts", groupKey: "sidebar.settings", icon: LuFileText },
   { id: "integrations", path: "/settings/applications", nameKey: "sidebar.integrations", groupKey: "sidebar.settings", icon: LuPlug },
   { id: "subscription", path: "/subscription-management", nameKey: "sidebar.subscriptionManagement", groupKey: "sidebar.settings", icon: LuCreditCard },

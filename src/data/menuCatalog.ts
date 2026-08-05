@@ -26,6 +26,8 @@ export type MenuGroup =
 export const menuCatalog: MenuCatalogItem[] = [
   // Dashboard
   { key: "dashboard.ecommerce", labelKey: "sidebar.dashboard", group: "dashboard" },
+  // AI assistant chat (pro tier) — grantable so a trusted manager can use it.
+  { key: "ai", labelKey: "sidebar.ai", group: "dashboard" },
 
   // Catalog
   { key: "ecommerce.categories", labelKey: "sidebar.categories", group: "catalog" },

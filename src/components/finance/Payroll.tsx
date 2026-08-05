@@ -16,7 +16,14 @@ import { useToast } from "@/context/ToastContext";
 import { TrashBinIcon } from "@/icons/index";
 import { LuBanknote, LuChevronRight, LuTriangleAlert } from "react-icons/lu";
 import { exportAoaToExcel } from "@/lib/exportExcel";
-import { formatMoney, formatNumber, formatDate } from "@/lib/reportFormat";
+import {
+  formatMoney,
+  formatNumber,
+  formatDate,
+  formatCompact,
+  periodLabel,
+  type CompactUnits,
+} from "@/lib/reportFormat";
 import {
   getPayrollSummary,
   getPayrollPreview,
@@ -36,9 +43,23 @@ import {
   type Account,
 } from "@/lib/api";
 
-// The page is a wage ledger (daftar), not a dashboard: one dominant liability
-// figure, bare tabular numbers in the table (so'm is stated once, on the hero),
-// and the employee drawer as the settle-up surface.
+// The page is a LIVE wage daftar (owner-decided 2026-08-05), modeled on the
+// paper notebook every do'kon keeps: the month is the unit, the wage is known
+// up front, hand-outs accumulate against it, and the remainder is settled when
+// the month closes. The page answers the owner's three questions and nothing
+// else: "Oyligi qancha? Shu oy qancha berdim? Qancha qoladi?"
+//
+// - The table's month window (a named, faintly tinted band) holds OYLIK ·
+//   BERILDI · QOLADI. OYLIK is alive: ledger truth once the month is closed,
+//   otherwise base + % of own sales so far — there is no empty "not accrued
+//   yet" cell, because the paper daftar never has one.
+// - "Hisoblash" (accrual) is deliberately invisible as a concept: the button
+//   is "Oyni yopish" — closing the month writes the numbers you've been
+//   looking at all along into the ledger.
+// - The lifetime balance appears ONLY in the drawer (JAMI QOLDIQ) and the
+//   hero — never as a table column next to month figures.
+// - Direction is a WORD, never a minus sign: a plain dark figure = to pay,
+//   amber + "avans" = paid ahead. Red is for penalties only.
 
 const CARD =
   "overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]";
@@ -58,23 +79,9 @@ const periodOptions = (): string[] => {
   });
 };
 
-// App locale → BCP-47 tag for month names.
-const INTL_LOCALE: Record<string, string> = {
-  uz: "uz-Latn-UZ",
-  uzc: "uz-Cyrl-UZ",
-  ru: "ru-RU",
-  en: "en-US",
-};
-
-/** '2026-07' → 'Iyul 2026' in the active locale. */
-const monthLabel = (period: string, locale: string): string => {
-  const [y, m] = period.split("-").map(Number);
-  const label = new Intl.DateTimeFormat(INTL_LOCALE[locale] ?? "uz-Latn-UZ", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(Date.UTC(y, m - 1, 1)));
-  return label.charAt(0).toUpperCase() + label.slice(1);
-};
+// '2026-07' → 'Iyul 2026'. Our own month tables (periodLabel), not Intl —
+// browsers without Uzbek CLDR data would render "2026 M07" here.
+const monthLabel = periodLabel;
 
 type ActionKind = "payment" | "advance" | "bonus" | "deduction";
 
@@ -91,13 +98,26 @@ const ENTRY_TONE: Record<
   deduction: { sign: "−", cls: "text-error-500" },
 };
 
-/** Owed = warning, overpaid = error, settled = quiet. */
+/** To-pay = the strong, actionable figure; avans = amber (explained by a
+ *  word, never red — an avans is routine); settled = quiet. */
 const balanceCls = (balance: number) =>
   balance > 0
-    ? "text-warning-600 dark:text-warning-400"
+    ? "text-gray-800 dark:text-white/90"
     : balance < 0
-      ? "text-error-500"
+      ? "text-warning-600 dark:text-warning-400"
       : "text-gray-400";
+
+/** The month-window band: every period-scoped cell shares this faint tint so
+ *  nothing inside it can be misread as an all-time figure. */
+const MONTH_BAND = "bg-gray-50/60 dark:bg-white/[0.02]";
+
+/** The month's remainder: the (live) wage minus what was handed out and
+ *  withheld. Positive = still to pay for this month, negative = paid ahead.
+ *  Falls back to the ledger figure if an older backend omits periodWage. */
+const monthDue = (row: PayrollSummaryRow) =>
+  (row.periodWage ?? row.periodAccrued) -
+  row.periodPaid -
+  (row.periodDeducted ?? 0);
 
 export default function Payroll() {
   const { t, locale } = useTranslations();
@@ -137,14 +157,12 @@ export default function Payroll() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [sum, accs, cfg] = await Promise.all([
+      const [sum, accs] = await Promise.all([
         getPayrollSummary(period),
         getAccounts(),
-        getPayrollSettings(),
       ]);
       setSummary(sum);
       setAccounts(accs);
-      setSettings(cfg);
     } catch (e) {
       showToast("error", (e as Error).message, "Error");
     } finally {
@@ -157,6 +175,15 @@ export default function Payroll() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Preferences are cosmetic — a failed fetch must not blank the daftar, so
+  // they load outside the main Promise.all and fail silently (the switch just
+  // stays off).
+  useEffect(() => {
+    getPayrollSettings()
+      .then(setSettings)
+      .catch(() => {});
+  }, []);
 
   // Optimistic: the switch flips immediately and reverts if the save fails,
   // so a one-field preference never costs a spinner.
@@ -188,10 +215,6 @@ export default function Payroll() {
   );
 
   const totals = summary?.totals;
-  // The signature: how much of this month's payroll is already settled.
-  const settlementPct = totals && totals.accrued > 0
-    ? Math.min(100, Math.round((totals.paid / totals.accrued) * 100))
-    : 0;
 
   const unaccrued = useMemo(
     () => summary?.unaccruedPeriods ?? [],
@@ -211,7 +234,28 @@ export default function Payroll() {
   // rather than a month still in progress.
   const periodClosed = period < currentPeriod();
 
-  /** Compact formula for a table cell: '3 000 000', '5% tushumdan', '3 000 000 + 5%'. */
+  // The month at a glance: total wages, what's been handed out, and what will
+  // be needed. `due` sums only positive remainders — one employee's avans
+  // doesn't hand cash back to pay another with.
+  const monthAgg = useMemo(() => {
+    const wage = rows.reduce(
+      (s, r) => s + (r.periodWage ?? r.periodAccrued),
+      0,
+    );
+    const paid = rows.reduce((s, r) => s + r.periodPaid, 0);
+    const due = rows.reduce((s, r) => s + Math.max(0, monthDue(r)), 0);
+    return { wage, paid, due };
+  }, [rows]);
+
+  // How much of this month's wage bill is already in employees' hands.
+  const settlementPct =
+    monthAgg.wage > 0
+      ? Math.min(100, Math.round((monthAgg.paid / monthAgg.wage) * 100))
+      : 0;
+
+  /** Full formula, for the Excel export: '3 000 000 /oy', '5% tushumdan',
+   *  '3 000 000 + 5%'. The '/oy' suffix keeps a bare oklad from being misread
+   *  as an amount currently owed — it turns the number into a rate. */
   const formulaLabel = (row: PayrollSummaryRow) => {
     const percentText = `${row.salesPercent}% ${
       row.percentBase === "profit"
@@ -220,13 +264,43 @@ export default function Payroll() {
     }`;
     switch (row.salaryType) {
       case "fixed":
-        return formatNumber(row.baseSalary);
+        return `${formatNumber(row.baseSalary)} ${t("payroll.perMonth")}`;
       case "percent":
         return percentText;
       case "mixed":
         return `${formatNumber(row.baseSalary)} + ${row.salesPercent}%`;
       default:
         return t("payroll.notSet") || "—";
+    }
+  };
+
+  // Short-scale units so the rate under a name stays tiny ("6 mln /oy").
+  const units: CompactUnits = useMemo(
+    () => ({
+      thousand: t("products.statsThousand"),
+      million: t("products.statsMillion"),
+      billion: t("products.statsBillion"),
+    }),
+    [t],
+  );
+
+  /** Compressed rate for the name subtext: '6 mln /oy', '5% tushumdan',
+   *  '3 mln + 5%'. The full-precision version lives in the Excel export. */
+  const compactFormula = (row: PayrollSummaryRow): string | null => {
+    const percentText = `${row.salesPercent}% ${
+      row.percentBase === "profit"
+        ? t("payroll.ofProfit") || "foydadan"
+        : t("payroll.ofRevenue") || "tushumdan"
+    }`;
+    switch (row.salaryType) {
+      case "fixed":
+        return `${formatCompact(row.baseSalary, units)} ${t("payroll.perMonth")}`;
+      case "percent":
+        return percentText;
+      case "mixed":
+        return `${formatCompact(row.baseSalary, units)} + ${row.salesPercent}%`;
+      default:
+        return null;
     }
   };
 
@@ -381,20 +455,24 @@ export default function Payroll() {
 
   const exportExcel = () => {
     if (!summary) return;
+    // Excel keeps SIGNED numbers (positive = to pay, negative = avans) — a
+    // spreadsheet is for sums, and words in number cells would break them.
     const header = [
       t("payroll.employee"),
       t("payroll.positionLabel"),
       t("payroll.salaryTypeLabel"),
-      t("payroll.periodAccrued"),
+      t("payroll.monthWage"),
       t("payroll.periodPaid"),
-      t("payroll.balance"),
+      t("payroll.remains"),
+      t("payroll.balanceTotal"),
     ];
     const body = rows.map((r) => [
       r.name,
       r.position ?? "",
       formulaLabel(r),
-      r.periodAccrued,
+      r.periodWage ?? r.periodAccrued,
       r.periodPaid,
+      monthDue(r),
       r.balance,
     ]);
     exportAoaToExcel(`ish-haqi-${period}`, [header, ...body], "Ish haqi");
@@ -433,50 +511,60 @@ export default function Payroll() {
       {summary && (
         <div className={`${CARD} px-5 py-5 sm:px-6`}>
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-            {/* Focal point: total liability */}
+            {/* Focal point: total liability. When the net position is money
+                handed out ahead of wages, the label flips to say so — the
+                figure itself never wears a minus. */}
             <div>
               <p className="text-theme-xs font-medium uppercase tracking-wider text-gray-400">
-                {t("payroll.totalDebt")}
+                {(totals?.balance ?? 0) < 0
+                  ? t("payroll.advanceGiven")
+                  : t("payroll.totalDebt")}
               </p>
               <p className="mt-1.5 text-3xl font-semibold tabular-nums tracking-tight text-gray-800 dark:text-white/90">
-                {money(totals?.balance ?? 0)}
+                {money(Math.abs(totals?.balance ?? 0))}
               </p>
               <p className="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">
                 {totals?.onPayroll ?? 0} {t("payroll.employeesOnPayroll")}
               </p>
             </div>
 
-            {/* Month settlement: accrued vs paid, with the meter */}
-            <div className="w-full sm:w-80">
-              <div className="flex items-baseline justify-between gap-4">
-                <span className="text-theme-xs font-medium uppercase tracking-wider text-gray-400">
-                  {t("payroll.monthSettlement")} · {monthLabel(period, locale)}
-                </span>
-                <span className="text-theme-xs tabular-nums text-gray-400">
-                  {settlementPct}%
-                </span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
-                <div
-                  className="h-full rounded-full bg-success-500 transition-[width] duration-500"
-                  style={{ width: `${settlementPct}%` }}
-                />
-              </div>
-              <div className="mt-2 flex justify-between text-theme-sm">
-                <span className="text-gray-500 dark:text-gray-400">
-                  {t("payroll.periodPaid")}{" "}
-                  <span className="font-medium tabular-nums text-gray-700 dark:text-gray-200">
-                    {formatNumber(totals?.paid ?? 0)}
+            {/* The month at a glance, on the LIVE wage bill: how much of it is
+                already in employees' hands, and what remains. For an open
+                month the remainder wears "~" — percent wages keep growing
+                until the month closes. */}
+            {monthAgg.wage > 0 && (
+              <div className="w-full sm:w-80">
+                <div className="flex items-baseline justify-between gap-4">
+                  <span className="text-theme-xs font-medium uppercase tracking-wider text-gray-400">
+                    {t("payroll.monthSettlement")} · {monthLabel(period, locale)}
                   </span>
-                </span>
-                <span className="text-gray-500 dark:text-gray-400">
-                  {t("payroll.periodAccrued")}{" "}
-                  <span className="font-medium tabular-nums text-gray-700 dark:text-gray-200">
-                    {formatNumber(totals?.accrued ?? 0)}
+                  <span className="text-theme-xs tabular-nums text-gray-400">
+                    {settlementPct}%
                   </span>
-                </span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-success-500 transition-[width] duration-500"
+                    style={{ width: `${settlementPct}%` }}
+                  />
+                </div>
+                <div className="mt-2 flex justify-between text-theme-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {t("payroll.periodPaid")}{" "}
+                    <span className="font-medium tabular-nums text-gray-700 dark:text-gray-200">
+                      {formatNumber(monthAgg.paid)}
+                    </span>
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {t("payroll.remains")}{" "}
+                    <span className="font-medium tabular-nums text-gray-700 dark:text-gray-200">
+                      {!periodClosed && monthAgg.due > 0 ? "~" : ""}
+                      {formatNumber(monthAgg.due)}
+                    </span>
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Months that were never closed. Without this a balance built only
@@ -551,17 +639,31 @@ export default function Payroll() {
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>
+                {/* The month window: the selected month names the band, and
+                    everything inside it is scoped to that month. OYLIK is the
+                    live wage, BERILDI what's been handed out, QOLADI the
+                    remainder — the three questions the owner actually asks.
+                    The lifetime balance lives in the drawer, never here. */}
+                <tr className="text-theme-xs uppercase tracking-wide text-gray-400">
+                  <th />
+                  <th
+                    colSpan={3}
+                    className={`px-3 pb-1 pt-3 text-center font-medium ${MONTH_BAND}`}
+                  >
+                    {monthLabel(period, locale)}
+                  </th>
+                  <th />
+                </tr>
                 <tr className="border-b border-gray-200 text-theme-xs uppercase tracking-wide text-gray-400 dark:border-gray-800">
                   <th className="px-3 py-3 font-medium">{t("payroll.employee")}</th>
-                  <th className="px-3 py-3 font-medium">{t("payroll.salaryTypeLabel")}</th>
-                  <th className="px-3 py-3 text-right font-medium">
-                    {t("payroll.periodAccrued")}
+                  <th className={`px-3 py-3 text-right font-medium ${MONTH_BAND}`}>
+                    {t("payroll.monthWage")}
                   </th>
-                  <th className="px-3 py-3 text-right font-medium">
+                  <th className={`px-3 py-3 text-right font-medium ${MONTH_BAND}`}>
                     {t("payroll.periodPaid")}
                   </th>
-                  <th className="px-3 py-3 text-right font-medium">
-                    {t("payroll.balance")}
+                  <th className={`px-3 py-3 text-right font-medium ${MONTH_BAND}`}>
+                    {t("payroll.remains")}
                   </th>
                   <th className="px-3 py-3" />
                 </tr>
@@ -580,37 +682,71 @@ export default function Payroll() {
                           <div className="font-medium text-gray-800 dark:text-white/90">
                             {row.name}
                           </div>
+                          {/* The rate rides under the name ("kassir · 6 mln
+                              /oy") — it is context, not a column: the OYLIK
+                              column already carries it as this month's money. */}
                           <div className="text-theme-xs text-gray-400">
-                            {[row.position, row.branchName]
+                            {[row.position, row.branchName, compactFormula(row)]
                               .filter(Boolean)
                               .join(" · ") || "—"}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3.5 tabular-nums text-gray-500 dark:text-gray-400">
-                      {formulaLabel(row)}
-                    </td>
-                    <td className="px-3 py-3.5 text-right tabular-nums text-gray-700 dark:text-gray-300">
-                      {row.periodAccrued > 0 ? (
-                        formatNumber(row.periodAccrued)
-                      ) : periodClosed &&
-                        row.salaryType !== "none" &&
-                        !row.accrualPosted ? (
-                        <span className="text-theme-xs font-normal text-warning-600 dark:text-warning-400">
-                          {t("payroll.notAccruedShort")}
-                        </span>
+                    {/* OYLIK — alive: ledger truth once closed, live estimate
+                        until then. A closed-but-unposted month still shows the
+                        real figure, wearing "hisoblanmagan" as its state. */}
+                    <td
+                      className={`px-3 py-3.5 text-right tabular-nums text-gray-700 dark:text-gray-300 ${MONTH_BAND}`}
+                    >
+                      {(row.periodWage ?? row.periodAccrued) > 0 ? (
+                        <>
+                          {formatNumber(row.periodWage ?? row.periodAccrued)}
+                          {periodClosed &&
+                            !row.accrualPosted &&
+                            row.salaryType !== "none" && (
+                              <div className="text-theme-xs lowercase text-warning-600 dark:text-warning-400">
+                                {t("payroll.notAccruedShort")}
+                              </div>
+                            )}
+                        </>
                       ) : (
                         "—"
                       )}
                     </td>
-                    <td className="px-3 py-3.5 text-right tabular-nums text-gray-700 dark:text-gray-300">
+                    <td
+                      className={`px-3 py-3.5 text-right tabular-nums text-gray-700 dark:text-gray-300 ${MONTH_BAND}`}
+                    >
                       {row.periodPaid > 0 ? formatNumber(row.periodPaid) : "—"}
                     </td>
-                    <td className="px-3 py-3.5 text-right">
-                      <span className={`font-semibold tabular-nums ${balanceCls(row.balance)}`}>
-                        {formatNumber(row.balance)}
-                      </span>
+                    {/* QOLADI — direction is a word, not a sign: a plain dark
+                        figure is "to pay", amber + "avans" is paid-ahead. An
+                        open month's remainder is due at month end, and says so. */}
+                    <td className={`px-3 py-3.5 text-right ${MONTH_BAND}`}>
+                      {(() => {
+                        const due = monthDue(row);
+                        if (due === 0) {
+                          return <span className="text-gray-400">—</span>;
+                        }
+                        return (
+                          <>
+                            <span
+                              className={`font-semibold tabular-nums ${balanceCls(due)}`}
+                            >
+                              {formatNumber(Math.abs(due))}
+                            </span>
+                            {due < 0 ? (
+                              <div className="text-theme-xs lowercase text-warning-600/80 dark:text-warning-400/80">
+                                {t("payroll.entryTypes.advance")}
+                              </div>
+                            ) : !periodClosed ? (
+                              <div className="text-theme-xs text-gray-400">
+                                {t("payroll.atMonthEnd")}
+                              </div>
+                            ) : null}
+                          </>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-3.5">
                       <div className="flex items-center justify-end gap-1.5">
@@ -649,10 +785,12 @@ export default function Payroll() {
       >
         {drawerRow && (
           <div className="space-y-6">
-            {/* Balance hero */}
+            {/* Balance hero: the LIFETIME figure — this is the settle-up
+                surface, so the all-time remainder leads here (the table shows
+                only the month). Magnitude + direction word, never a sign. */}
             <div>
               <p className="text-theme-xs font-medium uppercase tracking-wider text-gray-400">
-                {t("payroll.balance")}
+                {t("payroll.balanceTotal")}
               </p>
               <p
                 className={`mt-1 text-2xl font-semibold tabular-nums tracking-tight ${
@@ -661,20 +799,19 @@ export default function Payroll() {
                     : "text-gray-800 dark:text-white/90"
                 }`}
               >
-                {money(drawerRow.balance)}
+                {money(Math.abs(drawerRow.balance))}
               </p>
-              {/* A negative balance with an unposted month is not an
-                  overpayment — the wage side of the ledger is just missing.
-                  Saying "Pereplata" there would be a lie the owner has to
-                  unpick themselves. */}
+              {/* Paid-ahead is an avans, not an overpayment error — and when
+                  months were never posted, say THAT, because the missing wage
+                  is the real story behind the number. */}
               <p className="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">
                 {drawerRow.balance === 0
                   ? t("payroll.settledUp")
                   : drawerRow.balance < 0
                     ? unaccrued.length > 0
-                      ? `${t("payroll.notAccruedTitle")} — ${unaccruedLabel}`
-                      : t("payroll.overpaid")
-                    : formulaLabel(drawerRow)}
+                      ? `${t("payroll.advanceGiven")} · ${t("payroll.notAccruedTitle")} — ${unaccruedLabel}`
+                      : t("payroll.advanceGiven")
+                    : t("payroll.toPay")}
               </p>
             </div>
 
@@ -758,8 +895,16 @@ export default function Payroll() {
                               {tone.sign}
                               {formatNumber(Number(entry.amount))}
                             </p>
+                            {/* Running remainder after this entry — magnitude
+                                plus "avans" when paid-ahead, like the hero. */}
                             <p className="mt-0.5 text-theme-xs tabular-nums text-gray-400">
-                              {formatNumber(Number(entry.balanceAfter))}
+                              {formatNumber(Math.abs(Number(entry.balanceAfter)))}
+                              {Number(entry.balanceAfter) < 0 && (
+                                <span className="lowercase">
+                                  {" "}
+                                  {t("payroll.entryTypes.advance")}
+                                </span>
+                              )}
                             </p>
                           </div>
                           <button
@@ -936,9 +1081,15 @@ export default function Payroll() {
             {t(`payroll.actions.${actionKind}`)}
           </h2>
           <p className="mb-5 text-theme-sm text-gray-500 dark:text-gray-400">
-            {actionRow?.name} · {t("payroll.balance")}:{" "}
+            {actionRow?.name} · {t("payroll.balanceTotal")}:{" "}
             <span className="font-medium tabular-nums">
-              {money(actionRow?.balance ?? 0)}
+              {money(Math.abs(actionRow?.balance ?? 0))}
+              {(actionRow?.balance ?? 0) < 0 && (
+                <span className="lowercase">
+                  {" "}
+                  ({t("payroll.entryTypes.advance")})
+                </span>
+              )}
             </span>
           </p>
 

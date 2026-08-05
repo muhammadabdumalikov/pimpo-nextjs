@@ -19,6 +19,7 @@ import {
   LuLogOut,
   LuSunMedium,
   LuMoon,
+  LuSparkles,
 } from "react-icons/lu";
 import { CgProfile } from "react-icons/cg";
 import { useTheme } from "@/context/ThemeContext";
@@ -226,6 +227,12 @@ const AppSidebar: React.FC = () => {
       path: "/reports",
     },
     {
+      key: "ai",
+      icon: <LuSparkles size={22} />,
+      name: t('sidebar.ai'),
+      path: "/ai",
+    },
+    {
       key: "procurement",
       icon: <LuTruck size={22} />,
       name: t('sidebar.procurement'),
@@ -254,7 +261,6 @@ const AppSidebar: React.FC = () => {
         { name: t('sidebar.paymentMethods'), path: "/settings/payment-methods" },
         { name: t('sidebar.units'), path: "/settings/units" },
         { name: t('sidebar.catalogSettings'), path: "/settings/catalog" },
-        { name: t('sidebar.onlineStore'), path: "/settings/online-store" },
         { name: t('sidebar.profileSettings'), path: "/settings/profile" },
         { name: t('sidebar.integrations'), path: "/settings/applications" },
         { name: t('sidebar.subscriptionManagement'), path: "/subscription-management" },

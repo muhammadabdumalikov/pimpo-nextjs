@@ -62,6 +62,10 @@ export const defaultMenuPermissions: MenuPermission[] = [
   { menuItem: 'reports.extended', allowedTiers: PRO },
   { menuItem: 'reports.multibranch', allowedTiers: PRO },
 
+  // AI assistant — Business (pro) and up, matching the backend's @MinTier('pro')
+  // on /ai/* (it reads the extended-analytics reports, so it follows their tier).
+  { menuItem: 'ai', allowedTiers: PRO },
+
   // Procurement (suppliers + goods receipts) — Standart and up.
   { menuItem: 'suppliers', allowedTiers: BASIC },
   { menuItem: 'receipts', allowedTiers: BASIC },
@@ -115,7 +119,10 @@ const routeMenuMap: Record<string, string> = {
   '/customers': 'customers',
   '/subscription-management': 'subscriptionManagement',
   '/settings/receipts': 'settings.receipts',
-  '/settings/online-store': 'settings.onlineStore',
+  // App detail pages must be mapped EXPLICITLY: longest-prefix matching would
+  // otherwise resolve them to the free-tier '/settings' entry and silently
+  // ungate a paid feature.
+  '/settings/applications/online-store': 'settings.onlineStore',
   '/settings/applications/telegram': 'settings.telegram',
   '/settings': 'settings',
   '/cart': 'checkout',
@@ -157,6 +164,8 @@ const routeMenuMap: Record<string, string> = {
   // Multi-branch analytics — Business+ (proplus) only.
   '/reports/branch-comparison': 'reports.multibranch',
   '/reports/transfer-suggestions': 'reports.multibranch',
+  // AI assistant chat — pro tier (mirrors the backend guard on /ai/*).
+  '/ai': 'ai',
   '/roles': 'team.roles',
   '/staff': 'team.staff',
   '/staff-sales': 'team.sales',
