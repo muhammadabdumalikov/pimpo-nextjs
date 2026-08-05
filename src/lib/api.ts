@@ -1722,17 +1722,30 @@ export interface PayrollSummaryRow {
   periodProfit: number;
   periodAccrued: number;
   periodPaid: number;
+  /** False when this month's accrual was never run for this employee. */
+  accrualPosted: boolean;
 }
 
 export interface PayrollSummary {
   period: string;
   rows: PayrollSummaryRow[];
+  /** Closed months never accrued, newest first — not scoped to `period`. */
+  unaccruedPeriods: string[];
   totals: {
     balance: number;
     accrued: number;
     paid: number;
     onPayroll: number;
+    /** On-payroll employees still missing this month's accrual. */
+    pendingAccrual: number;
   };
+}
+
+export interface PayrollSettings {
+  businessId: string;
+  autoAccrue: boolean;
+  lastAutoPeriod: string | null;
+  updatedAt: string;
 }
 
 /** A computed (not yet posted) accrual line. */
@@ -1784,6 +1797,27 @@ export async function getPayrollSummary(period?: string): Promise<PayrollSummary
     headers: authHeaders(),
   });
   if (!response.ok) await parseError(response, 'Failed to fetch payroll summary');
+  return response.json();
+}
+
+export async function getPayrollSettings(): Promise<PayrollSettings> {
+  const response = await fetch(`${API_BASE_URL}/payroll/settings`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!response.ok) await parseError(response, 'Failed to fetch payroll settings');
+  return response.json();
+}
+
+export async function updatePayrollSettings(data: {
+  autoAccrue: boolean;
+}): Promise<PayrollSettings> {
+  const response = await fetch(`${API_BASE_URL}/payroll/settings`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) await parseError(response, 'Failed to update payroll settings');
   return response.json();
 }
 

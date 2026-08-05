@@ -1544,7 +1544,12 @@
     "historyShort": "Tarix",
     "actionsLabel": "Amallar",
     "overpaid": "Ortiqcha to'langan",
-    "settledUp": "Hisob-kitob yopiq"
+    "settledUp": "Hisob-kitob yopiq",
+    "notAccruedTitle": "Oylik hisoblanmagan",
+    "notAccruedHint": "Bu oylar uchun oylik hisoblanmagani uchun qoldiq faqat to'lovlardan iborat va manfiy ko'rinishi mumkin.",
+    "notAccruedShort": "hisoblanmagan",
+    "autoAccrue": "Avtomatik hisoblash",
+    "autoAccrueHint": "Har oy 1-sanasi o'tgan oy uchun avtomatik hisoblanadi"
   },
   "common": {
     "cancel": "Bekor qilish",

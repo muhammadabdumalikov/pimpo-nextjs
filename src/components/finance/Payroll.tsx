@@ -10,16 +10,19 @@ import AvatarText from "@/components/ui/avatar/AvatarText";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import SelectField from "@/components/form/SelectField";
+import Switch from "@/components/form/switch/Switch";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import { TrashBinIcon } from "@/icons/index";
-import { LuBanknote, LuChevronRight } from "react-icons/lu";
+import { LuBanknote, LuChevronRight, LuTriangleAlert } from "react-icons/lu";
 import { exportAoaToExcel } from "@/lib/exportExcel";
 import { formatMoney, formatNumber, formatDate } from "@/lib/reportFormat";
 import {
   getPayrollSummary,
   getPayrollPreview,
   getPayrollEntries,
+  getPayrollSettings,
+  updatePayrollSettings,
   accruePayroll,
   createPayrollPayment,
   createPayrollAdjustment,
@@ -29,6 +32,7 @@ import {
   type PayrollSummaryRow,
   type PayrollPreview,
   type PayrollEntry,
+  type PayrollSettings,
   type Account,
 } from "@/lib/api";
 
@@ -104,6 +108,7 @@ export default function Payroll() {
   const [period, setPeriod] = useState(currentPeriod());
   const [summary, setSummary] = useState<PayrollSummary | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [settings, setSettings] = useState<PayrollSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Accrual run
@@ -132,12 +137,14 @@ export default function Payroll() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [sum, accs] = await Promise.all([
+      const [sum, accs, cfg] = await Promise.all([
         getPayrollSummary(period),
         getAccounts(),
+        getPayrollSettings(),
       ]);
       setSummary(sum);
       setAccounts(accs);
+      setSettings(cfg);
     } catch (e) {
       showToast("error", (e as Error).message, "Error");
     } finally {
@@ -150,6 +157,19 @@ export default function Payroll() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Optimistic: the switch flips immediately and reverts if the save fails,
+  // so a one-field preference never costs a spinner.
+  const toggleAutoAccrue = async (next: boolean) => {
+    const previous = settings;
+    setSettings((s) => (s ? { ...s, autoAccrue: next } : s));
+    try {
+      setSettings(await updatePayrollSettings({ autoAccrue: next }));
+    } catch (e) {
+      setSettings(previous);
+      showToast("error", (e as Error).message, "Error");
+    }
+  };
 
   // Only employees actually on payroll (or still carrying a balance) are
   // listed — an accountless cleaner with no salary set stays out of the daftar.
@@ -173,6 +193,24 @@ export default function Payroll() {
     ? Math.min(100, Math.round((totals.paid / totals.accrued) * 100))
     : 0;
 
+  const unaccrued = useMemo(
+    () => summary?.unaccruedPeriods ?? [],
+    [summary],
+  );
+
+  // "Iyul 2026" → "Iyul 2026, Iyun 2026" → "Iyul 2026, Iyun 2026 +3". Naming
+  // more than two would crowd the line without telling the owner anything new:
+  // the fix is the same button either way.
+  const unaccruedLabel = useMemo(() => {
+    const names = unaccrued.slice(0, 2).map((p) => monthLabel(p, locale));
+    const rest = unaccrued.length - names.length;
+    return rest > 0 ? `${names.join(", ")} +${rest}` : names.join(", ");
+  }, [unaccrued, locale]);
+
+  // The selected month is closed, so a missing accrual there is a real gap
+  // rather than a month still in progress.
+  const periodClosed = period < currentPeriod();
+
   /** Compact formula for a table cell: '3 000 000', '5% tushumdan', '3 000 000 + 5%'. */
   const formulaLabel = (row: PayrollSummaryRow) => {
     const percentText = `${row.salesPercent}% ${
@@ -194,11 +232,15 @@ export default function Payroll() {
 
   // ─── Accrual run ──────────────────────────────────────────────────────────
 
-  const openPreview = async () => {
+  /** `target` lets the unaccrued-months banner jump straight to the month it
+   *  is complaining about, rather than making the owner find it by hand. */
+  const openPreview = async (target?: string) => {
+    const forPeriod = target ?? period;
+    if (target && target !== period) setPeriod(target);
     setPreviewLoading(true);
     setPreviewOpen(true);
     try {
-      const data = await getPayrollPreview(period);
+      const data = await getPayrollPreview(forPeriod);
       setPreview(data);
       setSelectedIds(
         data.rows
@@ -214,10 +256,12 @@ export default function Payroll() {
   };
 
   const confirmAccrual = async () => {
-    if (selectedIds.length === 0) return;
+    if (selectedIds.length === 0 || !preview) return;
     setAccruing(true);
     try {
-      const res = await accruePayroll(period, selectedIds);
+      // preview.period, not the period state: the banner can open the modal for
+      // a different month, and the state update may not have landed yet.
+      const res = await accruePayroll(preview.period, selectedIds);
       showToast(
         "success",
         `${res.created} ${t("payroll.accrualDone")} — ${money(res.total)}`,
@@ -379,7 +423,7 @@ export default function Payroll() {
           <Button size="sm" variant="outline" onClick={exportExcel} disabled={!summary || rows.length === 0}>
             {t("payroll.exportExcel")}
           </Button>
-          <Button size="sm" onClick={openPreview}>
+          <Button size="sm" onClick={() => openPreview()}>
             {t("payroll.runAccrual")}
           </Button>
         </div>
@@ -433,6 +477,48 @@ export default function Payroll() {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Months that were never closed. Without this a balance built only
+              from payments reads as an overpayment, which is exactly backwards
+              — the wage simply hasn't been posted yet. Shown on every month,
+              because the balance above is lifetime, not period-scoped. */}
+          {unaccrued.length > 0 && (
+            <div className="-mx-5 mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-5 pt-4 dark:border-gray-800 sm:-mx-6 sm:px-6">
+              <div className="flex items-start gap-2.5">
+                <LuTriangleAlert
+                  size={16}
+                  className="mt-0.5 shrink-0 text-warning-500"
+                />
+                <div>
+                  <p className="text-theme-sm font-medium text-gray-700 dark:text-gray-200">
+                    {t("payroll.notAccruedTitle")} — {unaccruedLabel}
+                  </p>
+                  <p className="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">
+                    {t("payroll.notAccruedHint")}
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openPreview(unaccrued[0])}
+              >
+                {t("payroll.runAccrual")}
+              </Button>
+            </div>
+          )}
+
+          {/* Auto-accrual: the durable fix for a month nobody closed. */}
+          <div className="-mx-5 mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-5 pt-4 dark:border-gray-800 sm:-mx-6 sm:px-6">
+            <Switch
+              label={t("payroll.autoAccrue")}
+              defaultChecked={settings?.autoAccrue ?? false}
+              onChange={toggleAutoAccrue}
+            />
+            <p className="text-theme-xs text-gray-400">
+              {t("payroll.autoAccrueHint")}
+            </p>
           </div>
         </div>
       )}
@@ -506,7 +592,17 @@ export default function Payroll() {
                       {formulaLabel(row)}
                     </td>
                     <td className="px-3 py-3.5 text-right tabular-nums text-gray-700 dark:text-gray-300">
-                      {row.periodAccrued > 0 ? formatNumber(row.periodAccrued) : "—"}
+                      {row.periodAccrued > 0 ? (
+                        formatNumber(row.periodAccrued)
+                      ) : periodClosed &&
+                        row.salaryType !== "none" &&
+                        !row.accrualPosted ? (
+                        <span className="text-theme-xs font-normal text-warning-600 dark:text-warning-400">
+                          {t("payroll.notAccruedShort")}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-3 py-3.5 text-right tabular-nums text-gray-700 dark:text-gray-300">
                       {row.periodPaid > 0 ? formatNumber(row.periodPaid) : "—"}
@@ -567,11 +663,17 @@ export default function Payroll() {
               >
                 {money(drawerRow.balance)}
               </p>
+              {/* A negative balance with an unposted month is not an
+                  overpayment — the wage side of the ledger is just missing.
+                  Saying "Pereplata" there would be a lie the owner has to
+                  unpick themselves. */}
               <p className="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">
                 {drawerRow.balance === 0
                   ? t("payroll.settledUp")
                   : drawerRow.balance < 0
-                    ? t("payroll.overpaid")
+                    ? unaccrued.length > 0
+                      ? `${t("payroll.notAccruedTitle")} — ${unaccruedLabel}`
+                      : t("payroll.overpaid")
                     : formulaLabel(drawerRow)}
               </p>
             </div>

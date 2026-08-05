@@ -1544,7 +1544,12 @@
     "historyShort": "History",
     "actionsLabel": "Actions",
     "overpaid": "Overpaid",
-    "settledUp": "Settled up"
+    "settledUp": "Settled up",
+    "notAccruedTitle": "Wages not accrued",
+    "notAccruedHint": "These months were never accrued, so the balance reflects payments only and can read as negative.",
+    "notAccruedShort": "not accrued",
+    "autoAccrue": "Auto-accrual",
+    "autoAccrueHint": "On the 1st of each month, the previous month is accrued automatically"
   },
   "common": {
     "cancel": "Cancel",
