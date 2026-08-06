@@ -1,4 +1,3 @@
-import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AiAssistant from "@/components/ai/AiAssistant";
 import { Metadata } from "next";
 
@@ -7,11 +6,8 @@ export const metadata: Metadata = {
   description: "AI yordamchi — do'kon ma'lumotlari bo'yicha savol-javob",
 };
 
+// No breadcrumb: the workspace card carries its own toolbar and fills the
+// viewport height on its own.
 export default function AiPage() {
-  return (
-    <div>
-      <PageBreadcrumb pageTitle="AI yordamchi" titleKey="ai.title" />
-      <AiAssistant />
-    </div>
-  );
+  return <AiAssistant />;
 }

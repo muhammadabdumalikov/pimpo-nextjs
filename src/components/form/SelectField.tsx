@@ -62,6 +62,19 @@ interface SelectFieldProps {
    * downward menu would be clipped or run off-screen.
    */
   dropUp?: boolean;
+  /**
+   * Extra classes for the open dropdown panel. The panel defaults to the
+   * trigger's width; a compact trigger (e.g. a ghost pill) can pass a
+   * `min-w-[...]` here to get a wider, readable panel — the min-width wins
+   * over the trigger-width default and the panel stays left-anchored.
+   */
+  dropdownClassName?: string;
+  /**
+   * Wrap long option labels onto extra lines instead of truncating — pair
+   * with a wider `dropdownClassName` panel when labels must stay readable
+   * in full (e.g. model ids). Off by default (single truncated line).
+   */
+  wrapOptions?: boolean;
 }
 
 /**
@@ -89,6 +102,8 @@ export default function SelectField({
   onOpen,
   portal = false,
   dropUp = false,
+  dropdownClassName = "",
+  wrapOptions = false,
 }: SelectFieldProps) {
   const { t } = useTranslations();
   const [open, setOpen] = useState(false);
@@ -326,7 +341,7 @@ export default function SelectField({
                 portal
                   ? "z-[70]"
                   : `absolute left-0 right-0 z-40 ${dropUp ? "bottom-full mb-1.5" : "mt-1.5"}`
-              } rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark`}
+              } rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark ${dropdownClassName}`}
             >
           {showSearch && (
             <div className="relative mb-1.5">
@@ -385,14 +400,24 @@ export default function SelectField({
                           : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/[0.05]"
                     }`}
                   >
-                    <span className="flex items-center gap-2 truncate">
+                    <span
+                      className={`flex items-center gap-2 ${
+                        wrapOptions ? "min-w-0" : "truncate"
+                      }`}
+                    >
                       {option.dotColor && (
                         <span
                           className="h-2.5 w-2.5 shrink-0 rounded-full"
                           style={{ backgroundColor: option.dotColor }}
                         />
                       )}
-                      <span className="truncate">{option.label}</span>
+                      <span
+                        className={
+                          wrapOptions ? "whitespace-normal break-words" : "truncate"
+                        }
+                      >
+                        {option.label}
+                      </span>
                     </span>
                   </button>
                 );

@@ -1,9 +1,10 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   LuArrowUp,
   LuCheck,
+  LuCopy,
   LuCpu,
   LuLoaderCircle,
   LuMessageSquarePlus,
@@ -23,6 +24,13 @@ import {
   type AiHistoryTurn,
 } from "@/lib/aiStream";
 import AiArtifactView from "./AiArtifact";
+import AiMarkdown from "./AiMarkdown";
+import AiRail from "./AiRail";
+
+// Re-rendering ApexCharts 60×/s during the reveal would cost more than the
+// animation saves — artifact props never change once landed, so memo skips
+// them on every reveal frame.
+const MemoizedArtifact = memo(AiArtifactView);
 
 // One assistant turn is an ORDERED list of parts — the model interleaves prose
 // and artifacts (a table can land between two paragraphs), so `{text,
@@ -55,6 +63,8 @@ interface AssistantMsg {
   error?: string;
   /** User pressed Stop before any content arrived. */
   stopped?: boolean;
+  /** The stream was aborted mid-flight — the reveal snaps, no residual typing. */
+  aborted?: boolean;
   done: boolean;
   /**
    * Set only when this turn was asked with a NON-default model — the owner is
@@ -182,6 +192,13 @@ export default function AiAssistant() {
     if (!el) return;
     stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   };
+
+  // The typewriter grows content without touching `messages`, so the scroll
+  // effect above never sees it — the revealing block calls this per step.
+  const followReveal = useCallback(() => {
+    const el = listRef.current;
+    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
+  }, []);
 
   // The client owns the transcript — replay the last turns as `history`
   // (trimmed; the server caps at 20 anyway). Assistant turns replay only
@@ -325,6 +342,7 @@ export default function AiAssistant() {
         patch((m) => ({
           ...m,
           done: true,
+          aborted,
           stopped: aborted && m.parts.length === 0 && !m.error,
           tools: m.tools.map((tr) =>
             tr.running ? { ...tr, running: false } : tr,
@@ -444,119 +462,137 @@ export default function AiAssistant() {
 
   return (
     <div className="flex h-[calc(100dvh-2rem)] min-h-[480px] flex-col rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] md:h-[calc(100dvh-3rem)]">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 dark:border-gray-800 sm:px-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400">
-            <LuSparkles size={20} />
+      {/* Toolbar: identity + model picker on the left, new chat on the right */}
+      <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-5">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400">
+            <LuSparkles size={18} />
           </span>
-          <div className="min-w-0">
-            <h3 className="truncate text-lg font-semibold text-gray-800 dark:text-white/90">
-              {t("ai.title")}
-            </h3>
-            <p className="hidden truncate text-xs text-gray-500 dark:text-gray-400 sm:block">
-              {t("ai.chatSubtitle")}
-            </p>
-          </div>
-        </div>
-        {messages.length > 0 && (
-          <button
-            onClick={resetChat}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
-          >
-            <LuMessageSquarePlus size={15} />
-            {t("ai.newChat")}
-          </button>
-        )}
-      </div>
-
-      {/* Messages */}
-      <div
-        ref={listRef}
-        onScroll={onListScroll}
-        className="custom-scrollbar flex-1 overflow-y-auto px-4 py-5 sm:px-5"
-      >
-        {messages.length === 0 ? (
-          <EmptyState suggestions={suggestions} onPick={send} />
-        ) : (
-          <div className="space-y-6">
-            {messages.map((m) =>
-              m.role === "user" ? (
-                <div key={m.id} className="flex justify-end">
-                  <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand-500 px-4 py-2.5 text-sm text-white">
-                    {m.content}
-                  </div>
-                </div>
-              ) : (
-                <AssistantBlock key={m.id} message={m} />
-              ),
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Composer */}
-      <div className="border-t border-gray-100 px-4 pb-3 pt-4 dark:border-gray-800 sm:px-5">
-        <div className="flex items-end gap-3">
-          <textarea
-            ref={taRef}
-            value={input}
-            rows={1}
-            disabled={streaming}
-            placeholder={t("ai.askPlaceholder")}
-            onChange={(e) => {
-              setInput(e.target.value);
-              autosize(e.target);
-            }}
-            onKeyDown={onComposerKeyDown}
-            className="max-h-40 flex-1 resize-none rounded-xl border border-gray-300 bg-transparent px-4 py-3 text-sm text-gray-900 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-800"
-          />
-          {streaming ? (
-            <button
-              onClick={stop}
-              aria-label={t("ai.stop")}
-              title={t("ai.stop")}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-error-500 text-white shadow-theme-xs transition hover:bg-error-600 active:scale-95"
-            >
-              <LuSquare size={16} className="fill-current" />
-            </button>
-          ) : (
-            <button
-              onClick={() => send(input)}
-              disabled={!input.trim()}
-              aria-label={t("ai.send")}
-              title={t("ai.send")}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white shadow-theme-xs transition hover:bg-brand-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <LuArrowUp size={18} />
-            </button>
+          <h3 className="min-w-0 truncate text-base font-semibold text-gray-800 dark:text-white/90">
+            {t("ai.title")}
+          </h3>
+          {modelSelectOptions.length > 0 && (
+            <>
+              <span className="hidden h-5 w-px shrink-0 bg-gray-200 dark:bg-gray-800 sm:block" />
+              <SelectField
+                options={modelSelectOptions}
+                value={model}
+                onChange={pickModel}
+                disabled={streaming}
+                searchable={modelSelectOptions.length > 6}
+                placeholder={t("ai.modelLabel")}
+                className="min-w-0 max-w-[150px] shrink-0 sm:max-w-[240px]"
+                buttonClassName="!h-9 !w-auto !gap-1 !rounded-full !border-transparent !bg-transparent !px-3 !text-xs !font-medium !text-gray-600 !shadow-none hover:!bg-gray-100 hover:!text-gray-800 dark:!border-transparent dark:!bg-transparent dark:!text-gray-400 dark:hover:!bg-white/[0.05] dark:hover:!text-gray-200"
+                // The trigger is a compact pill, but model names are long —
+                // the panel gets its own readable width and wraps labels.
+                dropdownClassName="min-w-[min(280px,calc(100vw-6rem))] sm:min-w-[340px]"
+                wrapOptions
+              />
+            </>
           )}
         </div>
-        {/* Utility row: model picker (ghost, secondary — the composer stays
-            the focal point) + the usual disclaimer. Wraps into two centered
-            rows on narrow screens instead of truncating either. */}
-        {modelSelectOptions.length > 0 ? (
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:justify-between">
-            <SelectField
-              options={modelSelectOptions}
-              value={model}
-              onChange={pickModel}
-              disabled={streaming}
-              searchable={modelSelectOptions.length > 6}
-              dropUp
-              placeholder={t("ai.modelLabel")}
-              className="min-w-[170px] max-w-[260px]"
-              buttonClassName="!h-9 !w-auto !gap-1 !rounded-lg !border-transparent !bg-transparent !px-2 !text-xs !font-medium !text-gray-500 !shadow-none hover:!bg-gray-100 hover:!text-gray-700 dark:!border-transparent dark:!bg-transparent dark:!text-gray-400 dark:hover:!bg-white/[0.05] dark:hover:!text-gray-200"
-            />
-            <p className="text-[11px] text-gray-400 dark:text-gray-500">
-              {t("ai.disclaimer")}
-            </p>
+        <button
+          onClick={resetChat}
+          disabled={messages.length === 0 && !streaming}
+          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-gray-900 px-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-gray-800 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 sm:px-4"
+          aria-label={t("ai.newChat")}
+          title={t("ai.newChat")}
+        >
+          <LuMessageSquarePlus size={16} />
+          <span className="hidden sm:inline">{t("ai.newChat")}</span>
+        </button>
+      </div>
+
+      {/* Content row: centered chat column + right rail (xl and up) */}
+      <div className="flex min-h-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div
+            ref={listRef}
+            onScroll={onListScroll}
+            className="custom-scrollbar flex-1 overflow-y-auto px-4 py-6 sm:px-6"
+          >
+            {messages.length === 0 ? (
+              <div className="mx-auto flex h-full w-full max-w-3xl">
+                <EmptyState suggestions={suggestions} onPick={send} />
+              </div>
+            ) : (
+              <div className="mx-auto w-full max-w-3xl space-y-8">
+                {messages.map((m, i) =>
+                  m.role === "user" ? (
+                    <div
+                      key={m.id}
+                      className="whitespace-pre-wrap rounded-2xl bg-brand-50 px-5 py-4 text-sm font-medium leading-relaxed text-gray-800 dark:bg-brand-500/10 dark:text-gray-100"
+                    >
+                      {m.content}
+                    </div>
+                  ) : (
+                    <AssistantBlock
+                      key={m.id}
+                      message={m}
+                      isLatest={i === messages.length - 1}
+                      onGrow={followReveal}
+                    />
+                  ),
+                )}
+              </div>
+            )}
           </div>
-        ) : (
-          <p className="mt-2 text-center text-[11px] text-gray-400 dark:text-gray-500">
-            {t("ai.disclaimer")}
-          </p>
-        )}
+
+          {/* Composer: one pill, send/stop lives inside it */}
+          <div className="px-4 pb-4 pt-1 sm:px-6">
+            <div className="mx-auto w-full max-w-3xl">
+              <div className="flex items-end gap-2 rounded-3xl border border-gray-200 bg-white py-2 pl-3 pr-2 shadow-theme-xs transition focus-within:border-brand-300 focus-within:ring-3 focus-within:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900">
+                <span
+                  aria-hidden="true"
+                  className="flex h-10 w-8 shrink-0 items-center justify-center text-gray-400 dark:text-gray-500"
+                >
+                  <LuSparkles size={16} />
+                </span>
+                <textarea
+                  ref={taRef}
+                  value={input}
+                  rows={1}
+                  disabled={streaming}
+                  placeholder={t("ai.askPlaceholder")}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    autosize(e.target);
+                  }}
+                  onKeyDown={onComposerKeyDown}
+                  // !bg-transparent: globals.css paints every textarea with an
+                  // UNLAYERED gray fill (the form-contrast pass); only the
+                  // important flag beats it, and the pill must be one surface.
+                  className="max-h-40 flex-1 resize-none self-center !bg-transparent py-2 text-sm text-gray-900 shadow-none placeholder:text-gray-400 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-60 dark:text-white/90 dark:placeholder:text-gray-500"
+                />
+                {streaming ? (
+                  <button
+                    onClick={stop}
+                    aria-label={t("ai.stop")}
+                    title={t("ai.stop")}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error-500 text-white shadow-theme-xs transition hover:bg-error-600 active:scale-95"
+                  >
+                    <LuSquare size={14} className="fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => send(input)}
+                    disabled={!input.trim()}
+                    aria-label={t("ai.send")}
+                    title={t("ai.send")}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white shadow-theme-xs transition hover:bg-brand-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <LuArrowUp size={18} />
+                  </button>
+                )}
+              </div>
+              <p className="mt-2 text-center text-[11px] text-gray-400 dark:text-gray-500">
+                {t("ai.disclaimer")}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <AiRail streaming={streaming} onPick={send} />
       </div>
     </div>
   );
@@ -573,7 +609,7 @@ function EmptyState({
 }) {
   const { t } = useTranslations();
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 py-8 text-center">
+    <div className="flex w-full flex-col items-center justify-center gap-6 py-8 text-center">
       <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400">
         <LuSparkles size={26} />
       </span>
@@ -585,7 +621,8 @@ function EmptyState({
           {t("ai.emptyHint")}
         </p>
       </div>
-      <div className="grid w-full max-w-lg gap-2 sm:grid-cols-2">
+      {/* Below xl the rail is hidden, so the questions live here instead. */}
+      <div className="grid w-full max-w-lg gap-2 sm:grid-cols-2 xl:hidden">
         {suggestions.map((s) => (
           <button
             key={s}
@@ -600,35 +637,163 @@ function EmptyState({
   );
 }
 
-function AssistantBlock({ message }: { message: AssistantMsg }) {
+// Decouples arrival from paint: providers (Gemini especially) deliver few,
+// large chunks, so raw rendering pops whole paragraphs in at once. A counter
+// drains toward the full length once per animation frame; the step is
+// proportional to the backlog, so a steady trickle types smoothly while a
+// one-chunk dump catches up in well under a second instead of crawling.
+// `snap` short-circuits everything, and prefers-reduced-motion folds into it.
+function useTypewriter(totalChars: number, snap: boolean): number {
+  const [reduced] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  const instant = snap || reduced;
+  const [revealed, setRevealed] = useState(() => (instant ? totalChars : 0));
+  const revealedRef = useRef(revealed);
+  const totalRef = useRef(totalChars);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    totalRef.current = totalChars;
+    if (instant) {
+      // `instant` never flips back off for a turn, and the hook returns
+      // totalChars directly while it holds — the state can stay stale, so
+      // no setState here (only the refs keep the loop guards honest).
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      revealedRef.current = totalChars;
+      return;
+    }
+    // One self-perpetuating loop per turn: effect re-runs on new arrivals
+    // just update totalRef and let the running loop pick them up.
+    if (rafRef.current !== null || revealedRef.current >= totalChars) return;
+    const tick = () => {
+      const backlog = totalRef.current - revealedRef.current;
+      if (backlog <= 0) {
+        rafRef.current = null;
+        return;
+      }
+      // ~180 chars/s floor for typing feel; /6 decay + 260 cap so even a
+      // multi-thousand-char backlog finishes its sweep in under a second.
+      const step = Math.min(260, Math.max(3, Math.ceil(backlog / 6)));
+      revealedRef.current = Math.min(totalRef.current, revealedRef.current + step);
+      setRevealed(revealedRef.current);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  }, [instant, totalChars]);
+
+  // Unmount kills the loop — no setState after unmount.
+  useEffect(
+    () => () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    },
+    [],
+  );
+
+  // `instant` renders full even before the snap effect commits.
+  return instant ? totalChars : revealed;
+}
+
+type RenderPart =
+  | { key: number; type: "text"; text: string }
+  | { key: number; type: "artifact"; artifact: AiArtifact };
+
+// Walk parts in arrival order against one reveal budget: text consumes it;
+// an artifact renders only once every preceding text part is fully revealed
+// (remaining still >= 0), so a chart can't outrun the sentence introducing
+// it. Artifacts themselves consume nothing.
+function revealParts(parts: AssistantPart[], revealed: number): RenderPart[] {
+  const out: RenderPart[] = [];
+  let remaining = revealed;
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (part.type === "text") {
+      const visible = Math.max(0, Math.min(part.text.length, remaining));
+      remaining -= part.text.length;
+      if (visible > 0) {
+        out.push({
+          key: i,
+          type: "text",
+          text:
+            visible >= part.text.length ? part.text : part.text.slice(0, visible),
+        });
+      }
+    } else if (remaining >= 0) {
+      out.push({ key: i, type: "artifact", artifact: part.artifact });
+    }
+  }
+  return out;
+}
+
+// Document-style answer: a single "Result" header per turn, then the tool
+// trace and parts straight on the surface — no bubble.
+function AssistantBlock({
+  message,
+  isLatest,
+  onGrow,
+}: {
+  message: AssistantMsg;
+  /** Only the newest turn animates; older turns always render in full. */
+  isLatest: boolean;
+  /** Parent scroll-follow — reveal growth never passes through `messages`. */
+  onGrow: () => void;
+}) {
   const { t } = useTranslations();
   const waiting =
     !message.done &&
     message.parts.length === 0 &&
     !message.error &&
     !message.tools.some((tr) => tr.running);
+  const proseText = message.parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("\n\n");
+  const totalChars = message.parts.reduce(
+    (n, p) => (p.type === "text" ? n + p.text.length : n),
+    0,
+  );
+  // Snap once the turn leaves the live path: superseded by a newer message,
+  // aborted, or errored. A natural `done` keeps draining so the animation
+  // finishes on its own (fast, per the backlog rule).
+  const snap = !isLatest || message.aborted === true || !!message.error;
+  const revealed = useTypewriter(totalChars, snap);
+  const drained = revealed >= totalChars;
+
+  // Keep the view glued to the typing, not just to raw arrival.
+  useEffect(() => {
+    onGrow();
+  }, [revealed, onGrow]);
+
   return (
     <div className="space-y-3">
-      {message.modelLabel && (
-        <div
-          className="flex items-center gap-1.5 text-[11px] font-medium text-gray-400 dark:text-gray-500"
-          title={t("ai.answeredWith") + ": " + message.modelLabel}
-        >
-          <LuCpu size={12} className="shrink-0" />
-          <span className="truncate">{message.modelLabel}</span>
-        </div>
-      )}
-      {message.tools.length > 0 && <ToolTrace runs={message.tools} />}
-      {message.parts.map((part, i) =>
-        part.type === "text" ? (
-          <p
-            key={i}
-            className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800 dark:text-gray-200"
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400">
+          <LuSparkles size={13} />
+        </span>
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          {t("ai.resultsLabel")}
+        </span>
+        {message.modelLabel && (
+          <span
+            className="ml-auto flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-gray-400 dark:text-gray-500"
+            title={t("ai.answeredWith") + ": " + message.modelLabel}
           >
-            {part.text}
-          </p>
+            <LuCpu size={12} className="shrink-0" />
+            <span className="truncate">{message.modelLabel}</span>
+          </span>
+        )}
+      </div>
+      {message.tools.length > 0 && <ToolTrace runs={message.tools} />}
+      {revealParts(message.parts, revealed).map((rp) =>
+        rp.type === "text" ? (
+          <AiMarkdown key={rp.key} text={rp.text} />
         ) : (
-          <AiArtifactView key={i} artifact={part.artifact} />
+          <MemoizedArtifact key={rp.key} artifact={rp.artifact} />
         ),
       )}
       {message.error && (
@@ -642,7 +807,49 @@ function AssistantBlock({ message }: { message: AssistantMsg }) {
         </p>
       )}
       {waiting && <ThinkingDots label={t("ai.thinking")} />}
+      {message.done && drained && proseText.trim().length > 0 && (
+        <div className="flex items-center pt-0.5">
+          <CopyTurnButton text={proseText} />
+        </div>
+      )}
     </div>
+  );
+}
+
+// Quiet per-turn action: copy the answer's prose (artifacts have their own
+// exports). Flips to a check for a moment as the only confirmation.
+function CopyTurnButton({ text }: { text: string }) {
+  const { t } = useTranslations();
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard unavailable (http, permissions) — nothing useful to show.
+    }
+  };
+  return (
+    <button
+      onClick={copy}
+      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/[0.05] dark:hover:text-gray-200"
+    >
+      {copied ? (
+        <LuCheck size={14} className="text-success-600 dark:text-success-500" />
+      ) : (
+        <LuCopy size={14} />
+      )}
+      {copied ? t("ai.copied") : t("ai.copy")}
+    </button>
   );
 }
 

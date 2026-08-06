@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { RiTelegram2Fill } from "react-icons/ri";
 import { LuSettings, LuSparkles, LuGlobe } from "react-icons/lu";
 import { useTranslations } from "@/hooks/useTranslations";
@@ -10,6 +11,22 @@ import { useAuth } from "@/context/AuthContext";
 import { isMenuVisible } from "@/data/menuPermissions";
 import Badge from "@/components/ui/badge/Badge";
 import { getAiSettings, getTelegramLinks, getCurrentUser } from "@/lib/api";
+
+// The BiLLZ asset is a wide lockup (1576×438) — a square brand mark on the
+// left, then the wordmark. Only the mark belongs on a 48px tile, and its
+// rounded corners have WHITE baked in (the PNG has no alpha), so showing the
+// bare 438px square would put white nubs on the tile corners. Cropping 36px
+// further in lands inside the blue, so the tile reads as a solid colour square
+// like the other three. Percentages (not pixels) so it holds at any tile size.
+//
+//   visible region = 366px of the original  →  438 − 2×36
+const BILLZ_MARK: React.CSSProperties = {
+  width: "430.6%", // 1576 / 366
+  height: "119.7%", //  438 / 366
+  left: "-9.84%", //   -36 / 366
+  top: "-9.84%",
+  maxWidth: "none", // beat the global img { max-width: 100% } reset
+};
 
 // Registry of integration apps shown on the grid. Add new entries here and a
 // matching detail page under /settings/applications/<id>.
@@ -50,8 +67,17 @@ const APPS: AppEntry[] = [
     descriptionKey: "integrations.billz.subtitle",
     href: "/settings/applications/billz",
     icon: (
-      <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-theme-purple-500/10 text-xl font-bold text-theme-purple-500">
-        B
+      <span className="relative block h-12 w-12 overflow-hidden rounded-xl">
+        <Image
+          src="/images/integrations/billz.png"
+          alt=""
+          aria-hidden
+          width={1576}
+          height={438}
+          sizes="208px"
+          className="absolute"
+          style={BILLZ_MARK}
+        />
       </span>
     ),
   },

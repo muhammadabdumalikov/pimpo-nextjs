@@ -4939,6 +4939,13 @@ export interface AiSettingsView {
   apiKeyLast4: string | null;
   /** Questions asked this calendar month. */
   monthlyCount: number;
+  /** Billable tokens this month (input dwarfs output ~19:1 — that's normal). */
+  monthlyInputTokens: number;
+  monthlyOutputTokens: number;
+  /** Approximate month spend from OUR price table — not a provider invoice. */
+  monthlyCostUsd: number;
+  /** True when some/all usage had no known price, so costUsd under-reports. */
+  monthlyCostPartial: boolean;
   lastUsedAt: string | null; // ISO
   /** Dropdown source of truth — per-provider model lists. */
   availableModels: Record<AiProviderId, { id: string; label: string }[]>;
@@ -4985,17 +4992,16 @@ export async function testAiConnection(data: {
   return response.json();
 }
 
-// Asks the provider which models the key can actually reach; `apiKey` omitted
-// uses the stored key. `live: false` = the provider call failed and the list
-// fell back to static suggestions — usable, but possibly stale.
-export async function listAiModels(data: {
-  provider: AiProviderId;
-  apiKey?: string;
-}): Promise<{ models: { id: string; label: string }[]; live: boolean }> {
-  const response = await fetch(`${API_BASE_URL}/ai/settings/models`, {
-    method: 'POST',
+// Curated model list for one provider — a short static list on the backend
+// (no key involved, nothing live to refresh). Any other id can still be typed
+// by hand in the settings form.
+export async function listAiModels(
+  provider: AiProviderId,
+): Promise<{ models: { id: string; label: string }[] }> {
+  const qs = new URLSearchParams({ provider });
+  const response = await fetch(`${API_BASE_URL}/ai/settings/models?${qs}`, {
+    method: 'GET',
     headers: authHeaders(),
-    body: JSON.stringify(data),
   });
   if (!response.ok) await parseError(response, 'Failed to list AI models');
   return response.json();
@@ -5020,8 +5026,7 @@ export interface AiCapabilities {
   model: string;
   /** hasKey && enabled. False → the chat renders the configure-first panel. */
   configured: boolean;
-  /** Pickable models, live from the provider (cached 1h server-side; falls
-   *  back to static suggestions, so never empty). */
+  /** Pickable models — the curated static list for the provider, never empty. */
   models: { id: string; label: string }[];
   tools: { name: string; label: string }[];
 }

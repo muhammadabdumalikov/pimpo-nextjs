@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { LuExternalLink, LuRefreshCw } from "react-icons/lu";
+import { LuExternalLink } from "react-icons/lu";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useToast } from "@/context/ToastContext";
 import Button from "@/components/ui/button/Button";
@@ -10,7 +10,13 @@ import Input from "@/components/form/input/InputField";
 import SelectField from "@/components/form/SelectField";
 import Switch from "@/components/form/switch/Switch";
 import ConfirmModal from "@/components/ui/confirm-modal/ConfirmModal";
-import { formatDate } from "@/lib/reportFormat";
+import { ReportKpi } from "@/components/reports/ReportShell";
+import {
+  formatCompact,
+  formatDate,
+  formatNumber,
+  type CompactUnits,
+} from "@/lib/reportFormat";
 import {
   getAiSettings,
   saveAiSettings,
@@ -51,8 +57,26 @@ const PROVIDERS: {
 
 // Sentinel option in the model dropdown that switches to free-text entry —
 // BYOK means a brand-new (or retired-and-replaced) model id must always be
-// typable even when the fetched list doesn't know it yet.
+// typable even when the curated list doesn't know it yet. This escape hatch
+// is what makes a short hand-picked list safe.
 const CUSTOM_MODEL = "__custom__";
+
+// Date + 24h time for the footer's "last used" — the shared DD.MM.YYYY date
+// plus HH:mm, matching the other settings screens (IntegrationsManagement).
+const formatDateTime = (iso: string | null): string => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return `${formatDate(d)}, ${d.toLocaleTimeString("uz-UZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+};
+
+// USD for the cost tile. Sub-cent real usage must never read "$0.00" — only
+// called with monthlyCount > 0, or with a >= 1¢ floor on partial months.
+const formatUsd = (v: number): string =>
+  v < 0.01 ? "< $0.01" : `$${v.toFixed(2)}`;
 
 /**
  * Settings → Ilovalar → AI yordamchi (BYOK).
@@ -86,58 +110,39 @@ export default function AiProviderSettings() {
   // below holds the actual id — the escape hatch for ids the list lacks.
   const [customModel, setCustomModel] = useState(false);
 
-  // Live model list from POST /ai/settings/models, for the CURRENT provider
+  // Curated model list from GET /ai/settings/models, for the CURRENT provider
   // only (a provider switch refetches). `models: null` = the request itself
-  // failed → fall back to the static suggestions from availableModels.
-  // `live: false` = the backend answered but from its static fallback.
+  // failed → fall back to the same curated suggestions from availableModels.
   const [fetchedModels, setFetchedModels] = useState<{
     provider: AiProviderId;
     models: { id: string; label: string }[] | null;
-    live: boolean;
   } | null>(null);
-  const [modelsLoading, setModelsLoading] = useState(false);
   // Drop out-of-order responses (fast provider switching).
   const modelsSeqRef = useRef(0);
-  // Last provider+key a fetch ran with, so blurring an unchanged key field
-  // doesn't refire the request.
-  const lastModelsFetchRef = useRef<{ provider: AiProviderId; key: string } | null>(
-    null,
-  );
   // True while `model` holds an auto-picked default (first list entry) rather
-  // than a saved or hand-picked value — only then may a fresh live list move
-  // the selection, so a valid custom/stored id is never clobbered.
+  // than a saved or hand-picked value — only then may a freshly fetched list
+  // move the selection, so a valid custom/stored id is never clobbered.
   const modelAutoRef = useRef(false);
 
-  const fetchModels = useCallback(
-    async (prov: AiProviderId, typedKey?: string) => {
-      const seq = ++modelsSeqRef.current;
-      lastModelsFetchRef.current = { provider: prov, key: typedKey ?? "" };
-      setModelsLoading(true);
-      try {
-        const res = await listAiModels(
-          typedKey ? { provider: prov, apiKey: typedKey } : { provider: prov },
+  const fetchModels = useCallback(async (prov: AiProviderId) => {
+    const seq = ++modelsSeqRef.current;
+    try {
+      const res = await listAiModels(prov);
+      if (seq !== modelsSeqRef.current) return;
+      setFetchedModels({ provider: prov, models: res.models });
+      // Only an auto-defaulted selection follows the fetched list; a saved or
+      // typed id stays put even when the list doesn't contain it.
+      if (modelAutoRef.current && res.models.length > 0) {
+        setModel((current) =>
+          res.models.some((m) => m.id === current) ? current : res.models[0].id,
         );
-        if (seq !== modelsSeqRef.current) return;
-        setFetchedModels({ provider: prov, models: res.models, live: res.live });
-        // Only an auto-defaulted selection follows the live list; a saved or
-        // typed id stays put even when the list doesn't contain it.
-        if (modelAutoRef.current && res.models.length > 0) {
-          setModel((current) =>
-            res.models.some((m) => m.id === current)
-              ? current
-              : res.models[0].id,
-          );
-        }
-      } catch {
-        // Quietly fall back to the static list — the page must stay usable.
-        if (seq !== modelsSeqRef.current) return;
-        setFetchedModels({ provider: prov, models: null, live: false });
-      } finally {
-        if (seq === modelsSeqRef.current) setModelsLoading(false);
       }
-    },
-    [],
-  );
+    } catch {
+      // Quietly fall back to the bundled list — the page must stay usable.
+      if (seq !== modelsSeqRef.current) return;
+      setFetchedModels({ provider: prov, models: null });
+    }
+  }, []);
 
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -165,11 +170,9 @@ export default function AiProviderSettings() {
         setCustomModel(false);
         setTestResult(null);
         modelAutoRef.current = false; // saved model — never auto-replaced
-        // With a stored key, ask the provider what this key can actually
-        // reach so the dropdown isn't stuck on stale static suggestions.
+        // Pull the curated list for the saved provider (no key needed).
         setFetchedModels(null);
-        lastModelsFetchRef.current = null;
-        if (view.hasKey) void fetchModels(view.provider);
+        void fetchModels(view.provider);
       } catch (err) {
         if (active) setLoadError((err as Error)?.message || "Error");
       } finally {
@@ -184,11 +187,11 @@ export default function AiProviderSettings() {
   const hasStoredKey = settings?.hasKey ?? false;
   const providerMeta = PROVIDERS.find((p) => p.id === provider) ?? PROVIDERS[0];
 
-  // Dropdown source: the live provider list when we have one for this
-  // provider, otherwise the static suggestions that shipped with settings.
-  const liveList =
+  // Dropdown source: the fetched curated list when we have one for this
+  // provider, otherwise the same suggestions that shipped with settings.
+  const fetchedList =
     fetchedModels?.provider === provider ? fetchedModels.models : null;
-  const modelList = liveList ?? settings?.availableModels?.[provider] ?? [];
+  const modelList = fetchedList ?? settings?.availableModels?.[provider] ?? [];
   const modelOptions = modelList.map((m) => ({ value: m.id, label: m.label }));
   // A saved/typed id the list doesn't know stays selected and visible — a
   // retired or brand-new model must never lock the owner out.
@@ -196,10 +199,6 @@ export default function AiProviderSettings() {
     modelOptions.unshift({ value: model, label: model });
   }
   modelOptions.push({ value: CUSTOM_MODEL, label: t("ai.customModelOption") });
-  // The quiet "list may be stale" hint: shown when the fetch fell back to
-  // static suggestions (backend said live:false, or the request failed).
-  const modelsStale =
-    fetchedModels?.provider === provider && !fetchedModels.live;
 
   // A save/test is possible with either a freshly typed key or a stored one.
   const hasUsableKey = hasStoredKey || apiKey.trim().length > 0;
@@ -210,7 +209,7 @@ export default function AiProviderSettings() {
     setCustomModel(false);
     // Returning to the saved provider restores the saved model (even a custom
     // id); any other provider starts from the first entry of its list until
-    // the live fetch below possibly refines it.
+    // the fetch below possibly refines it.
     const returningToSaved = !!settings && next === settings.provider;
     setModel(
       returningToSaved
@@ -219,28 +218,8 @@ export default function AiProviderSettings() {
     );
     modelAutoRef.current = !returningToSaved;
     setTestResult(null);
-    // Re-pull the live list when any key is around to try: a freshly typed
-    // one wins, else the stored one (which may not fit this provider — the
-    // backend then falls back and reports live:false, still usable).
-    const typed = apiKey.trim();
-    if (typed || hasStoredKey) void fetchModels(next, typed || undefined);
-  };
-
-  // After the owner finishes typing a new key (blur — not per keystroke),
-  // ask the provider what that key can reach. Skipped when nothing changed
-  // since the last fetch.
-  const onApiKeyBlur = () => {
-    const typed = apiKey.trim();
-    if (!typed) return;
-    const last = lastModelsFetchRef.current;
-    if (last && last.provider === provider && last.key === typed) return;
-    void fetchModels(provider, typed);
-  };
-
-  const refreshModels = () => {
-    if (modelsLoading || !hasUsableKey) return;
-    const typed = apiKey.trim();
-    void fetchModels(provider, typed || undefined);
+    // Re-pull the curated list for the newly selected provider.
+    void fetchModels(next);
   };
 
   const save = async () => {
@@ -343,6 +322,23 @@ export default function AiProviderSettings() {
       : "disabled"
     : "notConfigured";
 
+  // Footer usage band. The cost is OUR estimate from a price table — a
+  // partial month (some usage unpriced, e.g. a hand-typed model id) only
+  // supports a floor, so it reads "kamida $…" or drops the figure entirely.
+  const compactUnits: CompactUnits = {
+    thousand: t("products.statsThousand"),
+    million: t("products.statsMillion"),
+    billion: t("products.statsBillion"),
+  };
+  const costValue = settings.monthlyCostPartial
+    ? settings.monthlyCostUsd >= 0.01
+      ? `${t("ai.usageAtLeast")} ${formatUsd(settings.monthlyCostUsd)}`
+      : "—"
+    : formatUsd(settings.monthlyCostUsd);
+  const tokensTitle = `${t("ai.usageTokensIn")}: ${formatNumber(
+    settings.monthlyInputTokens,
+  )} · ${t("ai.usageTokensOut")}: ${formatNumber(settings.monthlyOutputTokens)}`;
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="flex flex-wrap items-center gap-3">
@@ -404,40 +400,25 @@ export default function AiProviderSettings() {
           </div>
         </div>
 
-        {/* Model — live list from the provider when a key is available,
-            static suggestions otherwise; the sentinel option opens free-text
-            entry so any id the list lacks can still be used. */}
+        {/* Model — the curated list for the selected provider; the sentinel
+            option opens free-text entry so any id the list lacks can still
+            be used. */}
         <div className="max-w-md">
           <Label>{t("ai.modelLabel")}</Label>
-          <div className="flex items-center gap-2">
-            <SelectField
-              className="flex-1"
-              options={modelOptions}
-              value={customModel ? CUSTOM_MODEL : model}
-              onChange={(v) => {
-                if (v === CUSTOM_MODEL) {
-                  setCustomModel(true);
-                } else {
-                  setCustomModel(false);
-                  setModel(v);
-                  modelAutoRef.current = false;
-                }
-                setTestResult(null);
-              }}
-            />
-            <button
-              type="button"
-              onClick={refreshModels}
-              disabled={modelsLoading || !hasUsableKey}
-              title={t("ai.refreshModels")}
-              aria-label={t("ai.refreshModels")}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 text-gray-500 shadow-theme-xs transition hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <LuRefreshCw
-                className={`h-4 w-4 ${modelsLoading ? "animate-spin" : ""}`}
-              />
-            </button>
-          </div>
+          <SelectField
+            options={modelOptions}
+            value={customModel ? CUSTOM_MODEL : model}
+            onChange={(v) => {
+              if (v === CUSTOM_MODEL) {
+                setCustomModel(true);
+              } else {
+                setCustomModel(false);
+                setModel(v);
+                modelAutoRef.current = false;
+              }
+              setTestResult(null);
+            }}
+          />
           {customModel && (
             <div className="mt-2">
               <Input
@@ -450,11 +431,6 @@ export default function AiProviderSettings() {
                 placeholder={t("ai.customModelPlaceholder")}
               />
             </div>
-          )}
-          {modelsStale && (
-            <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-              {t("ai.modelsStaleHint")}
-            </p>
           )}
         </div>
 
@@ -470,7 +446,6 @@ export default function AiProviderSettings() {
                   setApiKey(e.target.value);
                   setTestResult(null);
                 }}
-                onBlur={onApiKeyBlur}
                 disabled={hasStoredKey && !editingKey}
                 placeholder={
                   hasStoredKey
@@ -485,14 +460,9 @@ export default function AiProviderSettings() {
                 size="sm"
                 onClick={() => {
                   if (editingKey) {
-                    // Cancel — keep the stored key. If the model list was
-                    // fetched with the abandoned typed key, re-pull it with
-                    // the stored one.
+                    // Cancel — keep the stored key.
                     setApiKey("");
                     setEditingKey(false);
-                    if (lastModelsFetchRef.current?.key) {
-                      void fetchModels(provider);
-                    }
                   } else {
                     setEditingKey(true);
                   }
@@ -568,17 +538,52 @@ export default function AiProviderSettings() {
           )}
         </div>
 
-        {/* Usage — saved-state metadata, demoted to the card footer. */}
-        <div className="border-t border-gray-100 pt-4 text-theme-sm text-gray-500 dark:border-gray-800 dark:text-gray-400">
-          {t("ai.usageThisMonth")}:{" "}
-          <span className="font-medium text-gray-700 dark:text-gray-300">
-            {settings.monthlyCount} {t("ai.questionsSuffix")}
-          </span>
-          <span className="mx-2">·</span>
-          {t("ai.lastUsed")}:{" "}
-          <span className="font-medium text-gray-700 dark:text-gray-300">
-            {formatDate(settings.lastUsedAt)}
-          </span>
+        {/* Usage — saved-state metadata, demoted to the card footer: a
+            caption header, the month's figures as the shared KPI tiles, and
+            the cost-estimate disclaimer. */}
+        <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+              {t("ai.usageThisMonth")}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t("ai.lastUsed")}:{" "}
+              <span className="font-medium tabular-nums text-gray-700 dark:text-gray-300">
+                {formatDateTime(settings.lastUsedAt)}
+              </span>
+            </p>
+          </div>
+          {settings.monthlyCount === 0 ? (
+            <p className="mt-3 text-theme-sm text-gray-500 dark:text-gray-400">
+              {t("ai.usageEmpty")}
+            </p>
+          ) : (
+            <>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <ReportKpi
+                  label={t("ai.usageQuestions")}
+                  value={formatNumber(settings.monthlyCount)}
+                />
+                {/* The tile rounds — the exact in/out split lives in the
+                    tooltip. */}
+                <div title={tokensTitle}>
+                  <ReportKpi
+                    label={t("ai.usageTokens")}
+                    value={formatCompact(
+                      settings.monthlyInputTokens +
+                        settings.monthlyOutputTokens,
+                      compactUnits,
+                    )}
+                  />
+                </div>
+                <ReportKpi label={t("ai.usageCost")} value={costValue} />
+              </div>
+              <p className="mt-2.5 text-xs text-gray-400 dark:text-gray-500">
+                {t("ai.usageApproxNote")}
+                {settings.monthlyCostPartial && ` ${t("ai.usagePartialNote")}`}
+              </p>
+            </>
+          )}
         </div>
       </div>
 
